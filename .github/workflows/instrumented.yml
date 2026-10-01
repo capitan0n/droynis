@@ -1,0 +1,63 @@
+name: Instrumented tests
+
+# Manual for now: emulator jobs are slow and this repository's Actions minutes are limited.
+on:
+  workflow_dispatch:
+    inputs:
+      api-levels:
+        # From Android 16 QPR2 on, SDK packages carry a minor version: API 37 is "37.0".
+        description: JSON list of API levels to run on
+        default: '[26, 29, 31, 34, "37.0"]'
+
+permissions:
+  contents: read
+
+jobs:
+  emulator:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: ${{ fromJSON(inputs.api-levels) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic # MIT-licensed cache instead of the proprietary default
+
+      # The runner's avdmanager writes target=android-0 for minor-versioned images
+      # (android-37.0); cmdline-tools 22+ handle them. The emulator action reuses
+      # cmdline-tools/latest. https://github.com/ReactiveCircus/android-emulator-runner/issues/482
+      - name: Update Android cmdline-tools
+        run: |
+          sdk="${ANDROID_HOME:?ANDROID_HOME is not set}"
+          yes | "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "cmdline-tools;latest" > /dev/null
+          if [ -d "$sdk/cmdline-tools/latest-2" ]; then
+            rm -rf "$sdk/cmdline-tools/latest"
+            mv "$sdk/cmdline-tools/latest-2" "$sdk/cmdline-tools/latest"
+          fi
+          "$sdk/cmdline-tools/latest/bin/sdkmanager" --version
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          # keyevent 82 dismisses a swipe lock screen so the UI test can resume the activity
+          script: |
+            adb shell input keyevent 82
+            ./gradlew --stacktrace connectedDebugAndroidTest

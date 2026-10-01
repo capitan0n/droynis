@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Normal permission: coarse screen lock strength (NONE/LOW/MEDIUM/HIGH) for ACCS-2001, API 29+. -->
+    <uses-permission android:name="android.permission.REQUEST_PASSWORD_COMPLEXITY" />
+
+</manifest>

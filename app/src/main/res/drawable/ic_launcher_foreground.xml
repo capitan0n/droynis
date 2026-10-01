@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A shield with a check mark, kept inside the 66dp adaptive-icon safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L76,36 L76,52 C76,66 66,77 54,82 C42,77 32,66 32,52 L32,36 Z" />
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M44,54 L51,61 L65,46"
+        android:strokeWidth="5"
+        android:strokeColor="#00695C"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

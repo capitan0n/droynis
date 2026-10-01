@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Droynis</string>
+
+    <string name="scanning">Scanning… %1$d of %2$d</string>
+    <string name="hardening_index">Hardening index</string>
+    <string name="score_out_of">/ 100</string>
+    <string name="score_none">No check produced a result that can be scored.</string>
+    <string name="score_capped">Capped at %1$d by a critical failure: %2$s</string>
+    <string name="failed_counts">Failed: %1$d critical · %2$d warning · %3$d notice</string>
+    <string name="evaluated_skipped">%1$d checks scored · %2$d skipped (unknown or not applicable)</string>
+    <string name="active_tier">Privilege tier: %1$s</string>
+    <string name="rescan">Re-scan</string>
+
+    <string name="status_pass">PASS</string>
+    <string name="status_unknown">UNKNOWN</string>
+    <string name="status_unsupported">N/A</string>
+    <string name="severity_critical">CRITICAL</string>
+    <string name="severity_warning">WARNING</string>
+    <string name="severity_notice">NOTICE</string>
+    <string name="severity_info">INFO</string>
+
+    <string name="show_details">Show details</string>
+    <string name="hide_details">Hide details</string>
+    <string name="why_it_matters">Why it matters</string>
+    <string name="evidence">Evidence</string>
+    <string name="evidence_source">Source: %1$s</string>
+    <string name="no_evidence">No values were recorded.</string>
+    <string name="what_you_can_do">What you can do</string>
+    <string name="open_settings">Open settings</string>
+    <string name="check_meta">%1$s · %2$s tier · %3$d ms</string>
+</resources>

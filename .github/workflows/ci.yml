@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Also validates gradle-wrapper.jar against the official checksums.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic # MIT-licensed cache instead of the proprietary default
+
+      - name: Unit tests, lint, release build
+        run: ./gradlew --stacktrace check assembleRelease assembleDebugAndroidTest
+
+      - name: Release APK must not request network access
+        run: |
+          aapt2="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)aapt2"
+          apk=app/build/outputs/apk/release/app-release-unsigned.apk
+          "$aapt2" dump permissions "$apk" | tee permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "::error::$apk requests android.permission.INTERNET"
+            exit 1
+          fi
+
+      - name: Upload reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: "**/build/reports/"
+          retention-days: 7
