@@ -6,6 +6,7 @@ import io.github.capitan0n.droynis.checks.base.BluetoothCheck
 import io.github.capitan0n.droynis.checks.base.DeveloperOptionsCheck
 import io.github.capitan0n.droynis.checks.base.PasswordVisibilityCheck
 import io.github.capitan0n.droynis.checks.base.ScreenTimeoutCheck
+import io.github.capitan0n.droynis.checks.base.StayAwakeCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
 import io.github.capitan0n.droynis.core.SettingsActions
 import org.junit.Assert.assertEquals
@@ -41,6 +42,7 @@ class SdkConstantsTest {
         assertEquals(Settings.Global.ADB_ENABLED, UsbDebuggingCheck.ADB_ENABLED)
         assertEquals(Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, DeveloperOptionsCheck.DEVELOPMENT_SETTINGS_ENABLED)
         assertEquals(Settings.Global.BLUETOOTH_ON, BluetoothCheck.BLUETOOTH_ON)
+        assertEquals(Settings.Global.STAY_ON_WHILE_PLUGGED_IN, StayAwakeCheck.STAY_ON_WHILE_PLUGGED_IN)
         assertEquals(Settings.System.SCREEN_OFF_TIMEOUT, ScreenTimeoutCheck.SCREEN_OFF_TIMEOUT)
         assertEquals(Settings.System.TEXT_SHOW_PASSWORD, PasswordVisibilityCheck.TEXT_SHOW_PASSWORD)
     }

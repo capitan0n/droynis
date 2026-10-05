@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: base tier, 22 checks (see the README for the list) and a Compose UI with dashboard,
+Status: base tier, 30 checks (see the README for the list) and a Compose UI with dashboard,
 checks, tools and help screens. This file records how the brief maps onto current Android
 (API 37, October 2026) and the decisions taken so far.
 
@@ -27,6 +27,21 @@ checks, tools and help screens. This file records how the brief maps onto curren
 Smaller points: StrongBox absence is not user-fixable (INFO, no score impact). Emulators have
 adb on and no lock screen, so instrumented tests assert that a verdict was reached, not which.
 AOSP/ATD emulator images do not exist for every API level; Google APIs images are fine for tests.
+
+### Device state without privileges
+
+- **Bootloader** (INTG-1040): an attested key's certificate carries `RootOfTrust` (device locked,
+  verified boot state) as reported by the bootloader to the secure hardware. Droynis parses the
+  KeyDescription extension with its own small DER reader (no Bouncy Castle) and only trusts TEE or
+  StrongBox attestations. The chain is not yet checked against Google's roots, so this is posture,
+  not proof (row 1). Without hardware attestation it falls back to `ro.boot.*` properties, which
+  root can fake towards "locked" but which do not lie about "unlocked" on their own.
+- **System properties** come from running `/system/bin/getprop` once per scan (cached 10 s).
+  SELinux filters what an app may read; a missing property is "not visible", never "false".
+  `sys.oem_unlock_allowed` is not readable on every device, so OEM unlocking can be UNKNOWN.
+- **Root** (INTG-1050) is a heuristic: known su paths (existence only; Droynis never runs su) and
+  root managers or hooking frameworks by package name. Hidden root (DenyList, Shamiko, KernelSU)
+  is not detected, and the explanation says so.
 
 ## 2. Modules
 

@@ -40,6 +40,10 @@ data class DeviceSummary(
     val securityPatch: String,
     val buildId: String,
     val kernel: String?,
+    /** `Build.TYPE`: "user" on production phones, "userdebug" or "eng" on debuggable builds. */
+    val buildType: String,
+    /** `Build.TAGS`, e.g. "release-keys"; "test-keys" means the public AOSP signing keys. */
+    val buildTags: String,
 )
 
 /** Mirrors `DevicePolicyManager.ENCRYPTION_STATUS_*`. */
@@ -74,6 +78,8 @@ data class InstalledApp(
     val isDebuggable: Boolean,
     /** Package that installed the app, or null when unknown (for example adb). */
     val installer: String?,
+    /** The Android API level the app was built for (`targetSdkVersion`). */
+    val targetSdk: Int,
 )
 
 interface PackageInventory {
@@ -145,6 +151,54 @@ interface InputMethodProbe {
     fun enabledKeyboards(): Reading<List<Keyboard>>
 }
 
+/**
+ * Android system properties as `getprop` lists them. Properties this app may not read are simply
+ * missing from the map, so a missing key means "not visible", never "false".
+ */
+interface SystemProperties {
+    fun all(): Reading<Map<String, String>>
+}
+
+interface FileProbe {
+    /** The subset of [paths] that exist and are visible to this app. */
+    fun existing(paths: List<String>): Reading<List<String>>
+}
+
+/** Mirrors KeyMint `SecurityLevel`: where the attested key lives. */
+enum class SecurityLevel { SOFTWARE, TRUSTED_ENVIRONMENT, STRONG_BOX }
+
+/** Mirrors KeyMint `VerifiedBootState`, with the boot screen colour Android shows for each. */
+enum class VerifiedBootState(val label: String) {
+    VERIFIED("verified (green)"),
+    SELF_SIGNED("custom key (yellow)"),
+    UNVERIFIED("not verified (orange)"),
+    FAILED("failed (red)"),
+}
+
+data class RootOfTrust(val deviceLocked: Boolean, val verifiedBootState: VerifiedBootState)
+
+/** What a key attestation certificate says about the device. */
+data class KeyAttestation(
+    val attestationVersion: Int,
+    val securityLevel: SecurityLevel,
+    /** Absent from some old or software-only attestations. */
+    val rootOfTrust: RootOfTrust?,
+    /** Attested OS patch level as YYYYMM, when the certificate carries it. */
+    val osPatchLevel: Int?,
+)
+
+interface AttestationProbe {
+    /** Creates a throwaway key with an attestation certificate and reports what it says. */
+    fun attest(): Reading<KeyAttestation>
+}
+
+data class WebViewInfo(val packageName: String, val versionName: String, val lastUpdated: LocalDate)
+
+interface WebViewProbe {
+    /** The package that provides WebView, or `Value(null)` when the device has none. */
+    fun provider(): Reading<WebViewInfo?>
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -157,4 +211,8 @@ interface BaseProbes {
     val certificates: CertificateStore
     val radios: RadioProbe
     val inputMethods: InputMethodProbe
+    val properties: SystemProperties
+    val files: FileProbe
+    val attestation: AttestationProbe
+    val webView: WebViewProbe
 }

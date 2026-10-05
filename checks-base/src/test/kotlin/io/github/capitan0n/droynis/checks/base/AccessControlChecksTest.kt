@@ -57,6 +57,18 @@ class AccessControlChecksTest {
     }
 
     @Test
+    fun `stay awake while charging`() = runTest {
+        suspend fun status(raw: String?) =
+            StayAwakeCheck(FakeSettings(global = mapOf("stay_on_while_plugged_in" to value(raw)))).status()
+
+        assertEquals(Status.PASS, status("0"))
+        assertEquals(Status.FAIL, status("3")) // AC and USB
+        assertEquals(Status.FAIL, status("15"))
+        assertEquals(Status.UNKNOWN, status(null))
+        assertEquals(Status.UNKNOWN, status("on"))
+    }
+
+    @Test
     fun `password visibility`() = runTest {
         suspend fun status(raw: String?) =
             PasswordVisibilityCheck(FakeSettings(system = mapOf("show_password" to value(raw)))).status()

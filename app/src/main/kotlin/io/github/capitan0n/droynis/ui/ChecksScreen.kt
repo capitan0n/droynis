@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -47,24 +48,34 @@ fun ChecksScreen(
     onCategory: (Category?) -> Unit,
     onOpenCheck: (String) -> Unit,
 ) {
-    val verdictOf = { spec: CheckSpec -> findings[spec.id]?.verdict }
-    val visible = catalog.filter { (category == null || it.category == category) && filter.matches(verdictOf(it)) }
+    // Derived once per scan or filter change, not on every frame while the list scrolls.
+    val verdicts = remember(findings) { findings.mapValues { it.value.verdict } }
+    val counts = remember(catalog, verdicts) {
+        CheckFilter.entries.associateWith { option -> catalog.count { option.matches(verdicts[it.id]) } }
+    }
+    val groups = remember(catalog, verdicts, filter, category) {
+        Category.entries.mapNotNull { group ->
+            val all = catalog.filter { it.category == group }
+            val shown = all.filter { (category == null || group == category) && filter.matches(verdicts[it.id]) }
+            if (shown.isEmpty()) null else CheckGroup(group, shown, all.count { verdicts[it.id] == Verdict.PASSED }, all.size)
+        }
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().testTag(CHECKS_LIST_TAG),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LegendCard()
-                FilterChips(catalog, verdictOf, filter, onFilter)
-                CategoryChips(category, onCategory)
-            }
+        item(key = "legend", contentType = "legend") { LegendCard() }
+        item(key = "filters", contentType = "chips") {
+            FilterChips(counts, filter, onFilter, Modifier.padding(top = 8.dp))
+        }
+        item(key = "categories", contentType = "chips") {
+            CategoryChips(category, onCategory, Modifier.padding(top = 5.dp))
         }
 
-        if (visible.isEmpty()) {
-            item {
+        if (groups.isEmpty()) {
+            item(key = "empty", contentType = "empty") {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -83,24 +94,24 @@ fun ChecksScreen(
             }
         }
 
-        for (group in Category.entries) {
-            val specs = visible.filter { it.category == group }
-            if (specs.isEmpty()) continue
-            item(key = "header-${group.name}") {
-                val all = catalog.filter { it.category == group }
-                CategoryHeader(group, passed = all.count { verdictOf(it) == Verdict.PASSED }, total = all.size)
+        for (group in groups) {
+            item(key = "header-${group.category.name}", contentType = "header") {
+                CategoryHeader(group.category, passed = group.passed, total = group.total)
             }
-            itemsIndexed(specs, key = { _, spec -> spec.id }) { index, spec ->
+            itemsIndexed(group.specs, key = { _, spec -> spec.id }, contentType = { _, _ -> "check" }) { index, spec ->
                 CheckRow(
                     spec = spec,
                     finding = findings[spec.id],
                     onClick = { onOpenCheck(spec.id) },
-                    shape = groupShape(index, specs.size),
+                    shape = groupShape(index, group.specs.size),
                 )
             }
         }
     }
 }
+
+/** One category's visible checks, with pass counts over all of its checks. */
+private class CheckGroup(val category: Category, val specs: List<CheckSpec>, val passed: Int, val total: Int)
 
 @Composable
 private fun LegendCard() {
@@ -138,17 +149,17 @@ fun LegendRow(verdict: Verdict) {
 
 @Composable
 private fun FilterChips(
-    catalog: List<CheckSpec>,
-    verdictOf: (CheckSpec) -> Verdict?,
+    counts: Map<CheckFilter, Int>,
     selected: CheckFilter,
     onFilter: (CheckFilter) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         for (option in CheckFilter.entries) {
-            val count = catalog.count { option.matches(verdictOf(it)) }
+            val count = counts[option] ?: 0
             val label = when (option) {
                 CheckFilter.ALL -> R.string.filter_all
                 CheckFilter.ISSUES -> R.string.filter_issues
@@ -175,9 +186,9 @@ private fun FilterChips(
 }
 
 @Composable
-private fun CategoryChips(selected: Category?, onCategory: (Category?) -> Unit) {
+private fun CategoryChips(selected: Category?, onCategory: (Category?) -> Unit, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         FilterChip(

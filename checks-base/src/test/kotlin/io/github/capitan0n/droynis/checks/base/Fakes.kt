@@ -45,9 +45,13 @@ class FakeKeyguard(
     override fun passwordComplexity() = complexity
 }
 
-class FakeBuildInfo(private val patch: Reading<String>) : BuildInfo {
+class FakeBuildInfo(
+    private val patch: Reading<String>,
+    private val type: String = "user",
+    private val tags: String = "release-keys",
+) : BuildInfo {
     override fun securityPatch() = patch
-    override fun device() = DeviceSummary("Fairphone", "FP6", "17", 37, "2026-09-05", "TEST.1", "6.6.0")
+    override fun device() = DeviceSummary("Fairphone", "FP6", "17", 37, "2026-09-05", "TEST.1", "6.6.0", type, tags)
 }
 
 class FakePolicy(
@@ -114,6 +118,33 @@ class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(em
     override fun enabledKeyboards() = keyboards
 }
 
+class FakeProperties(private val props: Reading<Map<String, String>> = value(emptyMap())) : SystemProperties {
+    constructor(vararg pairs: Pair<String, String>) : this(value(mapOf(*pairs)))
+
+    override fun all() = props
+}
+
+class FakeFiles(private val present: Reading<List<String>> = value(emptyList())) : FileProbe {
+    override fun existing(paths: List<String>): Reading<List<String>> = when (present) {
+        is Reading.Value -> value(paths.filter { it in present.value })
+        else -> present
+    }
+}
+
+class FakeAttestation(private val attestation: Reading<KeyAttestation> = unsupported("no attestation")) : AttestationProbe {
+    override fun attest() = attestation
+}
+
+fun attested(
+    locked: Boolean,
+    state: VerifiedBootState = VerifiedBootState.VERIFIED,
+    level: SecurityLevel = SecurityLevel.TRUSTED_ENVIRONMENT,
+) = value(KeyAttestation(300, level, RootOfTrust(locked, state), osPatchLevel = 202609))
+
+class FakeWebView(private val info: Reading<WebViewInfo?> = value(null)) : WebViewProbe {
+    override fun provider() = info
+}
+
 class FakeProbes(
     override val settings: SystemSettings = FakeSettings(),
     override val keyguard: Keyguard = FakeKeyguard(unavailable()),
@@ -125,4 +156,8 @@ class FakeProbes(
     override val certificates: CertificateStore = FakeCertificates(),
     override val radios: RadioProbe = FakeRadios(),
     override val inputMethods: InputMethodProbe = FakeInputMethods(),
+    override val properties: SystemProperties = FakeProperties(),
+    override val files: FileProbe = FakeFiles(),
+    override val attestation: AttestationProbe = FakeAttestation(),
+    override val webView: WebViewProbe = FakeWebView(),
 ) : BaseProbes

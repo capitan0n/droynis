@@ -21,5 +21,7 @@ internal object AndroidBuildInfo : BuildInfo {
         securityPatch = Build.VERSION.SECURITY_PATCH.orEmpty(),
         buildId = Build.ID.orEmpty(),
         kernel = System.getProperty("os.version"),
+        buildType = Build.TYPE.orEmpty(),
+        buildTags = Build.TAGS.orEmpty(),
     )
 }

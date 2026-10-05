@@ -59,6 +59,7 @@ internal fun networkEvidence(snapshot: Reading<NetworkSnapshot?>): List<Evidence
         Evidence("Private DNS active", net.privateDnsActive?.toString() ?: "not reported", source),
         Evidence("Private DNS server", net.privateDnsServer ?: "none (off or automatic)", source),
         Evidence("DNS servers", net.dnsServers.joinToString().ifEmpty { "none reported" }, source),
+        Evidence("HTTP proxy", net.httpProxy ?: "none", source),
     ) + if (Transport.WIFI in net.transports) {
         listOf(Evidence("Wi-Fi security", net.wifiSecurity?.label ?: "not reported", source))
     } else {

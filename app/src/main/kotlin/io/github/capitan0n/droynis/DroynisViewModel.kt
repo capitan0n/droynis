@@ -183,6 +183,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             "Android" to "${device.androidVersion} (API ${device.sdkInt})",
             "Security patch" to device.securityPatch,
             "Build" to device.buildId,
+            "Build type" to "${device.buildType} (${device.buildTags})",
             device.kernel?.let { "Kernel" to it },
         )
     }

@@ -79,10 +79,25 @@ class AppsChecksTest {
     }
 
     @Test
+    fun `apps built for old android`() = runTest {
+        val apps = listOf(
+            InstalledApp("org.legacy.app", isSystem = false, isDebuggable = false, installer = null, targetSdk = 22),
+            InstalledApp("org.modern.app", isSystem = false, isDebuggable = false, installer = null, targetSdk = 35),
+            InstalledApp("com.android.legacy", isSystem = true, isDebuggable = false, installer = null, targetSdk = 19),
+        )
+        val outcome = OutdatedAppsCheck(FakePackages(value(apps), mapOf("org.legacy.app" to "Legacy"))).outcome()
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("1 app built for Android 8.1 or older: Legacy", outcome.summary)
+        assertEquals(Status.PASS, OutdatedAppsCheck(FakePackages(value(apps.drop(1)))).status())
+        assertEquals(Status.UNKNOWN, OutdatedAppsCheck(FakePackages(unavailable())).status())
+    }
+
+    @Test
     fun `debuggable apps`() = runTest {
         val apps = listOf(
-            InstalledApp("org.example.dev", isSystem = false, isDebuggable = true, installer = null),
-            InstalledApp("org.example.release", isSystem = false, isDebuggable = false, installer = "org.fdroid.fdroid"),
+            InstalledApp("org.example.dev", isSystem = false, isDebuggable = true, installer = null, targetSdk = 35),
+            InstalledApp("org.example.release", isSystem = false, isDebuggable = false, installer = "org.fdroid.fdroid", targetSdk = 35),
         )
         val outcome = DebuggableAppsCheck(FakePackages(value(apps), mapOf("org.example.dev" to "Dev Build"))).outcome()
 
@@ -95,11 +110,11 @@ class AppsChecksTest {
     @Test
     fun `apps from unknown sources ignore system apps and known stores`() = runTest {
         val apps = listOf(
-            InstalledApp("com.android.settings", isSystem = true, isDebuggable = false, installer = null),
-            InstalledApp("org.thoughtcrime.securesms", isSystem = false, isDebuggable = false, installer = "com.android.vending"),
-            InstalledApp("org.schabi.newpipe", isSystem = false, isDebuggable = false, installer = "org.fdroid.fdroid"),
-            InstalledApp("com.example.apk", isSystem = false, isDebuggable = false, installer = "com.google.android.packageinstaller"),
-            InstalledApp("com.example.adb", isSystem = false, isDebuggable = false, installer = null),
+            InstalledApp("com.android.settings", isSystem = true, isDebuggable = false, installer = null, targetSdk = 35),
+            InstalledApp("org.thoughtcrime.securesms", isSystem = false, isDebuggable = false, installer = "com.android.vending", targetSdk = 35),
+            InstalledApp("org.schabi.newpipe", isSystem = false, isDebuggable = false, installer = "org.fdroid.fdroid", targetSdk = 35),
+            InstalledApp("com.example.apk", isSystem = false, isDebuggable = false, installer = "com.google.android.packageinstaller", targetSdk = 35),
+            InstalledApp("com.example.adb", isSystem = false, isDebuggable = false, installer = null, targetSdk = 35),
         )
         val outcome = UnknownSourceAppsCheck(FakePackages(value(apps))).outcome()
 

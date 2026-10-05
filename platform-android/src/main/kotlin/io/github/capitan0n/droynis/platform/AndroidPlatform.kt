@@ -3,16 +3,20 @@ package io.github.capitan0n.droynis.platform
 import android.content.Context
 import android.os.Build
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
+import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BuildInfo
 import io.github.capitan0n.droynis.checks.base.CertificateStore
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
+import io.github.capitan0n.droynis.checks.base.FileProbe
 import io.github.capitan0n.droynis.checks.base.InputMethodProbe
 import io.github.capitan0n.droynis.checks.base.Keyguard
 import io.github.capitan0n.droynis.checks.base.NetworkProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
+import io.github.capitan0n.droynis.checks.base.WebViewProbe
 import io.github.capitan0n.droynis.core.Capabilities
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
@@ -33,6 +37,10 @@ class AndroidPlatform(context: Context) : BaseProbes {
     override val certificates: CertificateStore = AndroidCertificates
     override val radios: RadioProbe = AndroidRadios(app)
     override val inputMethods: InputMethodProbe = AndroidInputMethods(app, packages::label)
+    override val properties: SystemProperties = AndroidSystemProperties
+    override val files: FileProbe = AndroidFiles
+    override val attestation: AttestationProbe = AndroidAttestation
+    override val webView: WebViewProbe = AndroidWebView
 
     /** Not a check: feeds the permission overview on the Tools screen. */
     val permissionAudit = AndroidPermissionAudit(app)

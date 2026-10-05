@@ -35,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -66,11 +67,11 @@ fun DashboardScreen(
     onShowChecks: (CheckFilter, Category?) -> Unit,
     onShowTools: () -> Unit,
 ) {
-    // Live while scanning, so tiles and bars fill in as checks finish.
-    val findings = catalog.mapNotNull { state.findings[it.id] }
-    val counts = findings.countByVerdict()
-    val issues = findings.issues()
-    val specsById = catalog.associateBy { it.id }
+    // Live while scanning, so tiles and bars fill in as checks finish; derived once per change.
+    val findings = remember(catalog, state.findings) { catalog.mapNotNull { state.findings[it.id] } }
+    val counts = remember(findings) { findings.countByVerdict() }
+    val issues = remember(findings) { findings.issues() }
+    val summaries = remember(catalog, findings) { categorySummaries(catalog, findings) }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -105,8 +106,7 @@ fun DashboardScreen(
         }
 
         item { SectionHeader(stringResource(R.string.section_categories)) }
-        item {
-            val summaries = categorySummaries(catalog, findings)
+        item(key = "categories", contentType = "categories") {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 for (row in summaries.chunked(2)) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -129,9 +129,9 @@ fun DashboardScreen(
         if (issues.isEmpty() && !state.scanning && state.result != null) {
             item { AllClearCard() }
         } else {
-            items(issues.take(TOP_ISSUES), key = { it.spec.id }) { finding ->
+            items(issues.take(TOP_ISSUES), key = { it.spec.id }, contentType = { "issue" }) { finding ->
                 CheckRow(
-                    spec = specsById[finding.spec.id] ?: finding.spec,
+                    spec = finding.spec,
                     finding = finding,
                     onClick = { onOpenCheck(finding.spec.id) },
                     shape = MaterialTheme.shapes.large,

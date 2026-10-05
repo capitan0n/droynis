@@ -448,6 +448,7 @@ private fun DeviceInfoCard(state: UiState, onCopy: (String, String) -> Unit) {
         )
         InfoRow(stringResource(R.string.device_security_patch), device.securityPatch.ifEmpty { "?" })
         InfoRow(stringResource(R.string.device_build), device.buildId, monospace = true)
+        InfoRow(stringResource(R.string.device_build_type), "${device.buildType}, ${device.buildTags}", monospace = true)
         device.kernel?.let { InfoRow(stringResource(R.string.device_kernel), it, monospace = true) }
     }
 }

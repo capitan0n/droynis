@@ -31,9 +31,15 @@ architecture, the check contract and what the platform does and does not allow.
 |---|---|---|---|
 | INTG-1010 | Security patch age | Warning (critical > 1 year) | patch level older than 90 days |
 | INTG-1020 | Storage encryption | Critical | storage unencrypted, or encrypted only with the default key |
+| INTG-1040 | Bootloader lock | Critical | bootloader unlocked or verified boot not passing (hardware key attestation, boot properties as fallback) |
+| INTG-1041 | OEM unlocking | Notice | the OEM unlocking switch is on |
+| INTG-1050 | Root access | Critical | an su binary, root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found |
+| INTG-1060 | Android build | Warning | userdebug/eng build, public test keys or `ro.debuggable=1` |
+| INTG-1070 | WebView updates | Warning | WebView not updated for more than 60 days |
 | INTG-1030 | Advanced Protection (Android 16+) | Info | Advanced Protection is off |
 | ACCS-2001 | Secure lock screen | Critical | no PIN, pattern or password |
 | ACCS-2002 | Screen timeout | Notice | screen stays on longer than 2 minutes |
+| ACCS-2005 | Stay awake while charging | Notice | the screen never turns off (or locks) while charging |
 | ACCS-2003 | Password visibility | Notice | typed password characters are shown |
 | ACCS-2004 | Lock screen notifications | Notice | notification content visible while locked |
 | ACCS-2010 | Developer options | Notice | developer options enabled |
@@ -45,9 +51,11 @@ architecture, the check contract and what the platform does and does not allow.
 | APPS-4006 | Keyboard apps | Notice | a third-party keyboard is enabled |
 | APPS-4003 | Debuggable apps | Warning | an installed app is debuggable |
 | APPS-4004 | Apps from unknown sources | Notice | an app came from outside a known app store |
+| APPS-4007 | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
 | NETW-3001 | Private DNS (Android 9+) | Warning | DNS not encrypted and no VPN |
 | NETW-3002 | VPN | Info | no VPN active |
 | NETW-3005 | Wi-Fi security (Android 12+) | Warning | connected to an open or WEP network without VPN |
+| NETW-3007 | HTTP proxy | Warning | web traffic goes through a proxy |
 | NETW-3003 | User CA certificates | Warning | a user-installed CA can intercept TLS |
 | NETW-3004 | Bluetooth | Notice | Bluetooth is on |
 | NETW-3006 | NFC | Info | NFC is on |
@@ -68,6 +76,24 @@ Requires JDK 17+ and the Android SDK (compileSdk 37).
 ./gradlew assembleDebug    # app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Debug builds are slow by design (no R8, debuggable runtime), which shows as scroll jank. For
+daily use build a release, signed with your own key:
+
+```sh
+keytool -genkeypair -v -keystore droynis.jks -alias droynis -keyalg RSA -keysize 4096 -validity 10000
+cat > keystore.properties <<'END'
+storeFile=droynis.jks
+storePassword=YOUR_PASSWORD
+keyAlias=droynis
+keyPassword=YOUR_PASSWORD
+END
+./gradlew assembleRelease  # app/build/outputs/apk/release/app-release.apk
+```
+
+`keystore.properties` and `*.jks` are git-ignored. Without them, `assembleRelease` produces an
+unsigned APK (as F-Droid expects). A release-signed app cannot update a debug-signed one: run
+`adb uninstall io.github.capitan0n.droynis` once before switching.
 
 The pure-Kotlin modules (`core-model`, `checks-base`, `report`) hold all check logic and run on
 any JVM; only `platform-android` and `app` touch Android APIs.

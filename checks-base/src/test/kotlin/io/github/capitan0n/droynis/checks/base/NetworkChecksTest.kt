@@ -57,8 +57,21 @@ class NetworkChecksTest {
     fun `network evidence shows the wifi security only on wifi`() = runTest {
         fun labels(snapshot: NetworkSnapshot) = networkEvidence(value(snapshot)).map { it.label }
 
-        assertEquals("open, no encryption", networkEvidence(value(wifi(security = WifiSecurity.OPEN))).last().value)
+        val evidence = networkEvidence(value(wifi(security = WifiSecurity.OPEN))).associate { it.label to it.value }
+        assertEquals("open, no encryption", evidence["Wi-Fi security"])
+        assertEquals("none", evidence["HTTP proxy"])
         assertEquals(false, "Wi-Fi security" in labels(cellular()))
+    }
+
+    @Test
+    fun `http proxy`() = runTest {
+        suspend fun outcome(snapshot: NetworkSnapshot?) = HttpProxyCheck(FakeNetwork(value(snapshot))).outcome()
+
+        assertEquals(Status.PASS, outcome(wifi()).status)
+        val proxied = outcome(wifi().copy(httpProxy = "10.0.0.8:3128"))
+        assertEquals(Status.FAIL, proxied.status)
+        assertEquals("Web traffic goes through the proxy 10.0.0.8:3128", proxied.summary)
+        assertEquals(Status.UNKNOWN, outcome(null).status)
     }
 
     @Test

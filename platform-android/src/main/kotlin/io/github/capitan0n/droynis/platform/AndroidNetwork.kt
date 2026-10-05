@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.LinkProperties
 import android.net.NetworkCapabilities
+import android.net.ProxyInfo
 import android.net.Uri
 import android.net.wifi.WifiInfo
 import android.os.Build
@@ -24,13 +25,18 @@ internal class AndroidNetwork(private val context: Context) : NetworkProbe {
         return probe(source) {
             val network = connectivity.activeNetwork ?: return@probe Reading.Value(null, source)
             Reading.Value(
-                snapshot(connectivity.getNetworkCapabilities(network), connectivity.getLinkProperties(network)),
+                snapshot(
+                    connectivity.getNetworkCapabilities(network),
+                    connectivity.getLinkProperties(network),
+                    // The default proxy covers both a global proxy and the network's own.
+                    connectivity.defaultProxy,
+                ),
                 source,
             )
         }
     }
 
-    private fun snapshot(capabilities: NetworkCapabilities?, link: LinkProperties?): NetworkSnapshot {
+    private fun snapshot(capabilities: NetworkCapabilities?, link: LinkProperties?, proxy: ProxyInfo?): NetworkSnapshot {
         val transports = buildSet {
             if (capabilities != null) {
                 TRANSPORTS.forEach { (code, transport) -> if (capabilities.hasTransport(code)) add(transport) }
@@ -47,11 +53,13 @@ internal class AndroidNetwork(private val context: Context) : NetworkProbe {
             interfaceName = link?.interfaceName,
             wifiSecurity = wifiSecurity(capabilities),
             addresses = link?.linkAddresses.orEmpty().map { it.toString() },
-            httpProxy = link?.httpProxy?.let { proxy ->
-                proxy.host?.let { "$it:${proxy.port}" } ?: proxy.pacFileUrl?.takeIf { it != Uri.EMPTY }?.toString()
-            },
+            httpProxy = (proxy ?: link?.httpProxy)?.let { describe(it) },
         )
     }
+
+    /** "host:port", or the PAC script URL for an automatic proxy. */
+    private fun describe(proxy: ProxyInfo): String? =
+        proxy.pacFileUrl?.takeIf { it != Uri.EMPTY }?.toString() ?: proxy.host?.let { "$it:${proxy.port}" }
 
     /**
      * The connected Wi-Fi's security type. Without location permission Android 12+ redacts the

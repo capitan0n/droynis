@@ -204,6 +204,7 @@
     <string name="device_android_version">Android version</string>
     <string name="device_security_patch">Security patch</string>
     <string name="device_build">Build</string>
+    <string name="device_build_type">Build type</string>
     <string name="device_kernel">Kernel</string>
     <string name="device_copy">Copy device info</string>
     <string name="tools_report">Report</string>

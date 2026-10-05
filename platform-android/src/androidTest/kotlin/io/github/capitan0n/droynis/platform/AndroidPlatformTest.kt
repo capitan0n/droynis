@@ -38,6 +38,14 @@ class AndroidPlatformTest {
         val nfc = platform.radios.nfcEnabled()
         assertTrue("$nfc", nfc is Reading.Value || nfc is Reading.Unsupported) // emulators have no NFC
 
+        val props = platform.properties.all()
+        assertValue(props)
+        assertTrue("getprop should list ro.build.version.sdk", "ro.build.version.sdk" in (props as Reading.Value).value)
+        assertEquals(listOf("/system/bin/sh"), (platform.files.existing(listOf("/system/bin/sh", "/no/such/file")) as Reading.Value).value)
+        assertValue(platform.webView.provider())
+        // Emulators attest in software or not at all; either way the probe must not throw.
+        platform.attestation.attest()
+
         val apps = platform.packages.installedApps()
         assertValue(apps)
         assertTrue("expected more than a handful of apps", (apps as Reading.Value).value.size > 5)
