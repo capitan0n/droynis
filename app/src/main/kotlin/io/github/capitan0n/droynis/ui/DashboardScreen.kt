@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,10 +19,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
@@ -38,6 +41,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -54,6 +58,7 @@ import io.github.capitan0n.droynis.report.categorySummaries
 import io.github.capitan0n.droynis.report.countByVerdict
 import io.github.capitan0n.droynis.report.grade
 import io.github.capitan0n.droynis.report.issues
+import io.github.capitan0n.droynis.report.withoutMuted
 import io.github.capitan0n.droynis.ui.theme.StatusColors
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -68,17 +73,22 @@ fun DashboardScreen(
     onShowTools: () -> Unit,
 ) {
     // Live while scanning, so tiles and bars fill in as checks finish; derived once per change.
-    val findings = remember(catalog, state.findings) { catalog.mapNotNull { state.findings[it.id] } }
+    // Muted checks are left out everywhere here, like in the score.
+    val findings = remember(catalog, state.findings, state.muted) {
+        catalog.mapNotNull { state.findings[it.id] }.withoutMuted(state.muted)
+    }
     val counts = remember(findings) { findings.countByVerdict() }
     val issues = remember(findings) { findings.issues() }
-    val summaries = remember(catalog, findings) { categorySummaries(catalog, findings) }
+    val summaries = remember(catalog, findings, state.muted) {
+        categorySummaries(catalog.filterNot { it.id in state.muted }, findings)
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { HeroCard(state, issues.size, onScan) }
+        item { HeroCard(state, issues.size, onScan) { onShowChecks(CheckFilter.MUTED, null) } }
 
         item { SectionHeader(stringResource(R.string.section_results)) }
         item {
@@ -148,7 +158,7 @@ fun DashboardScreen(
 private const val TOP_ISSUES = 4
 
 @Composable
-private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit) {
+private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShowMuted: () -> Unit) {
     val result = state.result
     val index = result?.index
     val scanning = state.scanning || result == null
@@ -217,7 +227,12 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit) {
                         stringResource(R.string.scan_progress, state.done, state.total)
                     } else {
                         val time = result.context.startedAt.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-                        stringResource(R.string.scanned_at, time, result.findings.size)
+                        stringResource(
+                            R.string.scanned_at,
+                            time,
+                            result.findings.size,
+                            stringResource(result.context.capabilities.tier.labelRes),
+                        )
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -236,6 +251,15 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit) {
                         maxLines = 2,
                         container = StatusColors.Critical.copy(alpha = 0.16f),
                         content = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                val muted = index?.muted.orEmpty()
+                if (!scanning && muted.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Pill(
+                        text = stringResource(R.string.muted_note, muted.size),
+                        icon = Icons.Rounded.NotificationsOff,
+                        modifier = Modifier.clip(CircleShape).clickable(onClick = onShowMuted),
                     )
                 }
                 Spacer(Modifier.height(18.dp))

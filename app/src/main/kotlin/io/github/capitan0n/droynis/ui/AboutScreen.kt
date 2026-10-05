@@ -93,6 +93,12 @@ fun AboutScreen(appVersion: String, onOpenLink: (String) -> Unit, onFeedback: ()
 
         SectionCard(title = stringResource(R.string.about_what), icon = Icons.Rounded.Info) {
             Text(stringResource(R.string.about_body), style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(10.dp))
+            Text(
+                stringResource(R.string.about_independent),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
 
         SectionCard(title = stringResource(R.string.about_author_title), icon = Icons.Rounded.Person) {

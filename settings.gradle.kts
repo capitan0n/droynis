@@ -31,6 +31,7 @@ rootProject.name = "droynis"
 // Pure Kotlin/JVM: no Android SDK needed, unit-testable on any JVM.
 include(":core-model")
 include(":checks-base")
+include(":checks-adb")
 include(":report")
 
 // Android: the only modules that touch framework APIs.

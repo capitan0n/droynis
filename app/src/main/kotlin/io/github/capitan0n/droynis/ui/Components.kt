@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -290,7 +292,10 @@ fun InfoRow(
 
 private const val STACK_AFTER = 24
 
-/** One check in a list: verdict, title, one-line result and a chevron. */
+/**
+ * One check in a list: verdict, title, one-line result and a chevron. A [muted] check keeps its
+ * real verdict, faded, with a "Muted" tag instead of the severity.
+ */
 @Composable
 fun CheckRow(
     spec: CheckSpec,
@@ -298,6 +303,7 @@ fun CheckRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     shape: Shape = MaterialTheme.shapes.medium,
+    muted: Boolean = false,
 ) {
     Surface(
         onClick = onClick,
@@ -306,7 +312,7 @@ fun CheckRow(
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            VerdictIcon(finding?.verdict, size = 30.dp)
+            VerdictIcon(finding?.verdict, modifier = Modifier.alpha(if (muted) MUTED_ALPHA else 1f), size = 30.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(spec.title, style = MaterialTheme.typography.titleSmall)
@@ -319,7 +325,10 @@ fun CheckRow(
                 )
             }
             // Severity says how much a failure matters, so it is shown for failures only.
-            if (finding?.status == Status.FAIL) {
+            if (muted) {
+                Spacer(Modifier.width(8.dp))
+                Pill(stringResource(R.string.muted), icon = Icons.Rounded.NotificationsOff)
+            } else if (finding?.status == Status.FAIL) {
                 Spacer(Modifier.width(8.dp))
                 Pill(stringResource(finding.severity.labelRes))
             }
@@ -331,6 +340,9 @@ fun CheckRow(
         }
     }
 }
+
+/** How strongly a muted check's verdict is faded. */
+const val MUTED_ALPHA = 0.4f
 
 /** Rounded corners for an item in a visually grouped list: big outside, small between items. */
 fun groupShape(index: Int, count: Int): Shape {

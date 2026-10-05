@@ -36,11 +36,12 @@ internal const val REDACTED_SUMMARY = "Can't be verified: Android 17 and later r
 internal fun Evidence.redacted(): Evidence =
     copy(note = "Android 17+ may show apps \"0\" here whatever the real state")
 
-internal fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
+/** "1 app" or "3 apps". */
+fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
     if (n == 1) "1 $singular" else "$n $plural"
 
 /** "Signal", "Signal and Tasker" or "Signal, Tasker and 3 more". */
-internal fun List<String>.joinNames(limit: Int = 2): String = when {
+fun List<String>.joinNames(limit: Int = 2): String = when {
     size <= limit -> if (size <= 1) joinToString() else dropLast(1).joinToString() + " and " + last()
     else -> take(limit).joinToString() + " and ${size - limit} more"
 }

@@ -1,9 +1,11 @@
 package io.github.capitan0n.droynis.report
 
+import io.github.capitan0n.droynis.core.Capabilities
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Finding
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
@@ -93,6 +95,32 @@ class ReportTest {
         val markdown = MarkdownReport.render(context, emptyList(), HardeningIndex.of(emptyList()), emptyList(), "0.2.0")
 
         assertTrue("not available (no check could be scored)" in markdown)
+    }
+
+    @Test
+    fun `muted checks are named and marked but not scored`() {
+        val findings = listOf(
+            finding(Status.FAIL, Severity.WARNING, id = "INTG-1010", title = "Security patch age"),
+            finding(Status.PASS, Severity.CRITICAL, id = "ACCS-2001", title = "Screen lock"),
+        )
+        val index = HardeningIndex.of(findings, muted = setOf("INTG-1010"))
+
+        val markdown = MarkdownReport.render(context, findings, index, emptyList(), "0.6.0")
+
+        assertTrue("- Hardening index: 100 / 100" in markdown)
+        assertTrue("· muted 1" in markdown)
+        assertTrue("- Muted by the user, not scored: Security patch age (INTG-1010)" in markdown)
+        assertTrue("(INTG-1010) · muted" in markdown)
+    }
+
+    @Test
+    fun `the report names the tier and the grants it ran with`() {
+        val base = MarkdownReport.render(context, emptyList(), HardeningIndex.of(emptyList()), emptyList(), "0.5.0")
+        assertTrue("(privilege tier BASE)" in base)
+
+        val adb = context.copy(capabilities = Capabilities(setOf(Grant.PACKAGE_USAGE_STATS, Grant.DUMP)))
+        val markdown = MarkdownReport.render(adb, emptyList(), HardeningIndex.of(emptyList()), emptyList(), "0.5.0")
+        assertTrue("(privilege tier ADB: DUMP, PACKAGE_USAGE_STATS)" in markdown)
     }
 
     @Test

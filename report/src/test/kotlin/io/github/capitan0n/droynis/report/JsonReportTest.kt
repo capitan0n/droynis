@@ -54,7 +54,10 @@ class JsonReportTest {
 
         assertEquals("droynis-report", root["schema"])
         assertEquals(1L, root["schemaVersion"])
-        assertEquals("2026-10-05T14:02:00+03:00", (root["scan"] as Map<*, *>)["startedAt"])
+        val scan = root["scan"] as Map<*, *>
+        assertEquals("2026-10-05T14:02:00+03:00", scan["startedAt"])
+        assertEquals("BASE", scan["tier"])
+        assertEquals(emptyList<Any>(), scan["grants"])
         assertEquals(mapOf("model" to "FP6"), root["device"])
 
         val score = root["score"] as Map<*, *>
@@ -68,6 +71,21 @@ class JsonReportTest {
         assertEquals("INTG-1040", first["id"])
         assertEquals("CRITICAL", first["verdict"])
         assertEquals("Fix \"it\".", first["remediation"])
+        assertEquals(false, first["muted"])
+        assertEquals(emptyList<Any>(), score["muted"])
+    }
+
+    @Test
+    fun `muted checks are flagged, listed and left out of the score and verdict counts`() {
+        val index = HardeningIndex.of(findings, muted = setOf("INTG-1040"))
+        val root = MiniJson.parse(JsonReport.render(context, findings, index, emptyList(), "0.6.0")) as Map<*, *>
+
+        val score = root["score"] as Map<*, *>
+        assertEquals(100L, score["value"])
+        assertEquals(listOf("INTG-1040"), score["muted"])
+        assertEquals(0L, (root["verdicts"] as Map<*, *>)["CRITICAL"])
+        val muted = (root["findings"] as List<*>).map { (it as Map<*, *>)["muted"] }
+        assertEquals(listOf(true, false), muted) // still reported, with its real result
     }
 
     @Test

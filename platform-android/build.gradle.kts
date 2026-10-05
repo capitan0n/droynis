@@ -19,6 +19,7 @@ android {
 
 dependencies {
     api(project(":checks-base"))
+    api(project(":checks-adb"))
 
     testImplementation(libs.junit4)
 

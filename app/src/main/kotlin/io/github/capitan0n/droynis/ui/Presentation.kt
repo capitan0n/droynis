@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Grade
 import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.report.Verdict
@@ -78,6 +79,14 @@ val Severity.labelRes: Int
         Severity.WARNING -> R.string.severity_warning
         Severity.NOTICE -> R.string.severity_notice
         Severity.INFO -> R.string.severity_info
+    }
+
+val Tier.labelRes: Int
+    get() = when (this) {
+        Tier.BASE -> R.string.tier_base
+        Tier.ADB -> R.string.tier_adb
+        Tier.SHIZUKU -> R.string.tier_shizuku
+        Tier.ROOT -> R.string.tier_root
     }
 
 val Category.labelRes: Int

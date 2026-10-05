@@ -1,5 +1,7 @@
 package io.github.capitan0n.droynis
 
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -7,8 +9,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import io.github.capitan0n.droynis.checks.adb.adbChecks
+import io.github.capitan0n.droynis.checks.base.SecurityPatchAgeCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
 import io.github.capitan0n.droynis.checks.base.baseChecks
 import io.github.capitan0n.droynis.platform.AndroidPlatform
@@ -40,7 +45,8 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tab_checks)).performClick()
 
         val list = compose.onNodeWithTag(CHECKS_LIST_TAG)
-        val checks = baseChecks(AndroidPlatform(compose.activity))
+        val platform = AndroidPlatform(compose.activity)
+        val checks = baseChecks(platform) + adbChecks(platform)
         for (title in checks.map { it.spec.title }) {
             list.performScrollToNode(hasText(title))
         }
@@ -77,12 +83,49 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.menu_about)).performClick()
         compose.onNodeWithText(AppInfo.HANDLE, substring = true).assertExists()
         compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
+        compose.onNodeWithText("not affiliated", substring = true).assertExists()
 
         // The Help tab links to the same page.
         compose.onNodeWithContentDescription(text(R.string.navigate_back)).performClick()
         compose.onNodeWithText(text(R.string.tab_help)).performClick()
         compose.onNodeWithText(text(R.string.about_title)).performClick()
         compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
+    }
+
+    @Test
+    fun catalogListsTheTiersAndHowToSetUpAdb() {
+        waitForScan()
+
+        compose.onNodeWithContentDescription(text(R.string.more_options)).performClick()
+        compose.onNodeWithText(text(R.string.catalog_title)).performClick()
+        compose.onNodeWithText(text(R.string.tier_base_body)).assertExists()
+
+        compose.onNodeWithText(text(R.string.tier_adb)).performClick()
+        // Without adb grants the ADB tab offers the setup commands.
+        compose.onNodeWithText("pm grant", substring = true).assertExists()
+
+        compose.onNodeWithText(text(R.string.tier_root)).performClick()
+        compose.onNodeWithText(text(R.string.tier_root_note)).assertExists()
+    }
+
+    @Test
+    fun mutingACheckTakesItOutOfTheScoreAndBackIn() {
+        waitForScan()
+        compose.onNodeWithText(text(R.string.tab_checks)).performClick()
+        val patch = baseChecks(AndroidPlatform(compose.activity)).single { it is SecurityPatchAgeCheck }.spec.title
+        compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(patch))
+        compose.onNodeWithText(patch).performClick()
+
+        val mute = compose.onNodeWithText(text(R.string.detail_mute_body))
+        mute.performScrollTo().performClick()
+        mute.assertIsOn()
+        compose.onNodeWithContentDescription(text(R.string.navigate_back)).performClick()
+        compose.onNodeWithText("${text(R.string.muted)} 1").assertExists() // the Muted filter chip
+
+        compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(patch))
+        compose.onNodeWithText(patch).performClick()
+        mute.performScrollTo().performClick() // unmute, so other tests start clean
+        mute.assertIsOff()
     }
 
     private companion object {

@@ -1,0 +1,52 @@
+package io.github.capitan0n.droynis.platform
+
+import io.github.capitan0n.droynis.checks.adb.Dumpsys
+import io.github.capitan0n.droynis.core.Grant
+import io.github.capitan0n.droynis.core.Reading
+import io.github.capitan0n.droynis.core.Source
+import java.util.concurrent.TimeUnit
+
+/**
+ * Runs `/system/bin/dumpsys` as Droynis itself. The service checks our permissions (DUMP, and for
+ * some services PACKAGE_USAGE_STATS) and answers "Permission Denial" without them. No hidden API
+ * is used; the binary is the same one adb runs.
+ */
+internal object AndroidDumpsys : Dumpsys {
+
+    private const val DUMPSYS = "/system/bin/dumpsys"
+
+    // dumpsys appops on a phone with a few hundred apps prints a few MB at most.
+    private const val MAX_CHARS = 16 * 1024 * 1024
+
+    override fun dump(service: String, vararg args: String): Reading<String> {
+        val source = Source((listOf("dumpsys", service) + args).joinToString(" "), Grant.DUMP)
+        return probe(source) {
+            val process = ProcessBuilder(listOf(DUMPSYS, service) + args).redirectErrorStream(true).start()
+            try {
+                process.outputStream.close()
+                val text = StringBuilder()
+                val buffer = CharArray(64 * 1024)
+                process.inputStream.bufferedReader().use { reader ->
+                    while (true) {
+                        val n = reader.read(buffer)
+                        if (n < 0) break
+                        text.appendRange(buffer, 0, n)
+                        if (text.length > MAX_CHARS) {
+                            return@probe Reading.Unavailable("output longer than $MAX_CHARS characters", source)
+                        }
+                    }
+                }
+                process.waitFor(5, TimeUnit.SECONDS)
+                val firstLine = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+                when {
+                    firstLine.isEmpty() -> Reading.Unavailable("dumpsys printed nothing", source)
+                    firstLine.startsWith("Permission Denial") -> Reading.Unavailable(firstLine, source)
+                    firstLine.startsWith("Can't find service") -> Reading.Unsupported(firstLine, source)
+                    else -> Reading.Value(text.toString(), source)
+                }
+            } finally {
+                process.destroy()
+            }
+        }
+    }
+}

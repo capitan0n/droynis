@@ -9,7 +9,8 @@ import io.github.capitan0n.droynis.core.Status
  *
  * Only PASS and FAIL count. Each check weighs by its declared severity, so a result can't change
  * its own weight; an escalated (effective) CRITICAL FAIL still caps the score at [CRITICAL_CAP].
- * The score is floored, so any failure keeps it below 100.
+ * The score is floored, so any failure keeps it below 100. Checks the user muted are left out of
+ * the score and every count, and listed in [muted] instead.
  */
 data class HardeningIndex(
     /** 0–100, or null when no weighted check produced PASS or FAIL. */
@@ -23,6 +24,8 @@ data class HardeningIndex(
     val unsupported: Int,
     /** Ids of CRITICAL failures that capped the score. */
     val cappedBy: List<String>,
+    /** Ids of checks in this scan that the user muted, in scan order. */
+    val muted: List<String> = emptyList(),
 ) {
     val evaluated: Int get() = passed + failed.values.sum()
     val skipped: Int get() = unknown + unsupported
@@ -37,9 +40,10 @@ data class HardeningIndex(
             Severity.INFO -> 0
         }
 
-        fun of(findings: List<Finding>): HardeningIndex {
-            val passed = findings.filter { it.status == Status.PASS }
-            val failed = findings.filter { it.status == Status.FAIL }
+        fun of(findings: List<Finding>, muted: Set<String> = emptySet()): HardeningIndex {
+            val scored = findings.withoutMuted(muted)
+            val passed = scored.filter { it.status == Status.PASS }
+            val failed = scored.filter { it.status == Status.FAIL }
             val total = (passed + failed).sumOf { weight(it.spec.severity) }
             val earned = passed.sumOf { weight(it.spec.severity) }
             val cappedBy = failed.filter { it.severity == Severity.CRITICAL }.map { it.spec.id }
@@ -49,9 +53,10 @@ data class HardeningIndex(
                 uncappedScore = raw,
                 passed = passed.size,
                 failed = failed.groupingBy { it.severity }.eachCount(),
-                unknown = findings.count { it.status == Status.UNKNOWN },
-                unsupported = findings.count { it.status == Status.UNSUPPORTED },
+                unknown = scored.count { it.status == Status.UNKNOWN },
+                unsupported = scored.count { it.status == Status.UNSUPPORTED },
                 cappedBy = cappedBy,
+                muted = findings.map { it.spec.id }.filter { it in muted },
             )
         }
     }

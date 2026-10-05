@@ -77,6 +77,8 @@ class MainActivity : ComponentActivity(), AppActions {
 
     override fun setThemeMode(mode: ThemeMode) = viewModel.setThemeMode(mode)
 
+    override fun setMuted(checkId: String, muted: Boolean) = viewModel.setMuted(checkId, muted)
+
     /** Droynis never changes a setting itself; it opens the screen where the user can. */
     override fun openSettings(actions: List<String>) {
         for (action in actions + SettingsActions.SETTINGS) {

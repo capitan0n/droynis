@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FilterAltOff
 import androidx.compose.material.icons.rounded.Layers
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,7 @@ import io.github.capitan0n.droynis.report.verdict
 fun ChecksScreen(
     catalog: List<CheckSpec>,
     findings: Map<String, Finding>,
+    muted: Set<String>,
     filter: CheckFilter,
     onFilter: (CheckFilter) -> Unit,
     category: Category?,
@@ -50,14 +52,22 @@ fun ChecksScreen(
 ) {
     // Derived once per scan or filter change, not on every frame while the list scrolls.
     val verdicts = remember(findings) { findings.mapValues { it.value.verdict } }
-    val counts = remember(catalog, verdicts) {
-        CheckFilter.entries.associateWith { option -> catalog.count { option.matches(verdicts[it.id]) } }
+    val counts = remember(catalog, verdicts, muted) {
+        CheckFilter.entries.associateWith { option -> catalog.count { option.matches(verdicts[it.id], it.id in muted) } }
     }
-    val groups = remember(catalog, verdicts, filter, category) {
+    val groups = remember(catalog, verdicts, muted, filter, category) {
         Category.entries.mapNotNull { group ->
             val all = catalog.filter { it.category == group }
-            val shown = all.filter { (category == null || group == category) && filter.matches(verdicts[it.id]) }
-            if (shown.isEmpty()) null else CheckGroup(group, shown, all.count { verdicts[it.id] == Verdict.PASSED }, all.size)
+            val shown = all.filter {
+                (category == null || group == category) && filter.matches(verdicts[it.id], it.id in muted)
+            }
+            // Like the score, the pass count leaves muted checks out.
+            val scored = all.filterNot { it.id in muted }
+            if (shown.isEmpty()) {
+                null
+            } else {
+                CheckGroup(group, shown, scored.count { verdicts[it.id] == Verdict.PASSED }, scored.size)
+            }
         }
     }
 
@@ -104,6 +114,7 @@ fun ChecksScreen(
                     finding = findings[spec.id],
                     onClick = { onOpenCheck(spec.id) },
                     shape = groupShape(index, group.specs.size),
+                    muted = spec.id in muted,
                 )
             }
         }
@@ -160,6 +171,8 @@ private fun FilterChips(
     ) {
         for (option in CheckFilter.entries) {
             val count = counts[option] ?: 0
+            // The Muted chip appears once something is muted.
+            if (option == CheckFilter.MUTED && count == 0 && selected != option) continue
             val label = when (option) {
                 CheckFilter.ALL -> R.string.filter_all
                 CheckFilter.ISSUES -> R.string.filter_issues
@@ -167,9 +180,10 @@ private fun FilterChips(
                 CheckFilter.ATTENTION -> R.string.verdict_short_attention
                 CheckFilter.CRITICAL -> R.string.verdict_critical
                 CheckFilter.UNVERIFIED -> R.string.stat_unverified
+                CheckFilter.MUTED -> R.string.muted
             }
             val icon = when (option) {
-                CheckFilter.ALL, CheckFilter.ISSUES -> null
+                CheckFilter.ALL, CheckFilter.ISSUES, CheckFilter.MUTED -> null
                 CheckFilter.PASSED -> Verdict.PASSED
                 CheckFilter.ATTENTION -> Verdict.ATTENTION
                 CheckFilter.CRITICAL -> Verdict.CRITICAL
@@ -179,7 +193,15 @@ private fun FilterChips(
                 selected = selected == option,
                 onClick = { onFilter(option) },
                 label = { Text("${stringResource(label)} $count") },
-                leadingIcon = icon?.let { { VerdictIcon(it, size = 18.dp) } },
+                leadingIcon = when {
+                    icon != null -> {
+                        { VerdictIcon(icon, size = 18.dp) }
+                    }
+                    option == CheckFilter.MUTED -> {
+                        { Icon(Icons.Rounded.NotificationsOff, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    }
+                    else -> null
+                },
             )
         }
     }

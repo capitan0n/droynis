@@ -26,7 +26,8 @@
     <string name="dialog_close">Close</string>
     <string name="about_title">About Droynis</string>
     <string name="about_version">Version %1$s</string>
-    <string name="about_body">A Lynis-style security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
+    <string name="about_body">A security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
+    <string name="about_independent">Droynis is an independent project. It is not affiliated with, endorsed by or connected to Lynis or CISOfy; Lynis was only the inspiration for a readable audit with a hardening score.</string>
     <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
     <string name="about_what">What Droynis does</string>
     <string name="help_about_link">Version %1$s · author, source code and feedback</string>
@@ -88,10 +89,11 @@
     <string name="headline_issues">%1$d things need your attention</string>
     <string name="headline_all_good">Looking good</string>
     <string name="headline_no_score">Not enough results for a score</string>
-    <string name="scanned_at">Scanned at %1$s · %2$d checks</string>
+    <string name="scanned_at">Scanned at %1$s · %2$d checks · %3$s tier</string>
     <string name="scan_progress">Checked %1$d of %2$d</string>
     <string name="capped_note">Capped at 40 by a critical problem</string>
     <string name="capped_note_raw">Capped at 40 by a critical problem (%1$d without the cap)</string>
+    <string name="muted_note">%1$d muted · not in the score</string>
     <string name="stat_unverified">Unknown · N/A</string>
     <string name="section_results">Results</string>
     <string name="section_categories">Categories</string>
@@ -108,6 +110,7 @@
     <!-- Checks -->
     <string name="filter_all">All</string>
     <string name="filter_issues">Issues</string>
+    <string name="muted">Muted</string>
     <string name="filter_all_categories">All categories</string>
     <string name="checks_count">%1$d checks</string>
     <string name="checks_empty">No checks match these filters.</string>
@@ -132,6 +135,13 @@
     <string name="detail_min_android">Needs Android</string>
     <string name="detail_min_android_value">API %1$d or newer</string>
     <string name="detail_tier">Privilege tier</string>
+    <string name="detail_needs_tier">Needs the %1$s tier</string>
+    <string name="detail_needs_tier_body">This check reads data that public Android APIs don\'t give apps. Grant the read permissions once from a computer, then scan again.</string>
+    <string name="detail_mute">Mute this check</string>
+    <string name="detail_mute_body">A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out. Reports list it as muted. Use it for what you can\'t change, such as a patch level only the manufacturer can update.</string>
+    <string name="check_muted">Check muted: the score leaves it out.</string>
+    <string name="check_unmuted">The check counts in the score again.</string>
+    <string name="detail_set_up_tier">How to set it up</string>
     <string name="detail_duration">Time taken</string>
     <string name="detail_duration_value">%1$d ms</string>
 
@@ -238,25 +248,44 @@
     <!-- Help -->
     <string name="help_legend">Reading the results</string>
     <string name="help_score">How the score works</string>
-    <string name="help_score_body">Every check that passed or failed counts, weighted by its severity. The score is the share of that weight you passed. Unknown and N/A results do not count either way.</string>
+    <string name="help_score_body">Every check that passed or failed counts, weighted by its severity. The score is the share of that weight you passed. Unknown and N/A results do not count either way, and neither do checks you muted.</string>
     <string name="help_score_cap">A critical failure caps the score at 40: one critical gap undoes most other protections, so a high average would mislead. The dashboard also shows the score without the cap, so other fixes still count.</string>
     <string name="help_weights">Weights</string>
     <string name="help_grades">Grades</string>
     <string name="help_weight_value">× %1$d</string>
     <string name="grade_range">%1$d–%2$d</string>
-    <string name="help_catalog">What Droynis checks</string>
-    <string name="help_catalog_count">%1$d checks in %2$d categories</string>
-    <string name="help_tiers">Privilege tiers</string>
+    <string name="help_catalog_link">All %1$d checks by privilege tier, how to set up each tier, and muting</string>
+
+    <!-- Check catalog -->
+    <string name="catalog_title">Check catalog</string>
+    <string name="catalog_count">Checks (%1$d)</string>
+    <string name="catalog_none">No checks yet: this tier comes in a later update.</string>
+    <string name="catalog_open_result">Open result</string>
+    <string name="tier_card_title">%1$s tier</string>
     <string name="tier_base">Base</string>
-    <string name="tier_base_body">Public Android APIs only. Works on every phone with no setup.</string>
+    <string name="tier_base_body">Public Android APIs only. These checks run on every phone, with no setup and no extra permissions.</string>
     <string name="tier_adb">ADB</string>
-    <string name="tier_adb_body">Grant extra read permissions once with adb from a computer.</string>
+    <string name="tier_adb_body">Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can\'t do. Droynis still never changes a setting.</string>
     <string name="tier_shizuku">Shizuku</string>
-    <string name="tier_shizuku_body">Shell-level reads through the Shizuku app, without a computer.</string>
+    <string name="tier_shizuku_body">Shizuku is an open-source app that gives other apps the rights adb has, without a computer once it runs. Droynis will use it, read-only, for settings Android hides from apps.</string>
+    <string name="tier_shizuku_steps">1. Install Shizuku (open source, by RikkaApps).\n2. Start it: with Wireless debugging on Android 11 and later, from a computer with adb, or with root.\n3. Allow Droynis when Shizuku asks.\n4. Scan again.</string>
+    <string name="tier_shizuku_unlocks">Planned checks: the real USB debugging and developer options state on Android 17, which apps may draw over other apps or read all files, and which app is the always-on VPN.</string>
     <string name="tier_root">Root</string>
-    <string name="tier_root_body">Full read access on rooted phones.</string>
+    <string name="tier_root_body">For phones that are already rooted. Droynis will ask your root manager (such as Magisk, KernelSU or APatch) for a shell and run only a fixed list of read-only commands.</string>
+    <string name="tier_root_steps">1. Open Droynis on the rooted phone.\n2. Allow root access when your root manager asks.\n3. Scan again.</string>
+    <string name="tier_root_unlocks">Planned checks: files that even adb can\'t read, such as the list of computers trusted for USB debugging, and the SELinux mode.</string>
+    <string name="tier_root_note">Rooting weakens Android\'s security model, so don\'t root a phone just to audit it. Root access (INTG-1050) stays a critical finding.</string>
+    <string name="tier_how_it_will_work">How it will work</string>
     <string name="tier_active">Active</string>
     <string name="tier_planned">Planned</string>
+    <string name="tier_available">Available</string>
+    <string name="tiers_adb_steps">1. Turn on USB debugging and connect the phone to a computer with adb.\n2. Run the commands below.\n3. Tap Scan again. You can turn USB debugging off afterwards; the grants stay until you revoke them or reinstall.</string>
+    <string name="tiers_granted">Granted</string>
+    <string name="tiers_not_granted">Not granted</string>
+    <string name="tiers_copy_commands">Copy commands</string>
+    <string name="tiers_copy_revoke">Copy revoke commands</string>
+    <string name="grant_dump">Lets Android\'s dumpsys answer Droynis.</string>
+    <string name="grant_usage_stats">Lets dumpsys show per-app usage records. The Usage access switch in Settings is not enough.</string>
     <string name="help_privacy">Privacy</string>
     <string name="help_privacy_1">No internet permission: nothing leaves the phone unless you share a report yourself.</string>
     <string name="help_privacy_2">No trackers, ads, analytics or Google Play Services.</string>
@@ -272,9 +301,13 @@
     <string name="faq_q4">Can Droynis fix problems for me?</string>
     <string name="faq_a4">No, on purpose. It explains what to change and opens the right Settings screen, so you stay in control of every change.</string>
     <string name="faq_q5">What is a privilege tier?</string>
-    <string name="faq_a5">Each check states the access it needs. This version uses only the Base tier, so every check works on any phone without root, Shizuku or adb.</string>
+    <string name="faq_a5">Each check states the access it needs. Base checks work on any phone with no setup. ADB checks need two read-only permissions that you grant once from a computer (⋮ › Check catalog › ADB); until then they show as N/A and do not change the score. DUMP lets an app read system diagnostics, so Droynis reads only what its checks need, keeps nothing, and has no internet access to send it anywhere. Shizuku and root tiers come later.</string>
     <string name="faq_q6">Does Droynis run in the background?</string>
     <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
+    <string name="faq_q8">Can I leave out a check I can\'t fix?</string>
+    <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch.</string>
+    <string name="faq_q7">Is Droynis part of Lynis?</string>
+    <string name="faq_a7">No. Droynis is an independent project and is not affiliated with, endorsed by or connected to Lynis or CISOfy. Lynis, an audit tool for Linux and Unix, only inspired the idea of a readable audit with a hardening score. Droynis shares no code with it.</string>
 
     <!-- Accessibility -->
     <string name="cd_expand">Expand</string>

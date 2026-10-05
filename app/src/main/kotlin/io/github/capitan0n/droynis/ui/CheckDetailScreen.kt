@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -21,23 +22,28 @@ import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -54,6 +60,10 @@ fun CheckDetailScreen(
     finding: Finding?,
     onOpenSettings: (List<String>) -> Unit,
     onCopy: (label: String, text: String) -> Unit,
+    muted: Boolean,
+    onMute: (Boolean) -> Unit,
+    /** Set when the check needs grants Droynis does not hold; opens that tier's setup. */
+    onSetUpTier: (() -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -62,7 +72,21 @@ fun CheckDetailScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ResultHeader(spec, finding)
+        ResultHeader(spec, finding, muted)
+
+        if (onSetUpTier != null) {
+            SectionCard(
+                title = stringResource(R.string.detail_needs_tier, stringResource(spec.requiredTier.labelRes)),
+                icon = Icons.Rounded.Layers,
+                accent = MaterialTheme.colorScheme.tertiary,
+            ) {
+                Text(stringResource(R.string.detail_needs_tier_body), style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(12.dp))
+                FilledTonalButton(onClick = onSetUpTier) {
+                    Text(stringResource(R.string.detail_set_up_tier))
+                }
+            }
+        }
 
         SectionCard(title = stringResource(R.string.detail_why), icon = Icons.Rounded.Lightbulb) {
             Text(spec.explanation, style = MaterialTheme.typography.bodyLarge)
@@ -123,6 +147,22 @@ fun CheckDetailScreen(
             }
         }
 
+        SectionCard(title = stringResource(R.string.detail_mute), icon = Icons.Rounded.NotificationsOff) {
+            // The whole row toggles, so its text is the switch's label for screen readers too.
+            Row(
+                modifier = Modifier.fillMaxWidth().toggleable(value = muted, onValueChange = onMute, role = Role.Switch),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.detail_mute_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Switch(checked = muted, onCheckedChange = null)
+            }
+        }
+
         SectionCard(title = stringResource(R.string.detail_technical), icon = Icons.Rounded.Tune) {
             InfoRow(stringResource(R.string.detail_id), spec.id, monospace = true)
             InfoRow(stringResource(R.string.detail_category), stringResource(spec.category.labelRes))
@@ -134,7 +174,7 @@ fun CheckDetailScreen(
                 stringResource(R.string.detail_min_android),
                 stringResource(R.string.detail_min_android_value, spec.minSdk),
             )
-            InfoRow(stringResource(R.string.detail_tier), spec.requiredTier.name.lowercase().replaceFirstChar { it.uppercase() })
+            InfoRow(stringResource(R.string.detail_tier), stringResource(spec.requiredTier.labelRes))
             if (finding != null) {
                 InfoRow(
                     stringResource(R.string.detail_duration),
@@ -146,7 +186,7 @@ fun CheckDetailScreen(
 }
 
 @Composable
-private fun ResultHeader(spec: CheckSpec, finding: Finding?) {
+private fun ResultHeader(spec: CheckSpec, finding: Finding?, muted: Boolean) {
     val verdict = finding?.verdict
     val tint = verdict?.style?.color ?: MaterialTheme.colorScheme.primary
     Card(
@@ -179,6 +219,7 @@ private fun ResultHeader(spec: CheckSpec, finding: Finding?) {
                 Pill(spec.id, icon = Icons.Rounded.Code)
                 Pill(stringResource(spec.category.shortLabelRes), icon = spec.category.icon)
                 if (finding?.status == Status.FAIL) Pill(stringResource(finding.severity.labelRes))
+                if (muted) Pill(stringResource(R.string.muted), icon = Icons.Rounded.NotificationsOff)
             }
         }
     }

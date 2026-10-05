@@ -2,6 +2,8 @@ package io.github.capitan0n.droynis.platform
 
 import android.content.Context
 import android.os.Build
+import io.github.capitan0n.droynis.checks.adb.AdbProbes
+import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
@@ -18,13 +20,14 @@ import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.checks.base.WebViewProbe
 import io.github.capitan0n.droynis.core.Capabilities
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Source
 import java.time.ZonedDateTime
 
-/** Android implementations of the probes: the only code base-tier checks reach the framework through. */
-class AndroidPlatform(context: Context) : BaseProbes {
+/** Android implementations of the probes: the only code checks reach the framework through. */
+class AndroidPlatform(context: Context) : BaseProbes, AdbProbes {
     private val app = context.applicationContext
 
     override val settings: SystemSettings = AndroidSettings(app.contentResolver)
@@ -41,15 +44,20 @@ class AndroidPlatform(context: Context) : BaseProbes {
     override val files: FileProbe = AndroidFiles
     override val attestation: AttestationProbe = AndroidAttestation
     override val webView: WebViewProbe = AndroidWebView
+    override val dumpsys: Dumpsys = AndroidDumpsys
 
     /** Not a check: feeds the permission overview on the Tools screen. */
     val permissionAudit = AndroidPermissionAudit(app)
 
-    /** Grant detection arrives with the ADB and Shizuku tiers; until then every scan is base tier. */
+    private val grants = AndroidGrants(app)
+
+    /** What the user has granted with adb right now. Shizuku and root detection come later. */
+    fun detectGrants(): Set<Grant> = grants.detect()
+
     fun newScanContext(): ScanContext = ScanContext(
         startedAt = ZonedDateTime.now(),
         sdkInt = Build.VERSION.SDK_INT,
-        capabilities = Capabilities(),
+        capabilities = Capabilities(detectGrants()),
     )
 }
 

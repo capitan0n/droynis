@@ -18,4 +18,19 @@
     <!-- Read whether Android 16 Advanced Protection is on, for INTG-1030. -->
     <uses-permission android:name="android.permission.QUERY_ADVANCED_PROTECTION_MODE" />
 
+    <!--
+        Optional ADB tier. Not granted at install: only `adb shell pm grant` can give them, and
+        `pm revoke` takes them back. Without them the ADB-tier checks show as N/A.
+    -->
+
+    <!-- Lets dumpsys answer us; APPS-4101 reads `dumpsys appops`. -->
+    <uses-permission
+        android:name="android.permission.DUMP"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- dumpsys appops also asks for this permission itself; the Usage access switch is not enough. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
 </manifest>

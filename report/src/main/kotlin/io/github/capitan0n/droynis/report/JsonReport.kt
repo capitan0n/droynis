@@ -21,7 +21,7 @@ object JsonReport {
         facts: List<DeviceFact>,
         appVersion: String,
     ): String {
-        val counts = findings.countByVerdict()
+        val counts = findings.withoutMuted(index.muted).countByVerdict()
         val root = linkedMapOf(
             "schema" to SCHEMA,
             "schemaVersion" to SCHEMA_VERSION,
@@ -30,6 +30,7 @@ object JsonReport {
                 "startedAt" to context.startedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                 "sdkInt" to context.sdkInt,
                 "tier" to context.capabilities.tier.name,
+                "grants" to context.capabilities.grants.map { it.name }.sorted(),
             ),
             "device" to facts.associateTo(linkedMapOf()) { it.key to it.value },
             "score" to linkedMapOf(
@@ -41,6 +42,7 @@ object JsonReport {
                 "failed" to index.failed.entries.sortedByDescending { it.key }.associate { it.key.name to it.value },
                 "unknown" to index.unknown,
                 "unsupported" to index.unsupported,
+                "muted" to index.muted,
             ),
             "verdicts" to counts.entries.associate { it.key.name to it.value },
             "findings" to findings.map { finding ->
@@ -52,6 +54,7 @@ object JsonReport {
                     "verdict" to finding.verdict.name,
                     "severity" to finding.severity.name,
                     "declaredSeverity" to finding.spec.severity.name,
+                    "muted" to (finding.spec.id in index.muted),
                     "summary" to finding.summary,
                     "evidence" to finding.evidence.map {
                         linkedMapOf(

@@ -5,11 +5,13 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.DeviceSummary
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
 import io.github.capitan0n.droynis.checks.base.baseChecks
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
@@ -63,6 +65,10 @@ data class UiState(
     val network: Reading<NetworkSnapshot?>? = null,
     val permissions: Reading<PermissionOverview>? = null,
     val refreshingTools: Boolean = false,
+    /** Grants held right now; a scan uses what was held when it started. */
+    val grants: Set<Grant> = emptySet(),
+    /** Ids of checks the user muted: they still run, but the score and counts leave them out. */
+    val muted: Set<String> = emptySet(),
 ) {
     val done: Int get() = findings.size
 }
@@ -72,14 +78,14 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     private val platform = AndroidPlatform(application)
     private val prefs = application.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    // Each tier module contributes its registry here (adbChecks, shizukuChecks, ...).
-    private val checks = baseChecks(platform)
+    // Each tier module contributes its registry here; checks above the detected tier show as N/A.
+    private val checks = baseChecks(platform) + adbChecks(platform)
     private val scanner = Scanner()
 
     /** Every check in display order, whether or not it has run. */
     val catalog: List<CheckSpec> = checks.map { it.spec }
 
-    private val _state = MutableStateFlow(UiState(total = checks.size))
+    private val _state = MutableStateFlow(UiState(total = checks.size, muted = readMuted()))
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private val _themeMode = MutableStateFlow(readThemeMode())
@@ -101,8 +107,8 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
             val started = TimeSource.Monotonic.markNow()
-            val context = platform.newScanContext()
-            _state.update { it.copy(scanning = true, findings = emptyMap()) }
+            val context = withContext(Dispatchers.IO) { platform.newScanContext() }
+            _state.update { it.copy(scanning = true, findings = emptyMap(), grants = context.capabilities.grants) }
             scanner.scan(checks, context).collect { finding ->
                 _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
             }
@@ -110,12 +116,13 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             delay(MIN_VISIBLE_SCAN - started.elapsedNow())
             val findings = catalog.mapNotNull { _state.value.findings[it.id] }
             _state.update {
-                it.copy(scanning = false, result = ScanResult(context, findings, HardeningIndex.of(findings)))
+                val index = HardeningIndex.of(findings, it.muted)
+                it.copy(scanning = false, result = ScanResult(context, findings, index))
             }
         }
     }
 
-    /** Re-reads the device, network and permission facts shown on the Tools screen. */
+    /** Re-reads the device, network, permission and grant facts shown on the Tools screen. */
     fun refreshTools() {
         if (_state.value.refreshingTools) return
         _state.update { it.copy(refreshingTools = true) }
@@ -123,10 +130,30 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val device = withContext(Dispatchers.IO) { platform.build.device() }
             val network = withContext(Dispatchers.IO) { platform.network.activeNetwork() }
             val permissions = withContext(Dispatchers.IO) { platform.permissionAudit.overview() }
+            val grants = withContext(Dispatchers.IO) { platform.detectGrants() }
             _state.update {
-                it.copy(device = device, network = network, permissions = permissions, refreshingTools = false)
+                it.copy(
+                    device = device,
+                    network = network,
+                    permissions = permissions,
+                    grants = grants,
+                    refreshingTools = false,
+                )
             }
         }
+    }
+
+    /** Mutes or unmutes one check. The score updates at once; no new scan is needed. */
+    fun setMuted(checkId: String, muted: Boolean) {
+        val ids = if (muted) _state.value.muted + checkId else _state.value.muted - checkId
+        prefs.edit().putStringSet(KEY_MUTED, ids).apply()
+        _state.update { state ->
+            state.copy(
+                muted = ids,
+                result = state.result?.let { it.copy(index = HardeningIndex.of(it.findings, ids)) },
+            )
+        }
+        message(if (muted) R.string.check_muted else R.string.check_unmuted)
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -173,6 +200,12 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         _messages.tryEmit(getApplication<Application>().getString(resId))
     }
 
+    /** Ids of checks that no longer exist are dropped, so a removed check can't stay muted. */
+    private fun readMuted(): Set<String> {
+        val known = catalog.mapTo(HashSet()) { it.id }
+        return prefs.getStringSet(KEY_MUTED, null).orEmpty().filterTo(HashSet()) { it in known }
+    }
+
     private fun readThemeMode(): ThemeMode {
         val name = prefs.getString(KEY_THEME, null)
         return ThemeMode.entries.firstOrNull { it.name == name } ?: ThemeMode.SYSTEM
@@ -181,6 +214,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     companion object {
         private const val PREFS = "settings"
         private const val KEY_THEME = "theme"
+        private const val KEY_MUTED = "muted_checks"
         private val MIN_VISIBLE_SCAN = 700.milliseconds
 
         private val FILE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm")

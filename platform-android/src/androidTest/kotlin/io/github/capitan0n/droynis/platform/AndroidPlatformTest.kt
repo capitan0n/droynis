@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.platform
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.baseChecks
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Scanner
@@ -74,7 +75,7 @@ class AndroidPlatformTest {
 
     @Test
     fun noCheckCrashesOrTimesOutOnARealDevice(): Unit = runBlocking {
-        val checks = baseChecks(platform)
+        val checks = baseChecks(platform) + adbChecks(platform)
 
         val findings = Scanner().scan(checks, platform.newScanContext()).toList()
 
@@ -84,6 +85,15 @@ class AndroidPlatformTest {
                 (finding.summary.startsWith("Check failed") || finding.summary.startsWith("Timed out"))
             assertFalse("${finding.spec.id}: ${finding.summary}", crashed)
         }
+    }
+
+    @Test
+    fun withoutAdbGrantsDumpsysIsRefusedRatherThanParsed() {
+        // A test install has no adb grants unless someone gave them by hand.
+        if (platform.detectGrants().isNotEmpty()) return
+
+        val dump = platform.dumpsys.dump("appops")
+        assertTrue("expected a refusal, got $dump", dump is Reading.Unavailable)
     }
 
     private fun assertValue(reading: Reading<*>) {

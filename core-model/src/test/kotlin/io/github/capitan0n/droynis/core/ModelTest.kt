@@ -22,7 +22,7 @@ class ModelTest {
     @Test
     fun `required tier is the highest tier among required grants`() {
         assertEquals(Tier.BASE, spec().requiredTier)
-        assertEquals(Tier.BASE, spec(requires = setOf(Grant.PACKAGE_USAGE_STATS)).requiredTier)
+        assertEquals(Tier.ADB, spec(requires = setOf(Grant.PACKAGE_USAGE_STATS)).requiredTier)
         assertEquals(Tier.ADB, spec(requires = setOf(Grant.PACKAGE_USAGE_STATS, Grant.READ_LOGS)).requiredTier)
         assertEquals(Tier.SHIZUKU, spec(requires = setOf(Grant.DUMP, Grant.SHIZUKU)).requiredTier)
     }
@@ -34,6 +34,19 @@ class ModelTest {
         assertEquals(Tier.ADB, capabilities.tier)
         assertEquals(setOf(Grant.READ_LOGS), capabilities.missingFor(spec(requires = setOf(Grant.DUMP, Grant.READ_LOGS))))
         assertEquals(Tier.BASE, Capabilities().tier)
+    }
+
+    @Test
+    fun `adb commands name the permission behind a grant`() {
+        assertEquals(
+            "adb shell pm grant org.example android.permission.DUMP",
+            Grant.DUMP.adbGrantCommand("org.example"),
+        )
+        assertEquals(
+            "adb shell pm revoke org.example android.permission.PACKAGE_USAGE_STATS",
+            Grant.PACKAGE_USAGE_STATS.adbRevokeCommand("org.example"),
+        )
+        assertEquals(null, Grant.SHIZUKU.adbGrantCommand("org.example"))
     }
 
     @Test

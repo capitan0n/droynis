@@ -18,17 +18,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.automirrored.rounded.LiveHelp
 import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Insights
-import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.PrivacyTip
-import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TipsAndUpdates
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,24 +32,31 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.R
-import io.github.capitan0n.droynis.core.Category
-import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.report.Grade
 import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.ui.theme.StatusColors
 
 @Composable
-fun HelpScreen(catalog: List<CheckSpec>, appVersion: String, onAbout: () -> Unit) {
+fun HelpScreen(checkCount: Int, appVersion: String, onAbout: () -> Unit, onCatalog: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item(key = "about") { AboutLink(appVersion, onAbout) }
+        item(key = "catalog") {
+            LinkCard(
+                icon = Icons.AutoMirrored.Rounded.ListAlt,
+                title = stringResource(R.string.catalog_title),
+                subtitle = stringResource(R.string.help_catalog_link, checkCount),
+                onClick = onCatalog,
+            )
+        }
         item {
             SectionCard(title = stringResource(R.string.help_legend), icon = Icons.Rounded.TipsAndUpdates) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -62,43 +65,6 @@ fun HelpScreen(catalog: List<CheckSpec>, appVersion: String, onAbout: () -> Unit
             }
         }
         item { ScoreCard() }
-
-        item {
-            val categories = catalog.map { it.category }.distinct().size
-            Column {
-                SectionHeader(stringResource(R.string.help_catalog))
-                Text(
-                    stringResource(R.string.help_catalog_count, catalog.size, categories),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp),
-                )
-            }
-        }
-        for (category in Category.entries) {
-            val specs = catalog.filter { it.category == category }
-            if (specs.isEmpty()) continue
-            item(key = "catalog-${category.name}") {
-                Row(Modifier.padding(start = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconBadge(category.icon, category.accent, size = 28.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text(stringResource(category.labelRes), style = MaterialTheme.typography.titleSmall)
-                }
-            }
-            items(specs, key = { it.id }) { spec ->
-                ExpandableCard(title = spec.title, subtitle = "${spec.id} · ${stringResource(spec.severity.labelRes)}") {
-                    Text(spec.explanation, style = MaterialTheme.typography.bodyMedium)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        spec.remediation.text,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        item { TiersCard() }
         item { PrivacyCard() }
 
         item { SectionHeader(stringResource(R.string.help_faq)) }
@@ -112,26 +78,37 @@ fun HelpScreen(catalog: List<CheckSpec>, appVersion: String, onAbout: () -> Unit
                 Text(stringResource(answer), style = MaterialTheme.typography.bodyMedium)
             }
         }
-
     }
 }
 
 /** Opens the separate About page: version, author, source code and feedback. */
 @Composable
 private fun AboutLink(appVersion: String, onClick: () -> Unit) {
+    LinkCard(
+        icon = Icons.Rounded.Info,
+        title = stringResource(R.string.about_title),
+        subtitle = stringResource(R.string.help_about_link, appVersion),
+        onClick = onClick,
+        highlighted = true,
+    )
+}
+
+/** A full-width card that opens another page. */
+@Composable
+private fun LinkCard(icon: ImageVector, title: String, subtitle: String, onClick: () -> Unit, highlighted: Boolean = false) {
     Surface(
         onClick = onClick,
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        color = if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(28.dp))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(28.dp))
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.about_title), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.help_about_link, appVersion), style = MaterialTheme.typography.bodySmall)
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
         }
@@ -145,6 +122,8 @@ private val FAQ = listOf(
     R.string.faq_q4 to R.string.faq_a4,
     R.string.faq_q5 to R.string.faq_a5,
     R.string.faq_q6 to R.string.faq_a6,
+    R.string.faq_q8 to R.string.faq_a8,
+    R.string.faq_q7 to R.string.faq_a7,
 )
 
 @Composable
@@ -196,39 +175,6 @@ private fun ScoreCard() {
             content = MaterialTheme.colorScheme.onSurface,
             maxLines = Int.MAX_VALUE,
         )
-    }
-}
-
-@Composable
-private fun TiersCard() {
-    SectionCard(title = stringResource(R.string.help_tiers), icon = Icons.Rounded.Layers) {
-        val tiers = listOf(
-            Triple(R.string.tier_base, R.string.tier_base_body, true),
-            Triple(R.string.tier_adb, R.string.tier_adb_body, false),
-            Triple(R.string.tier_shizuku, R.string.tier_shizuku_body, false),
-            Triple(R.string.tier_root, R.string.tier_root_body, false),
-        )
-        tiers.forEachIndexed { i, (name, body, active) ->
-            if (i > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    if (active) Icons.Rounded.CheckCircle else Icons.Rounded.Schedule,
-                    contentDescription = null,
-                    tint = if (active) StatusColors.Good else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(stringResource(name), style = MaterialTheme.typography.titleSmall)
-                    Text(
-                        stringResource(body),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Pill(stringResource(if (active) R.string.tier_active else R.string.tier_planned))
-            }
-        }
     }
 }
 

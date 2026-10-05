@@ -77,6 +77,32 @@ class HardeningIndexTest {
         assertEquals(mapOf(Severity.CRITICAL to 1), index.failed)
     }
 
+    @Test
+    fun `muted checks leave the score and every count, but are listed`() {
+        val patch = finding(Status.FAIL, Severity.WARNING)
+        val findings = listOf(finding(Status.PASS, Severity.WARNING), patch, finding(Status.UNKNOWN))
+
+        val index = HardeningIndex.of(findings, muted = setOf(patch.spec.id, "TEST-9999"))
+
+        assertEquals(100, index.score) // 5 / 5 once the failing check is muted
+        assertEquals(1, index.passed)
+        assertEquals(emptyMap(), index.failed)
+        assertEquals(1, index.unknown)
+        assertEquals(listOf(patch.spec.id), index.muted) // ids not in this scan are not reported
+        assertEquals(50, HardeningIndex.of(findings).score)
+    }
+
+    @Test
+    fun `a muted critical failure no longer caps the score`() {
+        val root = finding(Status.FAIL, Severity.CRITICAL)
+        val findings = listOf(finding(Status.PASS, Severity.WARNING), root)
+
+        val index = HardeningIndex.of(findings, muted = setOf(root.spec.id))
+
+        assertEquals(100, index.score)
+        assertEquals(emptyList(), index.cappedBy)
+    }
+
     private fun finding(
         status: Status,
         declared: Severity = Severity.WARNING,

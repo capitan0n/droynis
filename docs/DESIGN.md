@@ -1,7 +1,7 @@
 # Droynis design notes
 
-Status: base tier, 30 checks (see the README for the list) and a Compose UI with dashboard,
-checks, tools and help screens. This file records how the brief maps onto current Android
+Status: base tier with 30 checks plus the first ADB-tier check (see the README for the list),
+and a Compose UI with dashboard, checks, tools and help screens. This file records how the brief maps onto current Android
 (API 37, October 2026) and the decisions taken so far.
 
 ## 1. Brief review: what does not hold on current Android
@@ -12,9 +12,9 @@ checks, tools and help screens. This file records how the brief maps onto curren
 | 2 | List apps with permissions, accessibility, admins… | Since API 30 package visibility hides most apps unless the app holds `QUERY_ALL_PACKAGES`. Without it, invisible apps produce false PASSes. | Declare `QUERY_ALL_PACKAGES` (fine on F-Droid; Play restricts it). |
 | 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via Shizuku (`appops get`, `settings get`). Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). |
 | 4 | Probe at runtime instead of branching on Android version | Calling an API newer than the device throws `NoSuchMethodError`, and lint's `NewApi` fails the build without an `SDK_INT` guard. | Version checks decide *whether an API exists* (`CheckSpec.minSdk`, `SDK_INT` guards in adapters). Runtime probing handles *content*: missing settings, OEM differences, `SecurityException`. Every probe returns a `Reading` instead of throwing. |
-| 5 | `PACKAGE_USAGE_STATS` is an ADB grant | It is an app-op the user can grant in Settings › Usage access. | Base-tier grant with an in-app prompt (`Grant.PACKAGE_USAGE_STATS`). |
+| 5 | `PACKAGE_USAGE_STATS` is an ADB grant | Settings › Usage access sets only the app-op, which is enough for `UsageStatsManager`. dumpsys services that show per-app data (`DumpUtils.checkUsageStatsPermission`, Android 17) also require the permission itself, which only `pm grant` gives. | `Grant.PACKAGE_USAGE_STATS` means the permission (ADB tier). A future `UsageStatsManager` check would add a base-tier usage-access grant. |
 | 6 | `READ_LOGS` grant survives reboots and unlocks logcat | Since Android 13 every logcat session also needs a per-session "Allow access to all device logs?" dialog, shown only while the app is in the foreground. SELinux denials are noisy on production builds. | Logcat scan is interactive only. For crash loops, evaluate `DropBoxManager` (`READ_LOGS` + usage access) instead of parsing logcat. |
-| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. |
+| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. `dumpsys appops` (APPS-4101) was checked against AppOpsService in Android 17: it needs DUMP and the `PACKAGE_USAGE_STATS` permission; `VpnManagerService` prints no lockdown state; the adb service is not visible to apps. |
 | 8 | Shizuku, and "no non-SDK interfaces" | Typical Shizuku code wraps hidden AIDL interfaces (`IAppOpsService`…), which is non-SDK by definition. `Shizuku.newProcess` is private since Shizuku-API 13.1.5. | Use a Shizuku `UserService` (our code running as shell, UID 2000) that runs a fixed allowlist of read-only commands and returns text over our own AIDL. |
 | 9 | A crashing or hanging check yields UNKNOWN | Coroutine timeouts only fire at suspension points; a blocking binder call cannot be interrupted. Native crashes and OOM kill the process. | Implemented: each check runs detached and races a timeout, so a hang costs one thread, not the scan. A separate scanner process is not worth it for v1. |
 | 10 | Network off by default, revocation list opt-in | `INTERNET` is granted at install. Once declared, "off by default" cannot be verified from the manifest. | Ship without `INTERNET` (CI fails the build otherwise). Import the revocation list JSON through the Storage Access Framework, or provide a separate online flavor. |
@@ -48,13 +48,13 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 ```
 core-model        Kotlin/JVM  Check contract, results, evidence, tiers, Scanner
 checks-base       Kotlin/JVM  base-tier checks + the probe interfaces they read
+checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys` probe they read
 report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category summaries,
                               Markdown export (later: JSON, diff between scans)
-platform-android  Android     probe implementations; the only framework calls for base checks;
-                              also the permission overview shown on the Tools screen
+platform-android  Android     probe implementations; the only framework calls for checks;
+                              grant detection; the permission overview on the Tools screen
 app               Android     Compose UI (dashboard, checks, tools, help), registry wiring,
                               settings deep links, report save/share
-checks-adb        (later)     Kotlin/JVM checks; probes implemented in platform-android
 checks-shizuku    (later)     Android, Shizuku UserService + parsers
 ```
 
@@ -83,7 +83,9 @@ data class Finding(spec, status, severity, summary, evidence, elapsedMillis)  //
 - `Evidence(label, value, source, note)`; `Source(method, grant)` names the exact API or command
   and the privilege used.
 - Tiers: `requires: Set<Grant>` per check; `requiredTier` is derived. A root tier adds a `Grant`.
-- Registry: `baseChecks(probes)`; adding a check is one class plus one line.
+- Registry: `baseChecks(probes)` and `adbChecks(probes)`; adding a check is one class plus one line.
+- Grants are detected for every scan (`checkSelfPermission`, plus the usage-stats app-op not
+  being denied), because `pm grant` and `pm revoke` take effect without a restart.
 - `Scanner`: gates on `minSdk` and grants (UNSUPPORTED, not run), runs the rest concurrently with
   a per-check timeout; exceptions and timeouts become UNKNOWN.
 
@@ -93,6 +95,16 @@ Weights by declared severity: CRITICAL 10, WARNING 5, NOTICE 2, INFO 0. Score = 
 passed weight / scored weight), PASS and FAIL only. Any CRITICAL FAIL (including one escalated
 by the check) caps it at 40. No scored check means no score, not 0 or 100. The index changes when
 more tiers are unlocked, so the UI always shows the tier and counts next to it.
+
+### Muting
+
+The user can mute a check whose finding they cannot act on (security patch age is the usual
+case: only the manufacturer ships patches). A muted check still runs and keeps its real status;
+it is only left out of the index (score, cap, counts) and of the dashboard counts and issue
+lists. Muting never turns a FAIL into a PASS, and it is never silent: the dashboard shows how many
+checks are muted, and both reports list them (`score.muted`, `"muted": true` per finding in JSON).
+Muted ids are stored on the device (`SharedPreferences`) and the index is recomputed on the spot,
+without a new scan. Ids that no longer exist are dropped when read.
 
 ### Why the critical cap stays
 
@@ -106,7 +118,9 @@ kept, shown next to a capped score and written to both reports.
 
 Markdown is for people. JSON (`JsonReport`, `"schema": "droynis-report"`, `schemaVersion` 1) is for
 diffing and tools: findings in catalog order, stable keys, two-space indentation, `null` for
-values that could not be read. Both contain only scan results and the device facts passed in.
+values that could not be read. Fields added since (`scan.grants`, `score.muted`, `muted` per
+finding) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
+out. Both contain only scan results and the device facts passed in.
 
 ## 5. Open questions for review
 
@@ -122,16 +136,22 @@ values that could not be read. Both contain only scan results and the device fac
    metadata are not.
 8. The Markdown report lists app labels and package names in evidence (accessibility services,
    notification listeners, keyboards, sideloaded apps). Redact them by default, as point 13 says?
+9. Muting is allowed for every check, critical ones included, and lifts the cap. Should a muted
+   critical failure still be flagged on the dashboard beyond the muted count?
 
 ## 6. Testing
 
 - Checks: JVM unit tests against fake probes, including threshold boundaries.
 - Scanner: virtual-time tests for timeouts and cancellation, plus a real-thread test where a
   check blocks like a hung binder call.
-- `platform-android`: instrumented tests run the real probes and all base checks on an emulator;
+- dumpsys parsers: JVM tests on output shaped like the Android 17 source, plus mutations (an
+  `Access:` line in another shape, an orphan line, no records) that must fail the parse.
+- `platform-android`: instrumented tests run the real probes and all checks on an emulator
+  (ADB-tier ones are gated to N/A without grants, and dumpsys must refuse rather than answer);
   a local unit test pins the SDK constants that the JVM modules hard-code.
 - `app`: a Compose UI test launches the app, waits for the scan, opens the Checks tab, scrolls to
-  every check, opens one and its evidence, and visits the Tools and Help tabs.
+  every check, opens one and its evidence, visits the Tools, Help and About pages and every
+  catalog tab (including the adb commands), and mutes and unmutes a check.
 - CI on every push: unit tests, lint, release build, and a check that the release APK does not
   request `INTERNET`. The emulator matrix is a manual workflow. API 37 system images use the new
   `37.0` package naming and need cmdline-tools 22+
@@ -153,5 +173,18 @@ critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, m
 used for category icons only, so they never read as a status. The score ring is colored by the
 result (red whenever a critical failure caps it) on a faded track of the same hue.
 
+The check catalog (⋮ menu, or a link at the top of Help) lists every check in one tab per tier:
+Base, ADB, Shizuku, Root. Each tab opens with what the tier is and how to set it up; the ADB tab
+lists each grant as held or not (read live), the exact `pm grant` commands, and `pm revoke`
+commands once something is granted. Tier-gated checks show "Needs the ADB tier" with a link to
+that tab. Help keeps only the legend, the score, privacy and the FAQ.
+
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,
 theme), implemented by `MainActivity`; screens take plain state, which keeps them previewable.
+
+## 9. Name and credit
+
+Droynis is an independent project, not affiliated with, endorsed by or connected to Lynis or
+CISOfy, and it shares no code with Lynis. Lynis inspired only the idea: a readable audit that
+explains each finding and sums the result up in a hardening score. The About page, the Help FAQ
+and the README say so.

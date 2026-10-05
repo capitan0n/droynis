@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.automirrored.rounded.Help
+import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.rounded.Build
@@ -76,8 +77,10 @@ import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
+import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Verdict
 import io.github.capitan0n.droynis.report.issues
+import io.github.capitan0n.droynis.report.withoutMuted
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 
@@ -87,6 +90,9 @@ interface AppActions {
     fun scan()
     fun refreshTools()
     fun setThemeMode(mode: ThemeMode)
+
+    /** A muted check still runs and shows its result, but the score and counts leave it out. */
+    fun setMuted(checkId: String, muted: Boolean)
 
     /** Opens the first Settings screen in [actions] that this phone has. */
     fun openSettings(actions: List<String>)
@@ -108,24 +114,36 @@ enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: Image
 }
 
 /** The verdict filter of the Checks screen. */
-enum class CheckFilter(val verdicts: Set<Verdict>?) {
-    ALL(null),
+enum class CheckFilter(val verdicts: Set<Verdict>) {
+    ALL(emptySet()),
     ISSUES(setOf(Verdict.ATTENTION, Verdict.CRITICAL)),
     PASSED(setOf(Verdict.PASSED)),
     ATTENTION(setOf(Verdict.ATTENTION)),
     CRITICAL(setOf(Verdict.CRITICAL)),
     UNVERIFIED(setOf(Verdict.UNKNOWN, Verdict.NOT_AVAILABLE)),
+    MUTED(emptySet()),
     ;
 
-    /** A check still running (null verdict) only shows under [ALL]. */
-    fun matches(verdict: Verdict?): Boolean = verdicts == null || verdict in verdicts
+    /**
+     * Muted checks show only under [ALL] and [MUTED], so the other counts match the score. A check
+     * still running (null verdict) only shows under [ALL].
+     */
+    fun matches(verdict: Verdict?, muted: Boolean): Boolean = when (this) {
+        ALL -> true
+        MUTED -> muted
+        else -> !muted && verdict in verdicts
+    }
 }
 
 /** The About page, shown full screen over the tabs. */
 private object AboutPage
 
-/** Tag of the Checks list, for UI tests. */
+/** The check catalog, shown full screen over the tabs. */
+private object CatalogPage
+
+/** Tags of the scrolling lists, for UI tests. */
 const val CHECKS_LIST_TAG = "checks_list"
+const val CATALOG_LIST_TAG = "catalog_list"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -145,17 +163,22 @@ fun DroynisApp(
     var filter by rememberSaveable { mutableStateOf(CheckFilter.ALL) }
     var category by rememberSaveable { mutableStateOf<Category?>(null) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
+    var showCatalog by rememberSaveable { mutableStateOf(false) }
+    // Kept while the catalog is closed, so it fades out and reopens on the same tab.
+    var catalogTier by rememberSaveable { mutableStateOf(Tier.BASE) }
     var showTheme by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val tabStates = rememberSaveableStateHolder()
 
     LaunchedEffect(messages) { messages.collect { snackbar.showSnackbar(it) } }
+    // Back closes the topmost page: About, then a check, then the catalog, then a tab.
+    BackHandler(enabled = openCheckId == null && !showCatalog && tab != Tab.DASHBOARD) { tab = Tab.DASHBOARD }
+    BackHandler(enabled = openCheckId == null && showCatalog) { showCatalog = false }
     BackHandler(enabled = openCheckId != null) { openCheckId = null }
-    BackHandler(enabled = openCheckId == null && tab != Tab.DASHBOARD) { tab = Tab.DASHBOARD }
     BackHandler(enabled = showAbout) { showAbout = false }
 
     val openSpec = catalog.firstOrNull { it.id == openCheckId }
-    val issueCount = state.result?.findings?.issues()?.size ?: 0
+    val issueCount = state.result?.findings?.withoutMuted(state.muted)?.issues()?.size ?: 0
     val showChecks = { newFilter: CheckFilter, newCategory: Category? ->
         filter = newFilter
         category = newCategory
@@ -176,13 +199,17 @@ fun DroynisApp(
                     },
                     scrollBehavior = scrollBehavior,
                 )
-            } else if (openSpec != null) {
+            } else if (openSpec != null || showCatalog) {
                 TopAppBar(
                     title = {
-                        Text(stringResource(openSpec.category.labelRes), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            stringResource(openSpec?.category?.labelRes ?: R.string.catalog_title),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { openCheckId = null }) {
+                        IconButton(onClick = { if (openSpec != null) openCheckId = null else showCatalog = false }) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.navigate_back))
                         }
                     },
@@ -197,12 +224,13 @@ fun DroynisApp(
                     showAboutButton = tab == Tab.HELP,
                     onTheme = { showTheme = true },
                     onAbout = { showAbout = true },
+                    onCatalog = { showCatalog = true },
                     scrollBehavior = scrollBehavior,
                 )
             }
         },
         bottomBar = {
-            if (openSpec == null && !showAbout) {
+            if (openSpec == null && !showAbout && !showCatalog) {
                 NavigationBar {
                     for (item in Tab.entries) {
                         NavigationBarItem(
@@ -225,7 +253,12 @@ fun DroynisApp(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            val screen: Any = if (showAbout) AboutPage else openSpec ?: tab
+            val screen: Any = when {
+                showAbout -> AboutPage
+                openSpec != null -> openSpec
+                showCatalog -> CatalogPage
+                else -> tab
+            }
             Crossfade(targetState = screen, label = "screen") { target ->
                 when (target) {
                     AboutPage -> AboutScreen(
@@ -233,11 +266,33 @@ fun DroynisApp(
                         onOpenLink = actions::openLink,
                         onFeedback = actions::sendFeedback,
                     )
+                    CatalogPage -> CatalogScreen(
+                        catalog = catalog,
+                        findings = state.findings,
+                        muted = state.muted,
+                        grants = state.grants,
+                        selected = catalogTier,
+                        onSelect = { catalogTier = it },
+                        scanning = state.scanning,
+                        actions = actions,
+                        onOpenCheck = { openCheckId = it },
+                    )
                     is CheckSpec -> CheckDetailScreen(
                         spec = target,
                         finding = state.findings[target.id],
                         onOpenSettings = actions::openSettings,
                         onCopy = actions::copy,
+                        muted = target.id in state.muted,
+                        onMute = { actions.setMuted(target.id, it) },
+                        onSetUpTier = if (state.grants.containsAll(target.requires)) {
+                            null
+                        } else {
+                            {
+                                openCheckId = null
+                                catalogTier = target.requiredTier
+                                showCatalog = true
+                            }
+                        },
                     )
                     is Tab -> tabStates.SaveableStateProvider(target.name) {
                         when (target) {
@@ -252,6 +307,7 @@ fun DroynisApp(
                             Tab.CHECKS -> ChecksScreen(
                                 catalog = catalog,
                                 findings = state.findings,
+                                muted = state.muted,
                                 filter = filter,
                                 onFilter = { filter = it },
                                 category = category,
@@ -259,7 +315,12 @@ fun DroynisApp(
                                 onOpenCheck = { openCheckId = it },
                             )
                             Tab.TOOLS -> ToolsScreen(state = state, actions = actions)
-                            Tab.HELP -> HelpScreen(catalog = catalog, appVersion = appVersion, onAbout = { showAbout = true })
+                            Tab.HELP -> HelpScreen(
+                                checkCount = catalog.size,
+                                appVersion = appVersion,
+                                onAbout = { showAbout = true },
+                                onCatalog = { showCatalog = true },
+                            )
                         }
                     }
                 }
@@ -289,6 +350,7 @@ private fun MainTopBar(
     showAboutButton: Boolean,
     onTheme: () -> Unit,
     onAbout: () -> Unit,
+    onCatalog: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -346,6 +408,10 @@ private fun MainTopBar(
                         actions.copyReport()
                     }
                     HorizontalDivider()
+                    MenuItem(R.string.catalog_title, Icons.AutoMirrored.Rounded.ListAlt) {
+                        menuOpen = false
+                        onCatalog()
+                    }
                     MenuItem(R.string.menu_theme, Icons.Rounded.Palette) {
                         menuOpen = false
                         onTheme()

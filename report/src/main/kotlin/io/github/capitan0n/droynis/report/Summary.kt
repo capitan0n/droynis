@@ -38,6 +38,13 @@ fun categorySummaries(specs: List<CheckSpec>, findings: List<Finding>): List<Cat
         }
     }
 
+/**
+ * The findings the score counts: all but the checks the user muted. Muted checks still run and
+ * keep their result; they just don't count.
+ */
+fun List<Finding>.withoutMuted(muted: Collection<String>): List<Finding> =
+    if (muted.isEmpty()) this else filterNot { it.spec.id in muted }
+
 /** Failed checks, most severe first; equally severe ones keep their order. */
 fun List<Finding>.issues(): List<Finding> =
     filter { it.status == Status.FAIL }.sortedByDescending { it.severity }
