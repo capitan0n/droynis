@@ -31,6 +31,7 @@ class SecurityPatchAgeCheck(private val build: BuildInfo) : Check {
                 "varies by vendor). If the vendor no longer ships updates, the device is end-of-life: " +
                 "plan to replace it or move to a maintained OS that supports relocking the bootloader.",
         ),
+        failsWhen = "the security patch is older than 90 days (critical when over a year old)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

@@ -28,6 +28,7 @@ class LockScreenNotificationsCheck(private val settings: SystemSettings) : Check
                 SettingsActions.SECURITY,
             ),
         ),
+        failsWhen = "notification content is visible while the phone is locked",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

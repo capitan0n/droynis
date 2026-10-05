@@ -23,6 +23,7 @@ class ScreenTimeoutCheck(private val settings: SystemSettings) : Check {
             text = "Set Screen timeout to 1 minute or less (Settings › Display).",
             settingsActions = listOf(SettingsActions.DISPLAY),
         ),
+        failsWhen = "the screen stays on for more than 2 minutes",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

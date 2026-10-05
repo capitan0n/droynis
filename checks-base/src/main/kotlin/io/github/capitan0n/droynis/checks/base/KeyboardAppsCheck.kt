@@ -28,6 +28,7 @@ class KeyboardAppsCheck(private val inputMethods: InputMethodProbe) : Check {
                 "An open-source keyboard that works offline keeps your typing on the phone.",
             settingsActions = listOf(SettingsActions.INPUT_METHODS),
         ),
+        failsWhen = "a third-party keyboard is enabled",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

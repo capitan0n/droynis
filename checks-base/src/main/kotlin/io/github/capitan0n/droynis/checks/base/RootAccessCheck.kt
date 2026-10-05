@@ -33,6 +33,7 @@ class RootAccessCheck(
             settingsActions = listOf(SettingsActions.APPS),
         ),
         timeout = 15.seconds,
+        failsWhen = "an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

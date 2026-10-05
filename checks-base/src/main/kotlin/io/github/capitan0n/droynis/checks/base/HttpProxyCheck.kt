@@ -25,6 +25,7 @@ class HttpProxyCheck(private val network: NetworkProbe) : Check {
                 "Proxy to None.",
             settingsActions = listOf(SettingsActions.WIFI),
         ),
+        failsWhen = "web traffic goes through an HTTP proxy",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

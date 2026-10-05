@@ -1,7 +1,11 @@
 package io.github.capitan0n.droynis.platform
 
+import android.app.admin.DeviceAdminInfo
 import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
+import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
 import android.os.Build
 import android.security.advancedprotection.AdvancedProtectionManager
 import io.github.capitan0n.droynis.checks.base.AdminApp
@@ -10,6 +14,8 @@ import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.EncryptionStatus
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import java.io.IOException
+import org.xmlpull.v1.XmlPullParserException
 
 internal class AndroidDevicePolicy(
     private val context: Context,
@@ -41,17 +47,47 @@ internal class AndroidDevicePolicy(
             ?: return Reading.Unsupported("no DevicePolicyManager service", source)
         return probe(source) {
             val admins = policy.activeAdmins.orEmpty()
-                .map { it.packageName }
-                .distinct()
-                .map { pkg ->
+                .groupBy { it.packageName }
+                .map { (pkg, receivers) ->
+                    val declared = receivers.map(::declaredPolicies)
                     AdminApp(
                         app = AppRef(pkg, label(pkg)),
                         isDeviceOwner = policy.isDeviceOwnerApp(pkg),
                         isProfileOwner = policy.isProfileOwnerApp(pkg),
+                        canLock = declared.anyUses(DeviceAdminInfo.USES_POLICY_FORCE_LOCK),
+                        canWipe = declared.anyUses(DeviceAdminInfo.USES_POLICY_WIPE_DATA),
                     )
                 }
             Reading.Value(admins, source)
         }
+    }
+
+    /**
+     * The policies an admin receiver declares in its `android.app.device_admin` metadata; Android
+     * grants an active admin exactly these. `hasGrantedPolicy()` would tell, but in Android 17 it
+     * answers only the admin itself (`DevicePolicyManagerService.hasGrantedPolicy`).
+     */
+    private fun declaredPolicies(receiver: ComponentName): DeviceAdminInfo? =
+        try {
+            @Suppress("DEPRECATION") // the ComponentInfoFlags overload needs API 33
+            val info = context.packageManager.getReceiverInfo(receiver, PackageManager.GET_META_DATA)
+            DeviceAdminInfo(context, ResolveInfo().apply { activityInfo = info })
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        } catch (e: XmlPullParserException) {
+            null
+        } catch (e: IOException) {
+            null
+        } catch (e: RuntimeException) {
+            // e.g. Resources.NotFoundException from a broken metadata reference: one admin stays unknown.
+            null
+        }
+
+    /** True if any receiver declares [policy]; null if none does but one could not be read. */
+    private fun List<DeviceAdminInfo?>.anyUses(policy: Int): Boolean? = when {
+        any { it?.usesPolicy(policy) == true } -> true
+        any { it == null } -> null
+        else -> false
     }
 
     override fun advancedProtection(): Reading<Boolean> {

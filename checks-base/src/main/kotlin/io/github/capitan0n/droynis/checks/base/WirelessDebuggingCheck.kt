@@ -25,6 +25,7 @@ class WirelessDebuggingCheck(private val settings: SystemSettings) : Check {
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
         ),
         minSdk = 30,
+        failsWhen = "adb over Wi-Fi is on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

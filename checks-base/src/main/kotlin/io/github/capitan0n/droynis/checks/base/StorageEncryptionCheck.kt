@@ -27,6 +27,7 @@ class StorageEncryptionCheck(private val policy: DevicePolicy) : Check {
                 "data and plan to replace it.",
             settingsActions = listOf(SettingsActions.SECURITY),
         ),
+        failsWhen = "storage is unencrypted, or encrypted only with the default key",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

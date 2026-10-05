@@ -19,6 +19,7 @@ kotlin {
 dependencies {
     api(project(":checks-base"))
 
+    testImplementation(project(":report"))
     testImplementation(kotlin("test"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
@@ -28,6 +29,11 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+    // CatalogDocTest compares docs/CHECKS.md with the check specs, and rewrites it with UPDATE_CHECKS_DOC=1.
+    val checksDoc = rootProject.layout.projectDirectory.file("docs/CHECKS.md")
+    inputs.files(checksDoc).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.property("updateChecksDoc", providers.environmentVariable("UPDATE_CHECKS_DOC").orElse(""))
+    systemProperty("droynis.checksDoc", checksDoc.asFile.path)
     testLogging {
         events("failed")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

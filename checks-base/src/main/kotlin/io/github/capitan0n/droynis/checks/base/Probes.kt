@@ -56,6 +56,10 @@ data class AdminApp(
     val app: AppRef,
     val isDeviceOwner: Boolean,
     val isProfileOwner: Boolean,
+    /** Declares the force-lock policy; null when its declaration could not be read. */
+    val canLock: Boolean? = null,
+    /** Declares the wipe-data policy (erase the phone); null when its declaration could not be read. */
+    val canWipe: Boolean? = null,
 )
 
 interface DevicePolicy {
@@ -80,6 +84,8 @@ data class InstalledApp(
     val installer: String?,
     /** The Android API level the app was built for (`targetSdkVersion`). */
     val targetSdk: Int,
+    /** False when the app is disabled, for example a system app the user turned off. */
+    val isEnabled: Boolean = true,
 )
 
 interface PackageInventory {
@@ -142,6 +148,9 @@ interface CertificateStore {
 interface RadioProbe {
     /** Unsupported when the device has no NFC hardware. */
     fun nfcEnabled(): Reading<Boolean>
+
+    /** The system-wide Location switch. */
+    fun locationEnabled(): Reading<Boolean>
 }
 
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */

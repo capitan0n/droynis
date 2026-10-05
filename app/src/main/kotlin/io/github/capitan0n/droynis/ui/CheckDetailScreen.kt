@@ -165,6 +165,7 @@ fun CheckDetailScreen(
 
         SectionCard(title = stringResource(R.string.detail_technical), icon = Icons.Rounded.Tune) {
             InfoRow(stringResource(R.string.detail_id), spec.id, monospace = true)
+            if (spec.failsWhen.isNotBlank()) InfoRow(stringResource(R.string.detail_fails_when), spec.failsWhen)
             InfoRow(stringResource(R.string.detail_category), stringResource(spec.category.labelRes))
             InfoRow(stringResource(R.string.detail_severity), stringResource(spec.severity.labelRes))
             if (finding != null && finding.severity != spec.severity) {

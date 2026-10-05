@@ -26,6 +26,7 @@ class LockScreenCheck(private val keyguard: Keyguard) : Check {
                 "much stronger than a pattern.",
             settingsActions = listOf(SettingsActions.SET_NEW_PASSWORD, SettingsActions.SECURITY),
         ),
+        failsWhen = "no PIN, pattern or password is set",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

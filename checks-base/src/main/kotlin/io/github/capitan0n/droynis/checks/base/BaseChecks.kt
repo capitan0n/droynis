@@ -16,9 +16,11 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     // Access control
     LockScreenCheck(probes.keyguard),
     ScreenTimeoutCheck(probes.settings),
+    LockDelayCheck(probes.settings, probes.keyguard),
     StayAwakeCheck(probes.settings),
     PasswordVisibilityCheck(probes.settings),
     LockScreenNotificationsCheck(probes.settings),
+    RemoteLockCheck(probes.policy, probes.packages),
     DeveloperOptionsCheck(probes.settings),
     UsbDebuggingCheck(probes.settings),
     WirelessDebuggingCheck(probes.settings),
@@ -38,4 +40,6 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     UserCertificatesCheck(probes.certificates),
     BluetoothCheck(probes.settings),
     NfcCheck(probes.radios),
+    LocationCheck(probes.radios),
+    ScanningCheck(probes.settings),
 )

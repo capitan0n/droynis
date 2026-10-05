@@ -25,6 +25,7 @@ class NfcCheck(private val radios: RadioProbe) : Check {
             text = "Turn NFC off if you do not use contactless payments, transit cards or NFC tags.",
             settingsActions = listOf(SettingsActions.NFC),
         ),
+        failsWhen = "NFC is on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

@@ -1,7 +1,7 @@
 # Droynis design notes
 
-Status: base tier with 30 checks plus the first ADB-tier check (see the README for the list),
-and a Compose UI with dashboard, checks, tools and help screens. This file records how the brief maps onto current Android
+Status: 34 base-tier checks and one ADB-tier check (listed in [CHECKS.md](CHECKS.md)), and a
+Compose UI with dashboard, checks, tools and help screens. This file records how the brief maps onto current Android
 (API 37, October 2026) and the decisions taken so far.
 
 ## 1. Brief review: what does not hold on current Android
@@ -42,6 +42,20 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **Root** (INTG-1050) is a heuristic: known su paths (existence only; Droynis never runs su) and
   root managers or hooking frameworks by package name. Hidden root (DenyList, Shamiko, KernelSU)
   is not detected, and the explanation says so.
+- **Location and scanning** (NETW-3008/3009): `LocationManager.isLocationEnabled()` (API 28+,
+  `location_mode` before). `wifi_scan_always_enabled` and `ble_scan_always_enabled` are hidden or
+  system API constants, but Android 17 marks both `@Readable`, so they are read by name; where a
+  release does not, the read fails and the check is UNKNOWN.
+- **Lock delay** (ACCS-2006): `lock_screen_lock_after_timeout` is `@Readable` in Android 17. When it
+  was never set, SystemUI applies its own default (5 s in AOSP) that apps can't read, so unset is
+  UNKNOWN, not PASS. "Power button instantly locks" lives in LockSettings and is unreadable.
+- **Remote lock** (ACCS-2020): whether Find Hub, Samsung Find My Mobile or another vendor service is
+  on is not visible to apps, and those services need no device admin. `hasGrantedPolicy()` answers
+  only the admin itself in Android 17, so Droynis parses each active admin's declared policies
+  (`DeviceAdminInfo`): an admin that declares both force-lock and wipe-data, and is not just a work
+  profile, is a PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL.
+  The theft protection switches (Theft Detection Lock, Offline Device Lock, Identity Check) are not
+  in the Android 17 Settings provider (only Identity Check promo flags are), so no check reads them.
 
 ## 2. Modules
 
@@ -144,6 +158,9 @@ out. Both contain only scan results and the device facts passed in.
 - Checks: JVM unit tests against fake probes, including threshold boundaries.
 - Scanner: virtual-time tests for timeouts and cancellation, plus a real-thread test where a
   check blocks like a hung binder call.
+- docs/CHECKS.md is generated from the check specs by `CatalogDocTest` (in `checks-adb`, the
+  module that sees every registry); `check` fails while the file is stale, and
+  `UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test` rewrites it. Every spec must set `failsWhen`.
 - dumpsys parsers: JVM tests on output shaped like the Android 17 source, plus mutations (an
   `Access:` line in another shape, an orphan line, no records) that must fail the parse.
 - `platform-android`: instrumented tests run the real probes and all checks on an emulator

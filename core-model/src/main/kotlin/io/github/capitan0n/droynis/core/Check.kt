@@ -36,6 +36,8 @@ data class CheckSpec(
     /** Privileges beyond public APIs. Empty for base-tier checks. */
     val requires: Set<Grant> = emptySet(),
     val timeout: Duration = 5.seconds,
+    /** When the check fails, in one short phrase with its thresholds, for the catalog and docs. */
+    val failsWhen: String = "",
 ) {
     init {
         require(ID_PATTERN.matches(id)) { "Check id '$id' must look like ACCS-2001" }

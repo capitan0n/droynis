@@ -36,6 +36,8 @@ class AndroidPlatformTest {
         assertValue(platform.inputMethods.enabledKeyboards())
         assertValue(platform.permissionAudit.overview())
 
+        assertValue(platform.radios.locationEnabled())
+
         val nfc = platform.radios.nfcEnabled()
         assertTrue("$nfc", nfc is Reading.Value || nfc is Reading.Unsupported) // emulators have no NFC
 

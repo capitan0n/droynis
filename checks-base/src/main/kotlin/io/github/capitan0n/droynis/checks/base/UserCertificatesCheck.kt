@@ -28,6 +28,7 @@ class UserCertificatesCheck(private val certificates: CertificateStore) : Check 
                 "remove certificates you do not need (the location varies by vendor).",
             settingsActions = listOf(SettingsActions.SECURITY),
         ),
+        failsWhen = "a user-installed CA certificate can intercept TLS",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

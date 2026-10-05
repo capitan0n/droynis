@@ -111,6 +111,7 @@
     <string name="filter_all">All</string>
     <string name="filter_issues">Issues</string>
     <string name="muted">Muted</string>
+    <string name="filter_all_tiers">All tiers</string>
     <string name="filter_all_categories">All categories</string>
     <string name="checks_count">%1$d checks</string>
     <string name="checks_empty">No checks match these filters.</string>
@@ -135,6 +136,7 @@
     <string name="detail_min_android">Needs Android</string>
     <string name="detail_min_android_value">API %1$d or newer</string>
     <string name="detail_tier">Privilege tier</string>
+    <string name="detail_fails_when">Fails when</string>
     <string name="detail_needs_tier">Needs the %1$s tier</string>
     <string name="detail_needs_tier_body">This check reads data that public Android APIs don\'t give apps. Grant the read permissions once from a computer, then scan again.</string>
     <string name="detail_mute">Mute this check</string>
@@ -261,6 +263,7 @@
     <string name="catalog_count">Checks (%1$d)</string>
     <string name="catalog_none">No checks yet: this tier comes in a later update.</string>
     <string name="catalog_open_result">Open result</string>
+    <string name="catalog_fails_when">Fails when %1$s.</string>
     <string name="tier_card_title">%1$s tier</string>
     <string name="tier_base">Base</string>
     <string name="tier_base_body">Public Android APIs only. These checks run on every phone, with no setup and no extra permissions.</string>

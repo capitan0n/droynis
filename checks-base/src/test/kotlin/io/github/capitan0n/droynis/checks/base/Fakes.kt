@@ -110,8 +110,12 @@ class FakeCertificates(private val certs: Reading<List<UserCertificate>> = value
     override fun userCertificates() = certs
 }
 
-class FakeRadios(private val nfc: Reading<Boolean> = value(false)) : RadioProbe {
+class FakeRadios(
+    private val nfc: Reading<Boolean> = value(false),
+    private val location: Reading<Boolean> = value(false),
+) : RadioProbe {
     override fun nfcEnabled() = nfc
+    override fun locationEnabled() = location
 }
 
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {

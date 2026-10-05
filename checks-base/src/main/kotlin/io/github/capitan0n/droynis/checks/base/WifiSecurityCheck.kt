@@ -27,6 +27,7 @@ class WifiSecurityCheck(private val network: NetworkProbe) : Check {
         ),
         // The security type of the connected network is public API from Android 12.
         minSdk = 31,
+        failsWhen = "the phone is on an open or WEP Wi-Fi network without a VPN",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

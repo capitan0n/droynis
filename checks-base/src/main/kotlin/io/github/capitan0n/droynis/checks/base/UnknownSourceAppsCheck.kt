@@ -30,6 +30,7 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
             settingsActions = listOf(SettingsActions.APPS, SettingsActions.UNKNOWN_APP_SOURCES),
         ),
         timeout = 15.seconds,
+        failsWhen = "an app came from outside a known app store",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

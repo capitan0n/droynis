@@ -35,6 +35,8 @@ class BootloaderCheck(
         ),
         // Generating an attested key in secure hardware can take a few seconds.
         timeout = 20.seconds,
+        failsWhen = "the bootloader is unlocked or verified boot isn't passing (hardware key attestation, boot " +
+            "properties as a fallback)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

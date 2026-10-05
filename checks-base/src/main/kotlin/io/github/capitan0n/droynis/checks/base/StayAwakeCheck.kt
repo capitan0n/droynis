@@ -24,6 +24,7 @@ class StayAwakeCheck(private val settings: SystemSettings) : Check {
             text = "Turn off \"Stay awake\" in Developer options.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
         ),
+        failsWhen = "the screen never turns off, so never locks, while charging",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

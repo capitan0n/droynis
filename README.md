@@ -20,7 +20,7 @@ does and does not allow.
 
 - **Dashboard**: security score (0–100) on a ring gauge with a grade (A–F), result counts,
   one card per category and the top issues.
-- **Checks**: every check with its result, filterable by result and category:
+- **Checks**: every check with its result, filterable by result, category and privilege tier:
   green ✓ passed, yellow – needs attention, red ✗ critical, grey ? unknown or N/A.
   Tap a check for why it matters, what to do (with a button to the right Settings screen),
   the raw evidence, a mute switch and technical details.
@@ -43,44 +43,19 @@ still runs and shows its real result, but the score, the critical cap, the count
 lists leave it out. The dashboard shows how many checks are muted, and both reports list them, so
 a muted score never passes for an unmuted one.
 
-## Checks (base tier)
+## Checks
 
-| ID | Check | Severity | Fails when |
-|---|---|---|---|
-| INTG-1010 | Security patch age | Warning (critical > 1 year) | patch level older than 90 days |
-| INTG-1020 | Storage encryption | Critical | storage unencrypted, or encrypted only with the default key |
-| INTG-1040 | Bootloader lock | Critical | bootloader unlocked or verified boot not passing (hardware key attestation, boot properties as fallback) |
-| INTG-1041 | OEM unlocking | Notice | the OEM unlocking switch is on |
-| INTG-1050 | Root access | Critical | an su binary, root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found |
-| INTG-1060 | Android build | Warning | userdebug/eng build, public test keys or `ro.debuggable=1` |
-| INTG-1070 | WebView updates | Warning | WebView not updated for more than 60 days |
-| INTG-1030 | Advanced Protection (Android 16+) | Info | Advanced Protection is off |
-| ACCS-2001 | Secure lock screen | Critical | no PIN, pattern or password |
-| ACCS-2002 | Screen timeout | Notice | screen stays on longer than 2 minutes |
-| ACCS-2005 | Stay awake while charging | Notice | the screen never turns off (or locks) while charging |
-| ACCS-2003 | Password visibility | Notice | typed password characters are shown |
-| ACCS-2004 | Lock screen notifications | Notice | notification content visible while locked |
-| ACCS-2010 | Developer options | Notice | developer options enabled |
-| ACCS-2011 | USB debugging | Warning | adb over USB enabled |
-| ACCS-2012 | Wireless debugging (Android 11+) | Warning | adb over Wi-Fi enabled |
-| APPS-4001 | Accessibility services | Notice | any accessibility service enabled |
-| APPS-4002 | Device admin apps | Notice | any device admin active |
-| APPS-4005 | Notification access | Notice | an app can read all notifications |
-| APPS-4006 | Keyboard apps | Notice | a third-party keyboard is enabled |
-| APPS-4003 | Debuggable apps | Warning | an installed app is debuggable |
-| APPS-4004 | Apps from unknown sources | Notice | an app came from outside a known app store |
-| APPS-4007 | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
-| NETW-3001 | Private DNS (Android 9+) | Warning | DNS not encrypted and no VPN |
-| NETW-3002 | VPN | Info | no VPN active |
-| NETW-3005 | Wi-Fi security (Android 12+) | Warning | connected to an open or WEP network without VPN |
-| NETW-3007 | HTTP proxy | Warning | web traffic goes through a proxy |
-| NETW-3003 | User CA certificates | Warning | a user-installed CA can intercept TLS |
-| NETW-3004 | Bluetooth | Notice | Bluetooth is on |
-| NETW-3006 | NFC | Info | NFC is on |
+**[docs/CHECKS.md](docs/CHECKS.md)** lists every check: when it fails, why it matters and what to
+do. It is generated from the app's own check definitions, so it always matches the app; the same
+list is in the app under ⋮ › Check catalog.
 
-## Checks (ADB tier)
+The checks cover device integrity (patch level, encryption, bootloader, root…), access control
+(screen lock, lock delay, remote lock, debugging…), apps and permissions, and network and radios
+(Private DNS, VPN, Wi-Fi, certificates, Bluetooth, NFC, location, scanning…). Most need no setup.
 
-Optional. They show as N/A, and do not change the score, until you grant two read-only
+### ADB tier
+
+Optional checks that show as N/A, and don't change the score, until you grant two read-only
 permissions once from a computer:
 
 ```sh
@@ -93,11 +68,7 @@ is granted. USB debugging can be turned off afterwards; the grants stay until
 `adb shell pm revoke …` or an uninstall. The Settings › Usage access switch alone is not enough:
 `dumpsys appops` asks for the `PACKAGE_USAGE_STATS` permission itself. DUMP lets an app read
 system diagnostics, so Droynis reads only what its checks need, keeps nothing and has no network
-access.
-
-| ID | Check | Severity | Fails when |
-|---|---|---|---|
-| APPS-4101 | Background camera, microphone and location use (Android 10+) | Notice (warning for camera or microphone) | a user app used the camera, microphone or location while in the background in the last 7 days (`dumpsys appops`) |
+access. Shizuku and root tiers are planned.
 
 ## Results and score
 
@@ -155,7 +126,9 @@ unsigned APK (as F-Droid expects). A release-signed app cannot update a debug-si
 `adb uninstall io.github.capitan0n.droynis` once before switching.
 
 The pure-Kotlin modules (`core-model`, `checks-base`, `checks-adb`, `report`) hold all check
-logic and run on any JVM; only `platform-android` and `app` touch Android APIs.
+logic and run on any JVM; only `platform-android` and `app` touch Android APIs. After adding or
+changing a check, regenerate the check list with `UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test`;
+`./gradlew check` fails while docs/CHECKS.md is out of date.
 
 ## Author
 

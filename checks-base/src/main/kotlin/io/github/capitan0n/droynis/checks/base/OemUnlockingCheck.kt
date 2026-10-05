@@ -27,6 +27,7 @@ class OemUnlockingCheck(private val properties: SystemProperties) : Check {
                 "is unlocked or when the carrier does not allow unlocking.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
         ),
+        failsWhen = "the OEM unlocking switch is on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

@@ -93,6 +93,18 @@ class DroynisAppTest {
     }
 
     @Test
+    fun checksCanBeFilteredByTier() {
+        waitForScan()
+        compose.onNodeWithText(text(R.string.tab_checks)).performClick()
+
+        compose.onNodeWithText(text(R.string.tier_adb)).performClick()
+        val adb = adbChecks(AndroidPlatform(compose.activity)).first().spec.title
+        compose.onNodeWithText(adb).assertExists()
+        val patch = baseChecks(AndroidPlatform(compose.activity)).single { it is SecurityPatchAgeCheck }.spec.title
+        compose.onNodeWithText(patch).assertDoesNotExist()
+    }
+
+    @Test
     fun catalogListsTheTiersAndHowToSetUpAdb() {
         waitForScan()
 

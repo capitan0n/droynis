@@ -24,6 +24,7 @@ class BluetoothCheck(private val settings: SystemSettings) : Check {
             text = "Turn Bluetooth off when you are not using headphones, a watch or a car.",
             settingsActions = listOf(SettingsActions.BLUETOOTH),
         ),
+        failsWhen = "Bluetooth is on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

@@ -45,6 +45,8 @@ class BackgroundSensorUseCheck(
         minSdk = 29,
         requires = setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS),
         timeout = 15.seconds,
+        failsWhen = "a user app used the camera, microphone or location from the background in the last 7 days " +
+            "(warning for camera or microphone)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

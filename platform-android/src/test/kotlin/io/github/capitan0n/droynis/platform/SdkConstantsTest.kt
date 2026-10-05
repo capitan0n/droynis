@@ -25,6 +25,7 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_WIFI_SETTINGS, SettingsActions.WIFI)
         assertEquals(Settings.ACTION_VPN_SETTINGS, SettingsActions.VPN)
         assertEquals(Settings.ACTION_BLUETOOTH_SETTINGS, SettingsActions.BLUETOOTH)
+        assertEquals(Settings.ACTION_LOCATION_SOURCE_SETTINGS, SettingsActions.LOCATION)
         assertEquals(Settings.ACTION_NFC_SETTINGS, SettingsActions.NFC)
         assertEquals(Settings.ACTION_DISPLAY_SETTINGS, SettingsActions.DISPLAY)
         assertEquals(Settings.ACTION_ACCESSIBILITY_SETTINGS, SettingsActions.ACCESSIBILITY)

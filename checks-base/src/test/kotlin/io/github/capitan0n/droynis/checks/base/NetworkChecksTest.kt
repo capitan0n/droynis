@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Status
 import java.time.LocalDate
 import kotlin.test.Test
@@ -100,5 +101,32 @@ class NetworkChecksTest {
         assertEquals(Status.FAIL, check("2").status()) // on while in airplane mode
         assertEquals(Status.PASS, check("0").status())
         assertEquals(Status.UNKNOWN, check(null).status())
+    }
+
+    @Test
+    fun `location`() = runTest {
+        assertEquals(Status.FAIL, LocationCheck(FakeRadios(location = value(true))).status())
+        assertEquals(Status.PASS, LocationCheck(FakeRadios(location = value(false))).status())
+        assertEquals(Status.UNKNOWN, LocationCheck(FakeRadios(location = unavailable("no service"))).status())
+    }
+
+    @Test
+    fun `wifi and bluetooth scanning`() = runTest {
+        fun check(wifi: Reading<String?>, ble: Reading<String?>) = ScanningCheck(
+            FakeSettings(global = mapOf("wifi_scan_always_enabled" to wifi, "ble_scan_always_enabled" to ble)),
+        )
+
+        val both = check(value("1"), value("1")).outcome()
+        assertEquals(Status.FAIL, both.status)
+        assertEquals("Wi-Fi scanning and Bluetooth scanning are on", both.summary)
+        assertEquals("Bluetooth scanning is on", check(value("0"), value("1")).outcome().summary)
+        // One switch on is enough to fail, even when the other can't be read.
+        assertEquals(Status.FAIL, check(unavailable("access denied"), value("1")).status())
+        assertEquals(Status.PASS, check(value("0"), value("0")).status())
+
+        val unread = check(value("0"), unavailable("access denied")).outcome()
+        assertEquals(Status.UNKNOWN, unread.status)
+        assertEquals("Could not tell whether Bluetooth scanning is on", unread.summary)
+        assertEquals(Status.UNKNOWN, check(value(null), value("0")).status())
     }
 }

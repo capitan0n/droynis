@@ -28,6 +28,7 @@ class AccessibilityServicesCheck(private val accessibility: AccessibilityProbe) 
                 "Settings › Accessibility.",
             settingsActions = listOf(SettingsActions.ACCESSIBILITY),
         ),
+        failsWhen = "any accessibility service is enabled",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

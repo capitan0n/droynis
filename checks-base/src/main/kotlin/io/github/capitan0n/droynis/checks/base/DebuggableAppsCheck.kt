@@ -30,6 +30,7 @@ class DebuggableAppsCheck(private val packages: PackageInventory) : Check {
             settingsActions = listOf(SettingsActions.APPS),
         ),
         timeout = 15.seconds,
+        failsWhen = "an installed app is debuggable",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

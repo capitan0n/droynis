@@ -29,6 +29,7 @@ class NotificationAccessCheck(
                 "for apps that do not need it.",
             settingsActions = listOf(SettingsActions.NOTIFICATION_ACCESS),
         ),
+        failsWhen = "an app can read all notifications",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

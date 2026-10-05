@@ -30,6 +30,7 @@ class OutdatedAppsCheck(private val packages: PackageInventory) : Check {
             settingsActions = listOf(SettingsActions.APPS),
         ),
         timeout = 15.seconds,
+        failsWhen = "a user app targets Android 8.1 (API 27) or older",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

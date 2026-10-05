@@ -27,6 +27,7 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
                 "your app store, and install pending system updates.",
             settingsActions = listOf(SettingsActions.APPS),
         ),
+        failsWhen = "WebView hasn't been updated for more than 60 days",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

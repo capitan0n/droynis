@@ -25,6 +25,7 @@ class VpnCheck(private val network: NetworkProbe) : Check {
                 "› VPN you can also turn on \"Always-on VPN\" and \"Block connections without VPN\".",
             settingsActions = listOf(SettingsActions.VPN),
         ),
+        failsWhen = "no VPN is active",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

@@ -141,6 +141,13 @@ private fun CatalogCheckCard(
         },
     ) {
         Text(spec.explanation, style = MaterialTheme.typography.bodyMedium)
+        if (spec.failsWhen.isNotBlank()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.catalog_fails_when, spec.failsWhen),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             spec.remediation.text,

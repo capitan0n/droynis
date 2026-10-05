@@ -27,6 +27,7 @@ class AdvancedProtectionCheck(private val policy: DevicePolicy) : Check {
             settingsActions = listOf(SettingsActions.SECURITY),
         ),
         minSdk = 36,
+        failsWhen = "Advanced Protection is off",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

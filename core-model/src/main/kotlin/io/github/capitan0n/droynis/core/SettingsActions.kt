@@ -29,6 +29,9 @@ object SettingsActions {
     /** `Settings.ACTION_BLUETOOTH_SETTINGS` */
     const val BLUETOOTH = "android.settings.BLUETOOTH_SETTINGS"
 
+    /** `Settings.ACTION_LOCATION_SOURCE_SETTINGS`: Location, including Wi-Fi and Bluetooth scanning. */
+    const val LOCATION = "android.settings.LOCATION_SOURCE_SETTINGS"
+
     /** `Settings.ACTION_NFC_SETTINGS` */
     const val NFC = "android.settings.NFC_SETTINGS"
 

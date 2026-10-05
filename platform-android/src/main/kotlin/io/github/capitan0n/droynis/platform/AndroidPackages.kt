@@ -26,6 +26,7 @@ internal class AndroidPackages(private val context: Context) : PackageInventory 
                         isDebuggable = (info.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0,
                         installer = installerOf(info.packageName),
                         targetSdk = info.targetSdkVersion,
+                        isEnabled = info.enabled,
                     )
                 }
             Reading.Value(apps, source)

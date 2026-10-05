@@ -30,6 +30,7 @@ class PrivateDnsCheck(private val network: NetworkProbe) : Check {
             settingsActions = listOf(SettingsActions.NETWORK),
         ),
         minSdk = 28,
+        failsWhen = "DNS isn't encrypted and no VPN is active",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

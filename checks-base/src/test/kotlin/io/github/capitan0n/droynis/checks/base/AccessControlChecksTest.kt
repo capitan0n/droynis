@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -120,5 +121,79 @@ class AccessControlChecksTest {
             WirelessDebuggingCheck(FakeSettings(global = mapOf("adb_wifi_enabled" to unavailable("access denied")))).status(),
         )
         assertEquals(30, WirelessDebuggingCheck(FakeSettings()).spec.minSdk)
+    }
+
+    @ParameterizedTest(name = "lock_screen_lock_after_timeout={0} -> {1}")
+    @CsvSource(
+        "0, PASS, Locks immediately after the screen turns off",
+        "5000, PASS, Locks 5 seconds after the screen turns off",
+        "30000, PASS, Locks 30 seconds after the screen turns off",
+        "60000, FAIL, Stays unlocked for 1 minute after the screen turns off",
+        "1800000, FAIL, Stays unlocked for 30 minutes after the screen turns off",
+    )
+    fun `lock after screen timeout`(raw: String, status: Status, summary: String) = runTest {
+        val check = LockDelayCheck(
+            FakeSettings(secure = mapOf("lock_screen_lock_after_timeout" to value(raw))),
+            FakeKeyguard(value(true)),
+        )
+
+        val outcome = check.outcome()
+
+        assertEquals(status, outcome.status)
+        assertEquals(summary, outcome.summary)
+    }
+
+    @Test
+    fun `lock delay is unknown when unset or unreadable, and N_A without a screen lock`() = runTest {
+        fun check(raw: String?, secure: Boolean = true) = LockDelayCheck(
+            FakeSettings(secure = mapOf("lock_screen_lock_after_timeout" to value(raw))),
+            FakeKeyguard(value(secure)),
+        )
+
+        assertEquals(Status.UNKNOWN, check(null).status()) // the default lives in SystemUI, unreadable
+        assertEquals(Status.UNKNOWN, check("soon").status())
+        assertEquals(Status.UNKNOWN, check("-5").status())
+        assertEquals(Status.UNSUPPORTED, check("600000", secure = false).status())
+        val unreadableLock = LockDelayCheck(FakeSettings(), FakeKeyguard(unavailable()))
+        assertEquals(Status.UNKNOWN, unreadableLock.status())
+    }
+
+    @Test
+    fun `remote lock passes only on an admin that may lock and erase`() = runTest {
+        fun admin(pkg: String, lock: Boolean?, wipe: Boolean?, deviceOwner: Boolean = false, profileOwner: Boolean = false) =
+            AdminApp(AppRef(pkg, pkg.substringAfterLast('.')), deviceOwner, profileOwner, canLock = lock, canWipe = wipe)
+        fun check(vararg admins: AdminApp, apps: List<InstalledApp> = emptyList()) =
+            RemoteLockCheck(FakePolicy(admins = value(admins.toList())), FakePackages(value(apps)))
+
+        val fmd = check(admin("de.nulide.findmydevice", lock = true, wipe = true)).outcome()
+        assertEquals(Status.PASS, fmd.status)
+        assertEquals("findmydevice can lock and erase this phone", fmd.summary)
+
+        // Lock alone, or a work profile that can only remove itself, is not enough.
+        assertEquals(Status.FAIL, check(admin("org.example.locker", lock = true, wipe = false)).status())
+        assertEquals(Status.FAIL, check(admin("org.example.work", lock = true, wipe = true, profileOwner = true)).status())
+        assertEquals(Status.PASS, check(admin("org.example.mdm", lock = true, wipe = true, deviceOwner = true, profileOwner = true)).status())
+        assertEquals(Status.FAIL, check().status())
+    }
+
+    @Test
+    fun `remote lock is unknown when a service may do it unseen`() = runTest {
+        fun app(pkg: String, enabled: Boolean = true) =
+            InstalledApp(pkg, isSystem = true, isDebuggable = false, installer = null, targetSdk = 37, isEnabled = enabled)
+        fun check(apps: Reading<List<InstalledApp>>, admins: List<AdminApp> = emptyList()) =
+            RemoteLockCheck(FakePolicy(admins = value(admins)), FakePackages(apps))
+
+        val google = check(value(listOf(app("com.google.android.gms")))).outcome()
+        assertEquals(Status.UNKNOWN, google.status)
+        assertEquals(
+            "Find Hub (Google Play services) can lock and erase a lost phone, but Android doesn't tell apps whether it is turned on",
+            google.summary,
+        )
+        assertEquals(Status.FAIL, check(value(listOf(app("com.google.android.gms", enabled = false)))).status())
+        assertEquals(Status.UNKNOWN, check(unavailable("denied")).status())
+
+        val unreadable = AdminApp(AppRef("org.example.admin", "Admin"), false, false, canLock = null, canWipe = null)
+        assertEquals(Status.UNKNOWN, check(value(emptyList()), listOf(unreadable)).status())
+        assertEquals(Status.UNKNOWN, RemoteLockCheck(FakePolicy(admins = unavailable()), FakePackages()).status())
     }
 }

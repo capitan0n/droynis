@@ -25,6 +25,7 @@ class DeveloperOptionsCheck(private val settings: SystemSettings) : Check {
                 "screen. Permissions granted to Droynis with adb stay granted.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
         ),
+        failsWhen = "developer options are on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

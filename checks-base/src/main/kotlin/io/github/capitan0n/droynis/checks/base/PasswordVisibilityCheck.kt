@@ -25,6 +25,7 @@ class PasswordVisibilityCheck(private val settings: SystemSettings) : Check {
                 "older ones).",
             settingsActions = listOf(SettingsActions.PRIVACY, SettingsActions.SECURITY),
         ),
+        failsWhen = "typed password characters are shown",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

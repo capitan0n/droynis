@@ -162,6 +162,7 @@ fun DroynisApp(
     var openCheckId by rememberSaveable { mutableStateOf(initialCheckId) }
     var filter by rememberSaveable { mutableStateOf(CheckFilter.ALL) }
     var category by rememberSaveable { mutableStateOf<Category?>(null) }
+    var tier by rememberSaveable { mutableStateOf<Tier?>(null) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     var showCatalog by rememberSaveable { mutableStateOf(false) }
     // Kept while the catalog is closed, so it fades out and reopens on the same tab.
@@ -182,6 +183,7 @@ fun DroynisApp(
     val showChecks = { newFilter: CheckFilter, newCategory: Category? ->
         filter = newFilter
         category = newCategory
+        tier = null
         tab = Tab.CHECKS
     }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
@@ -312,6 +314,8 @@ fun DroynisApp(
                                 onFilter = { filter = it },
                                 category = category,
                                 onCategory = { category = it },
+                                tier = tier,
+                                onTier = { tier = it },
                                 onOpenCheck = { openCheckId = it },
                             )
                             Tab.TOOLS -> ToolsScreen(state = state, actions = actions)

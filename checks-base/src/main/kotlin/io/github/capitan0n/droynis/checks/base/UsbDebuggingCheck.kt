@@ -25,6 +25,7 @@ class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
                 "authorizations\". Permissions granted to Droynis with adb stay granted afterwards.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
         ),
+        failsWhen = "adb over USB is on",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

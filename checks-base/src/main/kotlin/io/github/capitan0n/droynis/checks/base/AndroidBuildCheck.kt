@@ -27,6 +27,7 @@ class AndroidBuildCheck(
         remediation = Remediation(
             text = "Install the official firmware, or a maintained OS that publishes signed user builds.",
         ),
+        failsWhen = "it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

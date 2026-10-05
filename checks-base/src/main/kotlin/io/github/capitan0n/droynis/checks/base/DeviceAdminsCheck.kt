@@ -28,6 +28,7 @@ class DeviceAdminsCheck(private val policy: DevicePolicy) : Check {
                 "vendor) and deactivate the ones you do not need.",
             settingsActions = listOf(SettingsActions.SECURITY),
         ),
+        failsWhen = "any device admin is active",
     )
 
     override suspend fun run(context: ScanContext): Outcome {

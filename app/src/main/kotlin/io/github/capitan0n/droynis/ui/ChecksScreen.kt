@@ -35,10 +35,11 @@ import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
+import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Verdict
 import io.github.capitan0n.droynis.report.verdict
 
-/** Every check with its ✓ – ✗ ? result, filterable by verdict and category. */
+/** Every check with its ✓ – ✗ ? result, filterable by verdict, category and privilege tier. */
 @Composable
 fun ChecksScreen(
     catalog: List<CheckSpec>,
@@ -48,6 +49,8 @@ fun ChecksScreen(
     onFilter: (CheckFilter) -> Unit,
     category: Category?,
     onCategory: (Category?) -> Unit,
+    tier: Tier?,
+    onTier: (Tier?) -> Unit,
     onOpenCheck: (String) -> Unit,
 ) {
     // Derived once per scan or filter change, not on every frame while the list scrolls.
@@ -55,9 +58,11 @@ fun ChecksScreen(
     val counts = remember(catalog, verdicts, muted) {
         CheckFilter.entries.associateWith { option -> catalog.count { option.matches(verdicts[it.id], it.id in muted) } }
     }
-    val groups = remember(catalog, verdicts, muted, filter, category) {
+    // Tiers with at least one check; Shizuku and root chips appear once they have checks.
+    val tiers = remember(catalog) { catalog.map { it.requiredTier }.distinct().sorted() }
+    val groups = remember(catalog, verdicts, muted, filter, category, tier) {
         Category.entries.mapNotNull { group ->
-            val all = catalog.filter { it.category == group }
+            val all = catalog.filter { it.category == group && (tier == null || it.requiredTier == tier) }
             val shown = all.filter {
                 (category == null || group == category) && filter.matches(verdicts[it.id], it.id in muted)
             }
@@ -83,6 +88,11 @@ fun ChecksScreen(
         item(key = "categories", contentType = "chips") {
             CategoryChips(category, onCategory, Modifier.padding(top = 5.dp))
         }
+        if (tiers.size > 1) {
+            item(key = "tiers", contentType = "chips") {
+                TierChips(tiers, tier, onTier, Modifier.padding(top = 5.dp))
+            }
+        }
 
         if (groups.isEmpty()) {
             item(key = "empty", contentType = "empty") {
@@ -95,6 +105,7 @@ fun ChecksScreen(
                     OutlinedButton(onClick = {
                         onFilter(CheckFilter.ALL)
                         onCategory(null)
+                        onTier(null)
                     }) {
                         Icon(Icons.Rounded.FilterAltOff, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
@@ -227,6 +238,29 @@ private fun CategoryChips(selected: Category?, onCategory: (Category?) -> Unit, 
                 leadingIcon = {
                     Icon(option.icon, contentDescription = null, tint = option.accent, modifier = Modifier.size(18.dp))
                 },
+            )
+        }
+    }
+}
+
+@Composable
+private fun TierChips(tiers: List<Tier>, selected: Tier?, onTier: (Tier?) -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        FilterChip(
+            selected = selected == null,
+            onClick = { onTier(null) },
+            label = { Text(stringResource(R.string.filter_all_tiers)) },
+            leadingIcon = { Icon(Icons.Rounded.Layers, contentDescription = null, modifier = Modifier.size(18.dp)) },
+        )
+        for (option in tiers) {
+            FilterChip(
+                selected = selected == option,
+                onClick = { onTier(if (selected == option) null else option) },
+                label = { Text(stringResource(option.labelRes)) },
+                leadingIcon = { Icon(option.icon, contentDescription = null, modifier = Modifier.size(18.dp)) },
             )
         }
     }
