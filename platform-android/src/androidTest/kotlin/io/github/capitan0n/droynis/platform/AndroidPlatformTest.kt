@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.core.Status
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,38 +26,63 @@ class AndroidPlatformTest {
         assertValue(platform.keyguard.isDeviceSecure())
         assertValue(platform.build.securityPatch())
         assertValue(platform.settings.global("adb_enabled"))
+        assertValue(platform.settings.system("screen_off_timeout"))
+        assertValue(platform.policy.encryptionStatus())
+        assertValue(platform.policy.activeAdmins())
+        assertValue(platform.accessibility.enabledServices())
+        assertValue(platform.network.activeNetwork())
+        assertValue(platform.certificates.userCertificates())
+        assertValue(platform.inputMethods.enabledKeyboards())
+        assertValue(platform.permissionAudit.overview())
+
+        val nfc = platform.radios.nfcEnabled()
+        assertTrue("$nfc", nfc is Reading.Value || nfc is Reading.Unsupported) // emulators have no NFC
+
+        val apps = platform.packages.installedApps()
+        assertValue(apps)
+        assertTrue("expected more than a handful of apps", (apps as Reading.Value).value.size > 5)
 
         val complexity = platform.keyguard.passwordComplexity()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            assertValue(complexity)
-        } else {
-            assertTrue("$complexity", complexity is Reading.Unsupported)
-        }
+        val advancedProtection = platform.policy.advancedProtection()
+        if (Build.VERSION.SDK_INT >= 29) assertValue(complexity) else assertUnsupported(complexity)
+        if (Build.VERSION.SDK_INT >= 36) assertValue(advancedProtection) else assertUnsupported(advancedProtection)
     }
 
     @Test
-    fun missingSettingIsUnavailableRatherThanAnException() {
+    fun missingSettingIsNullOrUnavailableRatherThanAnException() {
         val reading = platform.settings.global("droynis_no_such_setting")
 
-        assertTrue("$reading", reading is Reading.Unavailable)
+        // Below API 31 an unknown key reads as unset; from API 31 a hidden key is access-denied.
+        assertTrue("$reading", reading is Reading.Unavailable || (reading as? Reading.Value)?.value == null)
     }
 
     @Test
-    fun baseChecksReachAVerdict(): Unit = runBlocking {
+    fun deviceSummaryHasNoEmptyBasics() {
+        val device = platform.build.device()
+
+        assertFalse(device.model.isBlank())
+        assertEquals(Build.VERSION.SDK_INT, device.sdkInt)
+    }
+
+    @Test
+    fun noCheckCrashesOrTimesOutOnARealDevice(): Unit = runBlocking {
         val checks = baseChecks(platform)
 
         val findings = Scanner().scan(checks, platform.newScanContext()).toList()
 
         assertEquals(checks.size, findings.size)
         for (finding in findings) {
-            assertTrue(
-                "${finding.spec.id}: ${finding.status} ${finding.summary}",
-                finding.status == Status.PASS || finding.status == Status.FAIL,
-            )
+            val crashed = finding.status == Status.UNKNOWN &&
+                (finding.summary.startsWith("Check failed") || finding.summary.startsWith("Timed out"))
+            assertFalse("${finding.spec.id}: ${finding.summary}", crashed)
         }
     }
 
     private fun assertValue(reading: Reading<*>) {
         assertTrue("expected a value, got $reading", reading is Reading.Value)
+    }
+
+    private fun assertUnsupported(reading: Reading<*>) {
+        assertTrue("expected unsupported, got $reading", reading is Reading.Unsupported)
     }
 }

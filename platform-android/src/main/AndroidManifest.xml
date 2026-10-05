@@ -1,7 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Normal permission: coarse screen lock strength (NONE/LOW/MEDIUM/HIGH) for ACCS-2001, API 29+. -->
+    <!-- All normal (install-time) permissions; none of them allows network access. -->
+
+    <!-- Coarse screen lock strength (NONE/LOW/MEDIUM/HIGH) for ACCS-2001, API 29+. -->
     <uses-permission android:name="android.permission.REQUEST_PASSWORD_COMPLEXITY" />
+
+    <!-- Read the default network's state (VPN, Private DNS) for the NETW checks. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- See every installed app; without it Android 11+ hides most apps and APPS checks would pass falsely. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
+    <!-- Read whether Android 16 Advanced Protection is on, for INTG-1030. -->
+    <uses-permission android:name="android.permission.QUERY_ADVANCED_PROTECTION_MODE" />
 
 </manifest>

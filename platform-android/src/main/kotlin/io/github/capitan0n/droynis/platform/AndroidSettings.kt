@@ -8,12 +8,18 @@ import io.github.capitan0n.droynis.core.Source
 
 internal class AndroidSettings(private val resolver: ContentResolver) : SystemSettings {
 
-    override fun global(key: String): Reading<String> {
-        val source = Source("Settings.Global \"$key\"")
-        return probe(source) {
-            Settings.Global.getString(resolver, key)
-                ?.let { Reading.Value(it, source) }
-                ?: Reading.Unavailable("not set", source)
-        }
+    override fun global(key: String): Reading<String?> =
+        read("Settings.Global", key) { Settings.Global.getString(resolver, key) }
+
+    override fun secure(key: String): Reading<String?> =
+        read("Settings.Secure", key) { Settings.Secure.getString(resolver, key) }
+
+    override fun system(key: String): Reading<String?> =
+        read("Settings.System", key) { Settings.System.getString(resolver, key) }
+
+    // A readable but unset key is Value(null); access denied (hidden keys on API 31+) is Unavailable.
+    private inline fun read(table: String, key: String, get: () -> String?): Reading<String?> {
+        val source = Source("$table \"$key\"")
+        return probe(source) { Reading.Value(get(), source) }
     }
 }

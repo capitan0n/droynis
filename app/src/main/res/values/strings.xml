@@ -1,32 +1,271 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Droynis</string>
+    <string name="app_tagline">Android security audit</string>
 
-    <string name="scanning">Scanning… %1$d of %2$d</string>
-    <string name="hardening_index">Hardening index</string>
+    <!-- Navigation and menus -->
+    <string name="tab_dashboard">Dashboard</string>
+    <string name="tab_checks">Checks</string>
+    <string name="tab_tools">Tools</string>
+    <string name="tab_help">Help</string>
+    <string name="navigate_back">Back</string>
+    <string name="more_options">More options</string>
+    <string name="menu_scan_again">Scan again</string>
+    <string name="menu_save_report">Save report…</string>
+    <string name="menu_share_report">Share report</string>
+    <string name="menu_copy_report">Copy report</string>
+    <string name="menu_theme">Theme</string>
+    <string name="menu_help">Help</string>
+    <string name="menu_about">About</string>
+
+    <!-- Dialogs -->
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="dialog_close">Close</string>
+    <string name="about_title">About Droynis</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_body">A Lynis-style security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
+    <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
+    <string name="about_privacy">No internet permission, no trackers, no ads.</string>
+
+    <!-- Verdicts -->
+    <string name="verdict_passed">Passed</string>
+    <string name="verdict_attention">Needs attention</string>
+    <string name="verdict_critical">Critical</string>
+    <string name="verdict_unknown">Unknown</string>
+    <string name="verdict_not_available">Not available</string>
+    <string name="verdict_pending">Checking…</string>
+    <string name="verdict_short_attention">Attention</string>
+    <string name="verdict_short_not_available">N/A</string>
+    <string name="verdict_desc_passed">The setting was read and is in good shape.</string>
+    <string name="verdict_desc_attention">Something to improve. It lowers the score.</string>
+    <string name="verdict_desc_critical">A serious problem. It caps the score at 40.</string>
+    <string name="verdict_desc_unknown">Android would not tell, so Droynis does not guess. It does not count.</string>
+    <string name="verdict_desc_not_available">Does not apply to this phone or Android version.</string>
+
+    <!-- Severities -->
+    <string name="severity_critical">Critical</string>
+    <string name="severity_warning">Warning</string>
+    <string name="severity_notice">Notice</string>
+    <string name="severity_info">Info</string>
+
+    <!-- Categories -->
+    <string name="category_integrity">Device integrity</string>
+    <string name="category_access">Access control</string>
+    <string name="category_apps">Apps and permissions</string>
+    <string name="category_network">Network and radios</string>
+    <string name="category_short_integrity">Integrity</string>
+    <string name="category_short_access">Access</string>
+    <string name="category_short_apps">Apps</string>
+    <string name="category_short_network">Network</string>
+
+    <!-- Dashboard -->
+    <string name="score_label">Security score</string>
     <string name="score_out_of">/ 100</string>
-    <string name="score_none">No check produced a result that can be scored.</string>
-    <string name="score_capped">Capped at %1$d by a critical failure: %2$s</string>
-    <string name="failed_counts">Failed: %1$d critical · %2$d warning · %3$d notice</string>
-    <string name="evaluated_skipped">%1$d checks scored · %2$d skipped (unknown or not applicable)</string>
-    <string name="active_tier">Privilege tier: %1$s</string>
-    <string name="rescan">Re-scan</string>
+    <string name="score_none">–</string>
+    <string name="grade_label">Grade %1$s · %2$s</string>
+    <string name="grade_a">Excellent</string>
+    <string name="grade_b">Good</string>
+    <string name="grade_c">Fair</string>
+    <string name="grade_d">Weak</string>
+    <string name="grade_f">At risk</string>
+    <string name="headline_scanning">Scanning your phone…</string>
+    <string name="headline_critical">Critical problems found</string>
+    <string name="headline_one_issue">1 thing needs your attention</string>
+    <string name="headline_issues">%1$d things need your attention</string>
+    <string name="headline_all_good">Looking good</string>
+    <string name="headline_no_score">Not enough results for a score</string>
+    <string name="scanned_at">Scanned at %1$s · %2$d checks</string>
+    <string name="scan_progress">Checked %1$d of %2$d</string>
+    <string name="capped_note">Capped at 40 by a critical problem</string>
+    <string name="stat_unverified">Unknown · N/A</string>
+    <string name="section_results">Results</string>
+    <string name="section_categories">Categories</string>
+    <string name="section_top_issues">Top issues</string>
+    <string name="section_your_device">Your device</string>
+    <string name="see_all">See all</string>
+    <string name="category_progress">%1$d of %2$d passed</string>
+    <string name="all_clear_title">No issues found</string>
+    <string name="all_clear_body">Every check that could be read passed. Scan again after you change settings or install apps.</string>
+    <string name="device_android">Android %1$s (API %2$d)</string>
+    <string name="device_patch">Security patch %1$s</string>
+    <string name="privacy_footer">Everything stays on this phone. Droynis has no internet permission and never changes your settings.</string>
 
-    <string name="status_pass">PASS</string>
-    <string name="status_unknown">UNKNOWN</string>
-    <string name="status_unsupported">N/A</string>
-    <string name="severity_critical">CRITICAL</string>
-    <string name="severity_warning">WARNING</string>
-    <string name="severity_notice">NOTICE</string>
-    <string name="severity_info">INFO</string>
+    <!-- Checks -->
+    <string name="filter_all">All</string>
+    <string name="filter_issues">Issues</string>
+    <string name="filter_all_categories">All categories</string>
+    <string name="checks_count">%1$d checks</string>
+    <string name="checks_empty">No checks match these filters.</string>
+    <string name="clear_filters">Clear filters</string>
+    <string name="legend_title">What the symbols mean</string>
+    <string name="check_pending_summary">Waiting for the scan…</string>
 
-    <string name="show_details">Show details</string>
-    <string name="hide_details">Hide details</string>
-    <string name="why_it_matters">Why it matters</string>
-    <string name="evidence">Evidence</string>
-    <string name="evidence_source">Source: %1$s</string>
-    <string name="no_evidence">No values were recorded.</string>
-    <string name="what_you_can_do">What you can do</string>
-    <string name="open_settings">Open settings</string>
-    <string name="check_meta">%1$s · %2$s tier · %3$d ms</string>
+    <!-- Check details -->
+    <string name="detail_why">Why it matters</string>
+    <string name="detail_what_to_do">What you can do</string>
+    <string name="detail_open_settings">Open settings</string>
+    <string name="detail_copy_command">Copy command</string>
+    <string name="detail_evidence">Evidence</string>
+    <string name="detail_evidence_empty">No values were recorded.</string>
+    <string name="detail_evidence_source">via %1$s</string>
+    <string name="detail_copy_evidence">Copy evidence</string>
+    <string name="detail_technical">Technical details</string>
+    <string name="detail_id">Check ID</string>
+    <string name="detail_category">Category</string>
+    <string name="detail_severity">Severity</string>
+    <string name="detail_result_severity">Severity of this result</string>
+    <string name="detail_min_android">Needs Android</string>
+    <string name="detail_min_android_value">API %1$d or newer</string>
+    <string name="detail_tier">Privilege tier</string>
+    <string name="detail_duration">Time taken</string>
+    <string name="detail_duration_value">%1$d ms</string>
+
+    <!-- Tools: network -->
+    <string name="tools_network">Network inspector</string>
+    <string name="tools_refresh">Refresh</string>
+    <string name="net_connection">Connection</string>
+    <string name="net_offline">Offline</string>
+    <string name="net_internet">Internet access</string>
+    <string name="net_validated">Working</string>
+    <string name="net_not_validated">Not confirmed</string>
+    <string name="net_metered">Metered</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="net_vpn">VPN</string>
+    <string name="net_vpn_on">Active</string>
+    <string name="net_vpn_off">Not active</string>
+    <string name="net_private_dns">Private DNS</string>
+    <string name="net_private_dns_strict">On · %1$s</string>
+    <string name="net_private_dns_auto">Automatic</string>
+    <string name="net_private_dns_off">Off</string>
+    <string name="net_not_reported">Not reported</string>
+    <string name="net_dns_servers">DNS servers</string>
+    <string name="net_wifi_security">Wi-Fi security</string>
+    <string name="net_proxy">HTTP proxy</string>
+    <string name="net_none">None</string>
+    <string name="net_addresses">IP addresses</string>
+    <string name="net_interface">Interface</string>
+    <string name="net_local_note">Read from Android on this phone. Droynis never connects to the internet.</string>
+    <string name="net_unavailable">Could not read the network state: %1$s</string>
+    <string name="transport_wifi">Wi-Fi</string>
+    <string name="transport_cellular">Mobile data</string>
+    <string name="transport_ethernet">Ethernet</string>
+    <string name="transport_vpn">VPN</string>
+    <string name="transport_bluetooth">Bluetooth tethering</string>
+    <string name="transport_other">Other</string>
+
+    <!-- Tools: permissions -->
+    <string name="tools_permissions">App permissions</string>
+    <string name="permissions_intro">Installed apps (not part of the system) that hold each permission right now. Tap a row to see them.</string>
+    <string name="permissions_inspected">%1$d apps inspected</string>
+    <string name="permissions_none">No app</string>
+    <string name="permissions_manage">Open privacy settings</string>
+    <string name="permissions_unavailable">Could not read app permissions: %1$s</string>
+    <string name="perm_location">Location</string>
+    <string name="perm_background_location">Location in the background</string>
+    <string name="perm_camera">Camera</string>
+    <string name="perm_microphone">Microphone</string>
+    <string name="perm_contacts">Contacts</string>
+    <string name="perm_calendar">Calendar</string>
+    <string name="perm_sms">SMS</string>
+    <string name="perm_call_log">Call logs</string>
+    <string name="perm_phone">Phone</string>
+    <string name="perm_nearby">Nearby devices</string>
+    <string name="perm_activity">Physical activity</string>
+    <string name="perm_body_sensors">Body sensors</string>
+    <string name="perm_files">Files and media</string>
+
+    <!-- Tools: shortcuts -->
+    <string name="tools_shortcuts">Security shortcuts</string>
+    <string name="tools_shortcuts_intro">Jump straight to the Settings screens the checks talk about.</string>
+    <string name="shortcut_security">Security</string>
+    <string name="shortcut_privacy">Privacy</string>
+    <string name="shortcut_network">Network</string>
+    <string name="shortcut_wifi">Wi-Fi</string>
+    <string name="shortcut_vpn">VPN</string>
+    <string name="shortcut_bluetooth">Bluetooth</string>
+    <string name="shortcut_nfc">NFC</string>
+    <string name="shortcut_developer">Developer options</string>
+    <string name="shortcut_accessibility">Accessibility</string>
+    <string name="shortcut_notifications">Notification access</string>
+    <string name="shortcut_keyboards">Keyboards</string>
+    <string name="shortcut_apps">Apps</string>
+    <string name="shortcut_unknown_sources">Install unknown apps</string>
+    <string name="shortcut_usage">Usage access</string>
+    <string name="shortcut_display">Display</string>
+    <string name="shortcut_about_phone">About phone</string>
+
+    <!-- Tools: device and report -->
+    <string name="tools_device">Device</string>
+    <string name="device_manufacturer">Manufacturer</string>
+    <string name="device_model">Model</string>
+    <string name="device_android_version">Android version</string>
+    <string name="device_security_patch">Security patch</string>
+    <string name="device_build">Build</string>
+    <string name="device_kernel">Kernel</string>
+    <string name="device_copy">Copy device info</string>
+    <string name="tools_report">Report</string>
+    <string name="report_body">Export the latest scan as a Markdown file with every check and its evidence.</string>
+    <string name="report_no_ids">Reports never contain your IMEI, serial number, phone number or account names.</string>
+    <string name="report_save">Save</string>
+    <string name="report_share">Share</string>
+    <string name="report_copy">Copy</string>
+    <string name="report_not_ready">Wait for the scan to finish first.</string>
+    <string name="report_saved">Report saved</string>
+    <string name="report_save_failed">Could not save the report</string>
+    <string name="report_copied">Report copied</string>
+    <string name="report_subject">Droynis security report</string>
+    <string name="copied">Copied</string>
+    <string name="settings_not_opened">This phone has no matching settings screen</string>
+
+    <!-- Help -->
+    <string name="help_legend">Reading the results</string>
+    <string name="help_score">How the score works</string>
+    <string name="help_score_body">Every check that passed or failed counts, weighted by its severity. The score is the share of that weight you passed. Unknown and N/A results do not count either way.</string>
+    <string name="help_score_cap">A critical failure caps the score at 40, however much else passed.</string>
+    <string name="help_weights">Weights</string>
+    <string name="help_grades">Grades</string>
+    <string name="help_weight_value">× %1$d</string>
+    <string name="grade_range">%1$d–%2$d</string>
+    <string name="help_catalog">What Droynis checks</string>
+    <string name="help_catalog_count">%1$d checks in %2$d categories</string>
+    <string name="help_tiers">Privilege tiers</string>
+    <string name="tier_base">Base</string>
+    <string name="tier_base_body">Public Android APIs only. Works on every phone with no setup.</string>
+    <string name="tier_adb">ADB</string>
+    <string name="tier_adb_body">Grant extra read permissions once with adb from a computer.</string>
+    <string name="tier_shizuku">Shizuku</string>
+    <string name="tier_shizuku_body">Shell-level reads through the Shizuku app, without a computer.</string>
+    <string name="tier_root">Root</string>
+    <string name="tier_root_body">Full read access on rooted phones.</string>
+    <string name="tier_active">Active</string>
+    <string name="tier_planned">Planned</string>
+    <string name="help_privacy">Privacy</string>
+    <string name="help_privacy_1">No internet permission: nothing leaves the phone unless you share a report yourself.</string>
+    <string name="help_privacy_2">No trackers, ads, analytics or Google Play Services.</string>
+    <string name="help_privacy_3">Read-only: Droynis opens Settings for you but never changes anything itself.</string>
+    <string name="help_privacy_4">Reports leave out hardware identifiers, phone numbers and account names.</string>
+    <string name="help_faq">Questions and answers</string>
+    <string name="faq_q1">Does a score of 100 mean my phone is safe?</string>
+    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see. It cannot find malware, spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
+    <string name="faq_q2">Why are some checks Unknown?</string>
+    <string name="faq_a2">Android hides some settings from apps, and some vendors change or remove them. Droynis then says it does not know instead of guessing. Android 17, for example, can report USB debugging and developer options as off to every app.</string>
+    <string name="faq_q3">Why does Droynis need to see all installed apps?</string>
+    <string name="faq_a3">Since Android 11 apps see only a few other apps by default. Without the “query all packages” permission the app checks would miss most apps and pass falsely.</string>
+    <string name="faq_q4">Can Droynis fix problems for me?</string>
+    <string name="faq_a4">No, on purpose. It explains what to change and opens the right Settings screen, so you stay in control of every change.</string>
+    <string name="faq_q5">What is a privilege tier?</string>
+    <string name="faq_a5">Each check states the access it needs. This version uses only the Base tier, so every check works on any phone without root, Shizuku or adb.</string>
+    <string name="faq_q6">Does Droynis run in the background?</string>
+    <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
+    <string name="help_about">About</string>
+    <string name="help_version">Droynis %1$s</string>
+    <string name="help_license">GPL-3.0-or-later · free and open-source software</string>
+
+    <!-- Accessibility -->
+    <string name="cd_expand">Expand</string>
+    <string name="cd_collapse">Collapse</string>
+    <string name="cd_copy">Copy</string>
 </resources>

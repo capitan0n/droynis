@@ -6,6 +6,8 @@ coroutines = "1.11.0"
 compose-bom = "2026.09.00"
 activity = "1.13.0"
 lifecycle = "2.11.0"
+# Material icons stopped at 1.7.8 (superseded by Material Symbols); pinned explicitly.
+material-icons = "1.7.8"
 junit = "6.1.3"
 junit4 = "4.13.2"
 androidx-test-runner = "1.7.0"
@@ -26,6 +28,7 @@ androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-view
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "compose-bom" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
+androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended", version.ref = "material-icons" }
 androidx-compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
 
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" }

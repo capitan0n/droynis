@@ -2,9 +2,16 @@ package io.github.capitan0n.droynis.platform
 
 import android.content.Context
 import android.os.Build
+import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BuildInfo
+import io.github.capitan0n.droynis.checks.base.CertificateStore
+import io.github.capitan0n.droynis.checks.base.DevicePolicy
+import io.github.capitan0n.droynis.checks.base.InputMethodProbe
 import io.github.capitan0n.droynis.checks.base.Keyguard
+import io.github.capitan0n.droynis.checks.base.NetworkProbe
+import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.core.Capabilities
 import io.github.capitan0n.droynis.core.Reading
@@ -19,6 +26,16 @@ class AndroidPlatform(context: Context) : BaseProbes {
     override val settings: SystemSettings = AndroidSettings(app.contentResolver)
     override val keyguard: Keyguard = AndroidKeyguard(app)
     override val build: BuildInfo = AndroidBuildInfo
+    override val packages: PackageInventory = AndroidPackages(app)
+    override val policy: DevicePolicy = AndroidDevicePolicy(app, packages::label)
+    override val accessibility: AccessibilityProbe = AndroidAccessibility(app, packages::label)
+    override val network: NetworkProbe = AndroidNetwork(app)
+    override val certificates: CertificateStore = AndroidCertificates
+    override val radios: RadioProbe = AndroidRadios(app)
+    override val inputMethods: InputMethodProbe = AndroidInputMethods(app, packages::label)
+
+    /** Not a check: feeds the permission overview on the Tools screen. */
+    val permissionAudit = AndroidPermissionAudit(app)
 
     /** Grant detection arrives with the ADB and Shizuku tiers; until then every scan is base tier. */
     fun newScanContext(): ScanContext = ScanContext(
@@ -38,6 +55,6 @@ internal inline fun <T> probe(source: Source, call: () -> Reading<T>): Reading<T
     } catch (e: LinkageError) {
         // the method is missing from this device's framework build
         Reading.Unsupported("${e.javaClass.simpleName}: ${e.message}", source)
-    } catch (e: RuntimeException) {
+    } catch (e: Exception) {
         Reading.Unavailable("${e.javaClass.simpleName}: ${e.message}", source)
     }

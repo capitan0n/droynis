@@ -27,4 +27,19 @@ class BaseChecksTest {
             assertTrue(spec.remediation.text.isNotBlank(), spec.id)
         }
     }
+
+    @Test
+    fun `checks are registered grouped by category`() {
+        val order = specs.map { it.category.ordinal }
+
+        assertEquals(order.sorted(), order)
+    }
+
+    @Test
+    fun `id prefixes match their category`() {
+        val prefixes = mapOf("INTG" to "DEVICE_INTEGRITY", "ACCS" to "ACCESS_CONTROL", "APPS" to "APPS", "NETW" to "NETWORK")
+        for (spec in specs) {
+            assertEquals(prefixes[spec.id.take(4)], spec.category.name, spec.id)
+        }
+    }
 }

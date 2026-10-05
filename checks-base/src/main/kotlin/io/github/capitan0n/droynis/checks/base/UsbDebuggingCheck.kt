@@ -9,7 +9,6 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
-import io.github.capitan0n.droynis.core.toEvidence
 
 class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
 
@@ -30,12 +29,19 @@ class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
 
     override suspend fun run(context: ScanContext): Outcome {
         val adb = settings.global(ADB_ENABLED)
-        val evidence = listOf(adb.toEvidence(ADB_ENABLED))
+        val evidence = listOf(adb.settingEvidence(ADB_ENABLED))
         return adb.evaluate("USB debugging state", evidence) { raw ->
-            when (raw.trim()) {
-                "1" -> Outcome.fail("USB debugging is enabled", evidence)
-                "0" -> Outcome.pass("USB debugging is disabled", evidence)
-                else -> Outcome.unknown("Unexpected value \"$raw\" for $ADB_ENABLED", evidence)
+            when (switchState(raw)) {
+                SwitchState.ON -> Outcome.fail("USB debugging is enabled", evidence)
+                SwitchState.OFF ->
+                    if (mayBeRedacted(context, raw)) {
+                        Outcome.unknown(REDACTED_SUMMARY, evidence.map { it.redacted() })
+                    } else {
+                        Outcome.pass("USB debugging is disabled", evidence)
+                    }
+                // The system writes this key at boot, so its absence is itself suspicious.
+                SwitchState.UNSET -> Outcome.unknown("$ADB_ENABLED is not set", evidence)
+                SwitchState.UNEXPECTED -> Outcome.unknown("Unexpected value \"$raw\" for $ADB_ENABLED", evidence)
             }
         }
     }

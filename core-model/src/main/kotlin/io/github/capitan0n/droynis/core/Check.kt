@@ -55,7 +55,7 @@ enum class Category(val label: String) {
     DEVICE_INTEGRITY("Device integrity"),
     ACCESS_CONTROL("Access control"),
     APPS("Apps and permissions"),
-    NETWORK("Network"),
+    NETWORK("Network and radios"),
 }
 
 /** Ordered from least to most severe, so `maxOf` picks the worst. */
