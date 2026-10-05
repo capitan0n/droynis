@@ -14,6 +14,8 @@ import io.github.capitan0n.droynis.core.Status
 data class HardeningIndex(
     /** 0–100, or null when no weighted check produced PASS or FAIL. */
     val score: Int?,
+    /** The score before the critical cap; equal to [score] when nothing capped it. */
+    val uncappedScore: Int?,
     val passed: Int,
     /** FAIL counts by effective severity. */
     val failed: Map<Severity, Int>,
@@ -44,6 +46,7 @@ data class HardeningIndex(
             val raw = if (total == 0) null else earned * 100 / total
             return HardeningIndex(
                 score = raw?.let { if (cappedBy.isEmpty()) it else minOf(it, CRITICAL_CAP) },
+                uncappedScore = raw,
                 passed = passed.size,
                 failed = failed.groupingBy { it.severity }.eachCount(),
                 unknown = findings.count { it.status == Status.UNKNOWN },

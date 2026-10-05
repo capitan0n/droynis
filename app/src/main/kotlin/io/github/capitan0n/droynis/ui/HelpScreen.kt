@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,9 +17,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.LiveHelp
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Gavel
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.PrivacyTip
@@ -28,6 +31,7 @@ import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -43,12 +47,13 @@ import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.ui.theme.StatusColors
 
 @Composable
-fun HelpScreen(catalog: List<CheckSpec>, appVersion: String) {
+fun HelpScreen(catalog: List<CheckSpec>, appVersion: String, onAbout: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item(key = "about") { AboutLink(appVersion, onAbout) }
         item {
             SectionCard(title = stringResource(R.string.help_legend), icon = Icons.Rounded.TipsAndUpdates) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -108,7 +113,28 @@ fun HelpScreen(catalog: List<CheckSpec>, appVersion: String) {
             }
         }
 
-        item { AboutCard(appVersion) }
+    }
+}
+
+/** Opens the separate About page: version, author, source code and feedback. */
+@Composable
+private fun AboutLink(appVersion: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(28.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.about_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.help_about_link, appVersion), style = MaterialTheme.typography.bodySmall)
+            }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null)
+        }
     }
 }
 
@@ -224,30 +250,6 @@ private fun PrivacyCard() {
                 Spacer(Modifier.width(10.dp))
                 Text(stringResource(line), style = MaterialTheme.typography.bodyMedium)
             }
-        }
-    }
-}
-
-@Composable
-private fun AboutCard(appVersion: String) {
-    SectionCard(title = stringResource(R.string.help_about), icon = Icons.Rounded.Shield) {
-        Text(stringResource(R.string.help_version, appVersion), style = MaterialTheme.typography.titleSmall)
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.about_body), style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                Icons.Rounded.Gavel,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                stringResource(R.string.help_license),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

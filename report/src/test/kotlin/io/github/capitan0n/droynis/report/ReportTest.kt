@@ -60,7 +60,7 @@ class ReportTest {
             context,
             findings,
             HardeningIndex.of(findings),
-            facts = listOf("Model" to "FP6 | test"),
+            facts = listOf(DeviceFact("model", "Model", "FP6 | test")),
             appVersion = "0.2.0",
         )
 
@@ -74,6 +74,18 @@ class ReportTest {
         assertTrue("### ✓ Secure lock screen (ACCS-2001)" in markdown)
         assertTrue("- adb_enabled: `1`, via Settings.Global \"adb_enabled\"" in markdown)
         assertTrue(markdown.endsWith("\n") && !markdown.endsWith("\n\n"))
+    }
+
+    @Test
+    fun `a capped score also shows the score without the cap`() {
+        val findings = listOf(
+            finding(Status.FAIL, Severity.CRITICAL, id = "INTG-1040"),
+            finding(Status.PASS, Severity.CRITICAL, id = "ACCS-2001"),
+        )
+
+        val markdown = MarkdownReport.render(context, findings, HardeningIndex.of(findings), emptyList(), "0.4.0")
+
+        assertTrue("- Hardening index: 40 / 100 (grade D, weak), capped by INTG-1040 (50 without the cap)" in markdown)
     }
 
     @Test

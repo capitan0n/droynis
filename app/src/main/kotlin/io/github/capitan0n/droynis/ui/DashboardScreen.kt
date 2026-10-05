@@ -225,8 +225,13 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit) {
                 )
                 if (!scanning && index?.cappedBy?.isNotEmpty() == true) {
                     Spacer(Modifier.height(10.dp))
+                    val uncapped = index.uncappedScore
                     Pill(
-                        text = stringResource(R.string.capped_note),
+                        text = if (uncapped != null && uncapped > (index.score ?: 0)) {
+                            stringResource(R.string.capped_note_raw, uncapped)
+                        } else {
+                            stringResource(R.string.capped_note)
+                        },
                         icon = Icons.Rounded.Warning,
                         maxLines = 2,
                         container = StatusColors.Critical.copy(alpha = 0.16f),

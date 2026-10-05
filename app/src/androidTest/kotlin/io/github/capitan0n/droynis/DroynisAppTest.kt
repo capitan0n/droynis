@@ -69,6 +69,22 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.help_legend)).assertExists()
     }
 
+    @Test
+    fun aboutScreenShowsTheAuthorAndFeedbackAddress() {
+        waitForScan()
+
+        compose.onNodeWithContentDescription(text(R.string.more_options)).performClick()
+        compose.onNodeWithText(text(R.string.menu_about)).performClick()
+        compose.onNodeWithText(AppInfo.HANDLE, substring = true).assertExists()
+        compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
+
+        // The Help tab links to the same page.
+        compose.onNodeWithContentDescription(text(R.string.navigate_back)).performClick()
+        compose.onNodeWithText(text(R.string.tab_help)).performClick()
+        compose.onNodeWithText(text(R.string.about_title)).performClick()
+        compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
+    }
+
     private companion object {
         const val SCAN_TIMEOUT_MS = 20_000L
     }

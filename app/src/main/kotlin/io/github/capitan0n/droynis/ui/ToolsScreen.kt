@@ -22,6 +22,7 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DeveloperMode
 import androidx.compose.material.icons.rounded.DisplaySettings
@@ -81,6 +82,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.DroynisViewModel
 import io.github.capitan0n.droynis.R
+import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
 import io.github.capitan0n.droynis.checks.base.Transport
@@ -431,7 +433,7 @@ private fun DeviceInfoCard(state: UiState, onCopy: (String, String) -> Unit) {
         trailing = {
             if (device != null) {
                 IconButton(onClick = {
-                    val text = DroynisViewModel.reportFacts(device).joinToString("\n") { (k, v) -> "$k: $v" }
+                    val text = DroynisViewModel.reportFacts(device).joinToString("\n") { "${it.label}: ${it.value}" }
                     onCopy(device.model, text)
                 }) {
                     Icon(Icons.Rounded.ContentCopy, stringResource(R.string.device_copy))
@@ -469,11 +471,19 @@ private fun ReportCard(reportReady: Boolean, actions: AppActions) {
         )
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = actions::saveReport, enabled = reportReady) {
+            Button(onClick = { actions.saveReport(ReportFormat.MARKDOWN) }, enabled = reportReady) {
                 Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                 Text(stringResource(R.string.report_save))
             }
+            Button(onClick = { actions.saveReport(ReportFormat.JSON) }, enabled = reportReady) {
+                Icon(Icons.Rounded.DataObject, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.report_save_json))
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(onClick = actions::shareReport, enabled = reportReady) {
                 Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))

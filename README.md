@@ -23,7 +23,8 @@ architecture, the check contract and what the platform does and does not allow.
   Settings screens, device info and the report export (save as Markdown, share, copy).
 - **Help**: what the symbols and the score mean, the full check catalog, privilege tiers,
   privacy and FAQ.
-- Menu: scan again, save/share/copy report, light/dark/system theme, about.
+- Menu: scan again, save the report as Markdown or JSON, share/copy it, light/dark/system theme,
+  and an About page (author, source code, feedback).
 
 ## Checks (base tier)
 
@@ -65,7 +66,21 @@ Unknown, never Passed: on Android 17, for example, apps may be shown USB debuggi
 options as off whatever their real state, so a "0" there counts as Unknown.
 
 Score: passed weight / scored weight × 100, with weights critical 10, warning 5, notice 2, info 0.
-A critical failure caps the score at 40. Unknown and N/A results do not count.
+A critical failure caps the score at 40, because one critical gap (no screen lock, unlocked
+bootloader, root) undoes most other protections; the app and reports also show the score without
+the cap. Unknown and N/A results do not count.
+
+## Comparing scans
+
+Save the report as JSON (⋮ › Save report (JSON)). The layout is versioned (`schemaVersion`) and
+findings keep a fixed order, so two scans diff cleanly:
+
+```sh
+jq -r '.findings[] | "\(.id)\t\(.verdict)\t\(.summary)"' old.json > old.tsv
+jq -r '.findings[] | "\(.id)\t\(.verdict)\t\(.summary)"' new.json > new.tsv
+diff old.tsv new.tsv
+jq '.score' new.json
+```
 
 ## Build
 
@@ -97,6 +112,11 @@ unsigned APK (as F-Droid expects). A release-signed app cannot update a debug-si
 
 The pure-Kotlin modules (`core-model`, `checks-base`, `report`) hold all check logic and run on
 any JVM; only `platform-android` and `app` touch Android APIs.
+
+## Author
+
+Alexandros – capitan0n · <https://github.com/capitan0n/droynis> · feedback:
+[capitan0n@protonmail.com](mailto:capitan0n@protonmail.com)
 
 ## License
 

@@ -5,6 +5,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -28,9 +29,13 @@ class MainActivity : ComponentActivity(), AppActions {
     private val viewModel: DroynisViewModel by viewModels()
 
     // The Storage Access Framework picks the file, so Droynis needs no storage permission.
-    private val createReport = registerForActivityResult(ActivityResultContracts.CreateDocument(MARKDOWN)) { uri ->
-        if (uri != null) viewModel.writeReport(uri)
-    }
+    private val createMarkdown = createDocument(ReportFormat.MARKDOWN)
+    private val createJson = createDocument(ReportFormat.JSON)
+
+    private fun createDocument(format: ReportFormat) =
+        registerForActivityResult(ActivityResultContracts.CreateDocument(format.mimeType)) { uri ->
+            if (uri != null) viewModel.writeReport(uri, format)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -87,20 +92,24 @@ class MainActivity : ComponentActivity(), AppActions {
         viewModel.message(R.string.settings_not_opened)
     }
 
-    override fun saveReport() {
-        if (viewModel.reportMarkdown() == null) {
+    override fun saveReport(format: ReportFormat) {
+        if (viewModel.report(format) == null) {
             viewModel.message(R.string.report_not_ready)
             return
         }
+        val launcher = when (format) {
+            ReportFormat.MARKDOWN -> createMarkdown
+            ReportFormat.JSON -> createJson
+        }
         try {
-            createReport.launch(viewModel.reportFileName())
+            launcher.launch(viewModel.reportFileName(format))
         } catch (e: ActivityNotFoundException) {
             viewModel.message(R.string.report_save_failed)
         }
     }
 
     override fun shareReport() {
-        val report = viewModel.reportMarkdown()
+        val report = viewModel.report(ReportFormat.MARKDOWN)
         if (report == null) {
             viewModel.message(R.string.report_not_ready)
             return
@@ -113,7 +122,7 @@ class MainActivity : ComponentActivity(), AppActions {
     }
 
     override fun copyReport() {
-        val report = viewModel.reportMarkdown()
+        val report = viewModel.report(ReportFormat.MARKDOWN)
         if (report == null) {
             viewModel.message(R.string.report_not_ready)
             return
@@ -123,14 +132,29 @@ class MainActivity : ComponentActivity(), AppActions {
 
     override fun copy(label: String, text: String) = copyText(label, text, R.string.copied)
 
-    private fun copyText(label: String, text: String, confirmation: Int) {
-        val clipboard = getSystemService(ClipboardManager::class.java) ?: return
-        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
-        // Android 13+ confirms clipboard writes on its own.
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) viewModel.message(confirmation)
+    /** Opens a web page in the user's browser; Droynis itself never goes online. */
+    override fun openLink(url: String) {
+        try {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        } catch (e: ActivityNotFoundException) {
+            copyText(url, url, R.string.no_app_for_link, explain = true)
+        }
     }
 
-    private companion object {
-        const val MARKDOWN = "text/markdown"
+    override fun sendFeedback() {
+        val subject = getString(R.string.feedback_subject, BuildConfig.VERSION_NAME)
+        val mailto = Uri.parse("mailto:${AppInfo.FEEDBACK_EMAIL}?subject=${Uri.encode(subject)}")
+        try {
+            startActivity(Intent(Intent.ACTION_SENDTO, mailto))
+        } catch (e: ActivityNotFoundException) {
+            copyText(AppInfo.FEEDBACK_EMAIL, AppInfo.FEEDBACK_EMAIL, R.string.no_email_app, explain = true)
+        }
+    }
+
+    /** [explain] shows [message] even where Android 13+ confirms the copy itself. */
+    private fun copyText(label: String, text: String, message: Int, explain: Boolean = false) {
+        val clipboard = getSystemService(ClipboardManager::class.java) ?: return
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+        if (explain || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) viewModel.message(message)
     }
 }

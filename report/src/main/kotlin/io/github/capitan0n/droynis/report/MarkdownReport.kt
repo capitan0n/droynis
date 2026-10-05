@@ -17,7 +17,7 @@ object MarkdownReport {
         context: ScanContext,
         findings: List<Finding>,
         index: HardeningIndex,
-        facts: List<Pair<String, String>>,
+        facts: List<DeviceFact>,
         appVersion: String,
     ): String = buildString {
         appendLine("# Droynis security report")
@@ -37,7 +37,7 @@ object MarkdownReport {
             appendLine()
             appendLine("| Field | Value |")
             appendLine("|---|---|")
-            facts.forEach { (field, value) -> appendLine("| ${cell(field)} | ${cell(value)} |") }
+            facts.forEach { appendLine("| ${cell(it.label)} | ${cell(it.value)} |") }
             appendLine()
         }
 
@@ -53,7 +53,11 @@ object MarkdownReport {
     private fun scoreLine(index: HardeningIndex): String {
         val score = index.score ?: return "not available (no check could be scored)"
         val grade = index.grade?.let { " (grade ${it.name}, ${it.label.lowercase()})" }.orEmpty()
-        val cap = if (index.cappedBy.isEmpty()) "" else ", capped by ${index.cappedBy.joinToString()}"
+        val cap = if (index.cappedBy.isEmpty()) {
+            ""
+        } else {
+            ", capped by ${index.cappedBy.joinToString()} (${index.uncappedScore} without the cap)"
+        }
         return "$score / 100$grade$cap"
     }
 

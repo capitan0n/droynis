@@ -94,6 +94,20 @@ passed weight / scored weight), PASS and FAIL only. Any CRITICAL FAIL (including
 by the check) caps it at 40. No scored check means no score, not 0 or 100. The index changes when
 more tiers are unlocked, so the UI always shows the tier and counts next to it.
 
+### Why the critical cap stays
+
+A weighted average lets many small passes hide one critical gap: 29 passes and no screen lock would
+otherwise score above 90. The cap makes the score follow the weakest link, as SSL Labs does with
+its grade caps. Its cost is lost resolution: fixes elsewhere no longer move the capped number, and
+a heuristic false positive (root detection) hurts a lot. So `HardeningIndex.uncappedScore` is
+kept, shown next to a capped score and written to both reports.
+
+### Reports
+
+Markdown is for people. JSON (`JsonReport`, `"schema": "droynis-report"`, `schemaVersion` 1) is for
+diffing and tools: findings in catalog order, stable keys, two-space indentation, `null` for
+values that could not be read. Both contain only scan results and the device facts passed in.
+
 ## 5. Open questions for review
 
 1. Application id `io.github.capitan0n.droynis`: cheap to change now, painful after release.

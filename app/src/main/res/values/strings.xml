@@ -11,7 +11,8 @@
     <string name="navigate_back">Back</string>
     <string name="more_options">More options</string>
     <string name="menu_scan_again">Scan again</string>
-    <string name="menu_save_report">Save report…</string>
+    <string name="menu_save_report">Save report (Markdown)…</string>
+    <string name="menu_save_json">Save report (JSON)…</string>
     <string name="menu_share_report">Share report</string>
     <string name="menu_copy_report">Copy report</string>
     <string name="menu_theme">Theme</string>
@@ -27,6 +28,17 @@
     <string name="about_version">Version %1$s</string>
     <string name="about_body">A Lynis-style security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
     <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
+    <string name="about_what">What Droynis does</string>
+    <string name="help_about_link">Version %1$s · author, source code and feedback</string>
+    <string name="about_author_title">Author</string>
+    <string name="about_source">Source code</string>
+    <string name="about_feedback">Feedback</string>
+    <string name="about_send_feedback">Send feedback</string>
+    <string name="about_open_repo">GitHub</string>
+    <string name="about_license_title">License</string>
+    <string name="feedback_subject">Droynis feedback (v%1$s)</string>
+    <string name="no_app_for_link">No app can open links, so the address was copied.</string>
+    <string name="no_email_app">No email app found, so the address was copied.</string>
     <string name="about_privacy">No internet permission, no trackers, no ads.</string>
 
     <!-- Verdicts -->
@@ -79,6 +91,7 @@
     <string name="scanned_at">Scanned at %1$s · %2$d checks</string>
     <string name="scan_progress">Checked %1$d of %2$d</string>
     <string name="capped_note">Capped at 40 by a critical problem</string>
+    <string name="capped_note_raw">Capped at 40 by a critical problem (%1$d without the cap)</string>
     <string name="stat_unverified">Unknown · N/A</string>
     <string name="section_results">Results</string>
     <string name="section_categories">Categories</string>
@@ -208,9 +221,10 @@
     <string name="device_kernel">Kernel</string>
     <string name="device_copy">Copy device info</string>
     <string name="tools_report">Report</string>
-    <string name="report_body">Export the latest scan as a Markdown file with every check and its evidence.</string>
+    <string name="report_body">Save the latest scan as Markdown to read, or as JSON to compare scans and analyze them with tools such as jq.</string>
     <string name="report_no_ids">Reports never contain your IMEI, serial number, phone number or account names.</string>
-    <string name="report_save">Save</string>
+    <string name="report_save">Markdown</string>
+    <string name="report_save_json">JSON</string>
     <string name="report_share">Share</string>
     <string name="report_copy">Copy</string>
     <string name="report_not_ready">Wait for the scan to finish first.</string>
@@ -225,7 +239,7 @@
     <string name="help_legend">Reading the results</string>
     <string name="help_score">How the score works</string>
     <string name="help_score_body">Every check that passed or failed counts, weighted by its severity. The score is the share of that weight you passed. Unknown and N/A results do not count either way.</string>
-    <string name="help_score_cap">A critical failure caps the score at 40, however much else passed.</string>
+    <string name="help_score_cap">A critical failure caps the score at 40: one critical gap undoes most other protections, so a high average would mislead. The dashboard also shows the score without the cap, so other fixes still count.</string>
     <string name="help_weights">Weights</string>
     <string name="help_grades">Grades</string>
     <string name="help_weight_value">× %1$d</string>
@@ -261,9 +275,6 @@
     <string name="faq_a5">Each check states the access it needs. This version uses only the Base tier, so every check works on any phone without root, Shizuku or adb.</string>
     <string name="faq_q6">Does Droynis run in the background?</string>
     <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
-    <string name="help_about">About</string>
-    <string name="help_version">Droynis %1$s</string>
-    <string name="help_license">GPL-3.0-or-later · free and open-source software</string>
 
     <!-- Accessibility -->
     <string name="cd_expand">Expand</string>

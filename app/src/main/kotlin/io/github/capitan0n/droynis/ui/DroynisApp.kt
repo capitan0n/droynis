@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
@@ -71,6 +72,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.R
+import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
@@ -88,10 +90,14 @@ interface AppActions {
 
     /** Opens the first Settings screen in [actions] that this phone has. */
     fun openSettings(actions: List<String>)
-    fun saveReport()
+    fun saveReport(format: ReportFormat)
     fun shareReport()
     fun copyReport()
     fun copy(label: String, text: String)
+
+    /** Opens [url] in the browser; Droynis itself has no internet access. */
+    fun openLink(url: String)
+    fun sendFeedback()
 }
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
@@ -115,7 +121,8 @@ enum class CheckFilter(val verdicts: Set<Verdict>?) {
     fun matches(verdict: Verdict?): Boolean = verdicts == null || verdict in verdicts
 }
 
-private enum class AppDialog { THEME, ABOUT }
+/** The About page, shown full screen over the tabs. */
+private object AboutPage
 
 /** Tag of the Checks list, for UI tests. */
 const val CHECKS_LIST_TAG = "checks_list"
@@ -137,13 +144,15 @@ fun DroynisApp(
     var openCheckId by rememberSaveable { mutableStateOf(initialCheckId) }
     var filter by rememberSaveable { mutableStateOf(CheckFilter.ALL) }
     var category by rememberSaveable { mutableStateOf<Category?>(null) }
-    var dialog by rememberSaveable { mutableStateOf<AppDialog?>(null) }
+    var showAbout by rememberSaveable { mutableStateOf(false) }
+    var showTheme by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val tabStates = rememberSaveableStateHolder()
 
     LaunchedEffect(messages) { messages.collect { snackbar.showSnackbar(it) } }
     BackHandler(enabled = openCheckId != null) { openCheckId = null }
     BackHandler(enabled = openCheckId == null && tab != Tab.DASHBOARD) { tab = Tab.DASHBOARD }
+    BackHandler(enabled = showAbout) { showAbout = false }
 
     val openSpec = catalog.firstOrNull { it.id == openCheckId }
     val issueCount = state.result?.findings?.issues()?.size ?: 0
@@ -157,7 +166,17 @@ fun DroynisApp(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
-            if (openSpec != null) {
+            if (showAbout) {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.about_title)) },
+                    navigationIcon = {
+                        IconButton(onClick = { showAbout = false }) {
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.navigate_back))
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                )
+            } else if (openSpec != null) {
                 TopAppBar(
                     title = {
                         Text(stringResource(openSpec.category.labelRes), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -175,13 +194,15 @@ fun DroynisApp(
                     reportReady = state.result != null,
                     actions = actions,
                     onHelp = { tab = Tab.HELP },
-                    onDialog = { dialog = it },
+                    showAboutButton = tab == Tab.HELP,
+                    onTheme = { showTheme = true },
+                    onAbout = { showAbout = true },
                     scrollBehavior = scrollBehavior,
                 )
             }
         },
         bottomBar = {
-            if (openSpec == null) {
+            if (openSpec == null && !showAbout) {
                 NavigationBar {
                     for (item in Tab.entries) {
                         NavigationBarItem(
@@ -204,8 +225,14 @@ fun DroynisApp(
         snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            Crossfade(targetState = openSpec ?: tab, label = "screen") { target ->
+            val screen: Any = if (showAbout) AboutPage else openSpec ?: tab
+            Crossfade(targetState = screen, label = "screen") { target ->
                 when (target) {
+                    AboutPage -> AboutScreen(
+                        appVersion = appVersion,
+                        onOpenLink = actions::openLink,
+                        onFeedback = actions::sendFeedback,
+                    )
                     is CheckSpec -> CheckDetailScreen(
                         spec = target,
                         finding = state.findings[target.id],
@@ -232,7 +259,7 @@ fun DroynisApp(
                                 onOpenCheck = { openCheckId = it },
                             )
                             Tab.TOOLS -> ToolsScreen(state = state, actions = actions)
-                            Tab.HELP -> HelpScreen(catalog = catalog, appVersion = appVersion)
+                            Tab.HELP -> HelpScreen(catalog = catalog, appVersion = appVersion, onAbout = { showAbout = true })
                         }
                     }
                 }
@@ -240,17 +267,15 @@ fun DroynisApp(
         }
     }
 
-    when (dialog) {
-        AppDialog.THEME -> ThemeDialog(
+    if (showTheme) {
+        ThemeDialog(
             current = themeMode,
             onPick = {
                 actions.setThemeMode(it)
-                dialog = null
+                showTheme = false
             },
-            onDismiss = { dialog = null },
+            onDismiss = { showTheme = false },
         )
-        AppDialog.ABOUT -> AboutDialog(appVersion = appVersion, onDismiss = { dialog = null })
-        null -> Unit
     }
 }
 
@@ -261,7 +286,9 @@ private fun MainTopBar(
     reportReady: Boolean,
     actions: AppActions,
     onHelp: () -> Unit,
-    onDialog: (AppDialog) -> Unit,
+    showAboutButton: Boolean,
+    onTheme: () -> Unit,
+    onAbout: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -286,6 +313,9 @@ private fun MainTopBar(
             }
         },
         actions = {
+            if (showAboutButton) {
+                IconButton(onClick = onAbout) { Icon(Icons.Rounded.Info, stringResource(R.string.menu_about)) }
+            }
             IconButton(onClick = actions::scan, enabled = !scanning) {
                 Icon(Icons.Rounded.Refresh, stringResource(R.string.menu_scan_again))
             }
@@ -301,7 +331,11 @@ private fun MainTopBar(
                     HorizontalDivider()
                     MenuItem(R.string.menu_save_report, Icons.Rounded.Save, enabled = reportReady) {
                         menuOpen = false
-                        actions.saveReport()
+                        actions.saveReport(ReportFormat.MARKDOWN)
+                    }
+                    MenuItem(R.string.menu_save_json, Icons.Rounded.DataObject, enabled = reportReady) {
+                        menuOpen = false
+                        actions.saveReport(ReportFormat.JSON)
                     }
                     MenuItem(R.string.menu_share_report, Icons.Rounded.Share, enabled = reportReady) {
                         menuOpen = false
@@ -314,7 +348,7 @@ private fun MainTopBar(
                     HorizontalDivider()
                     MenuItem(R.string.menu_theme, Icons.Rounded.Palette) {
                         menuOpen = false
-                        onDialog(AppDialog.THEME)
+                        onTheme()
                     }
                     MenuItem(R.string.menu_help, Icons.AutoMirrored.Rounded.Help) {
                         menuOpen = false
@@ -322,7 +356,7 @@ private fun MainTopBar(
                     }
                     MenuItem(R.string.menu_about, Icons.Rounded.Info) {
                         menuOpen = false
-                        onDialog(AppDialog.ABOUT)
+                        onAbout()
                     }
                 }
             }
@@ -370,35 +404,6 @@ private fun ThemeDialog(current: ThemeMode, onPick: (ThemeMode) -> Unit, onDismi
                         )
                     }
                 }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) } },
-    )
-}
-
-@Composable
-private fun AboutDialog(appVersion: String, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                Icons.Rounded.Shield,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(40.dp),
-            )
-        },
-        title = { Text(stringResource(R.string.about_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(stringResource(R.string.about_version, appVersion), style = MaterialTheme.typography.labelLarge)
-                Text(stringResource(R.string.about_body))
-                Text(stringResource(R.string.about_privacy))
-                Text(
-                    stringResource(R.string.about_license),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) } },

@@ -15,11 +15,14 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.platform.PermissionOverview
+import io.github.capitan0n.droynis.report.DeviceFact
 import io.github.capitan0n.droynis.report.HardeningIndex
+import io.github.capitan0n.droynis.report.JsonReport
 import io.github.capitan0n.droynis.report.MarkdownReport
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 import java.io.IOException
-import java.time.LocalDate
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.Dispatchers
@@ -42,6 +45,11 @@ data class ScanResult(
     val findings: List<Finding>,
     val index: HardeningIndex,
 )
+
+enum class ReportFormat(val extension: String, val mimeType: String) {
+    MARKDOWN("md", "text/markdown"),
+    JSON("json", "application/json"),
+}
 
 data class UiState(
     val scanning: Boolean = false,
@@ -126,27 +134,26 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         _themeMode.value = mode
     }
 
-    /** Markdown for the last finished scan, or null before the first one finishes. */
-    fun reportMarkdown(): String? {
+    /** The last finished scan as a report, or null before the first one finishes. */
+    fun report(format: ReportFormat): String? {
         val result = _state.value.result ?: return null
-        val device = _state.value.device ?: platform.build.device()
-        return MarkdownReport.render(
-            context = result.context,
-            findings = result.findings,
-            index = result.index,
-            facts = reportFacts(device),
-            appVersion = BuildConfig.VERSION_NAME,
-        )
+        val facts = reportFacts(_state.value.device ?: platform.build.device())
+        val render = when (format) {
+            ReportFormat.MARKDOWN -> MarkdownReport::render
+            ReportFormat.JSON -> JsonReport::render
+        }
+        return render(result.context, result.findings, result.index, facts, BuildConfig.VERSION_NAME)
     }
 
-    fun reportFileName(): String {
-        val date = _state.value.result?.context?.startedAt?.toLocalDate() ?: LocalDate.now()
-        return "droynis-report-$date.md"
+    /** e.g. droynis-report-2026-10-05-1402.json, so several scans a day sort and never collide. */
+    fun reportFileName(format: ReportFormat): String {
+        val time = _state.value.result?.context?.startedAt ?: ZonedDateTime.now()
+        return "droynis-report-${time.format(FILE_TIME)}.${format.extension}"
     }
 
     /** Writes the report to a document the user picked. */
-    fun writeReport(uri: Uri) {
-        val text = reportMarkdown() ?: return
+    fun writeReport(uri: Uri, format: ReportFormat) {
+        val text = report(format) ?: return
         val resolver = getApplication<Application>().contentResolver
         viewModelScope.launch {
             val saved = withContext(Dispatchers.IO) {
@@ -176,15 +183,17 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         private const val KEY_THEME = "theme"
         private val MIN_VISIBLE_SCAN = 700.milliseconds
 
+        private val FILE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm")
+
         /** Device facts for reports: deliberately no serial number, IMEI, phone number or account. */
-        fun reportFacts(device: DeviceSummary): List<Pair<String, String>> = listOfNotNull(
-            "Manufacturer" to device.manufacturer,
-            "Model" to device.model,
-            "Android" to "${device.androidVersion} (API ${device.sdkInt})",
-            "Security patch" to device.securityPatch,
-            "Build" to device.buildId,
-            "Build type" to "${device.buildType} (${device.buildTags})",
-            device.kernel?.let { "Kernel" to it },
+        fun reportFacts(device: DeviceSummary): List<DeviceFact> = listOfNotNull(
+            DeviceFact("manufacturer", "Manufacturer", device.manufacturer),
+            DeviceFact("model", "Model", device.model),
+            DeviceFact("androidVersion", "Android", "${device.androidVersion} (API ${device.sdkInt})"),
+            DeviceFact("securityPatch", "Security patch", device.securityPatch),
+            DeviceFact("buildId", "Build", device.buildId),
+            DeviceFact("buildType", "Build type", "${device.buildType} (${device.buildTags})"),
+            device.kernel?.let { DeviceFact("kernel", "Kernel", it) },
         )
     }
 }

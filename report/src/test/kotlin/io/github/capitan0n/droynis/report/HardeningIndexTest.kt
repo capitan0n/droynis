@@ -41,6 +41,7 @@ class HardeningIndexTest {
         val index = HardeningIndex.of(findings)
 
         assertEquals(58, index.score) // 7 / 12, floored
+        assertEquals(58, index.uncappedScore)
         assertEquals(2, index.passed)
         assertEquals(3, index.evaluated)
         assertEquals(1, index.skipped)
@@ -61,6 +62,7 @@ class HardeningIndexTest {
         val index = HardeningIndex.of(findings)
 
         assertEquals(HardeningIndex.CRITICAL_CAP, index.score)
+        assertEquals(96, index.uncappedScore) // 250 / 260: the progress the cap hides
         assertEquals(listOf(findings.last().spec.id), index.cappedBy)
     }
 
