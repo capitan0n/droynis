@@ -9,6 +9,13 @@ android {
     defaultConfig {
         minSdk = 26
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Shizuku creates the shell service by reflection; keep it through the app's R8.
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    buildFeatures {
+        // IShellService: the binder interface of Droynis' read-only Shizuku shell.
+        aidl = true
     }
 
     compileOptions {
@@ -20,6 +27,10 @@ android {
 dependencies {
     api(project(":checks-base"))
     api(project(":checks-adb"))
+    api(project(":checks-shizuku"))
+
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     testImplementation(libs.junit4)
 

@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 35 checks.
+Every check Droynis runs, by privilege tier and category: 43 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -14,8 +14,8 @@ Any critical failure caps the score at 40, and muted checks don't count.
 | Tier | Checks |
 |---|---|
 | [Base](#base-tier) | 34 |
-| [ADB](#adb-tier) | 1 |
-| Shizuku | planned |
+| [ADB](#adb-tier) | 7 |
+| [Shizuku](#shizuku-tier) | 2 |
 | Root | planned |
 
 ## Base tier
@@ -341,7 +341,7 @@ With these on, the phone keeps scanning for Wi-Fi networks and Bluetooth devices
 
 ## ADB tier
 
-Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can't do. Until then these checks show as N/A and don't change the score.
+Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can't do. Until then these checks show as N/A and don't change the score. The Shizuku tier covers them too, without the grants.
 
 Turn on USB debugging, connect the phone to a computer with adb, run:
 
@@ -355,6 +355,12 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [APPS-4101](#apps-4101-background-camera-microphone-and-location-use) | Background camera, microphone and location use (Android 10+) | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
+| [APPS-4102](#apps-4102-apps-that-can-draw-over-other-apps) | Apps that can draw over other apps (Android 10+) | Notice | a user app may display over other apps |
+| [APPS-4103](#apps-4103-apps-with-access-to-all-files) | Apps with access to all files (Android 11+) | Notice | a user app has all files access |
+| [APPS-4104](#apps-4104-apps-that-can-install-other-apps) | Apps that can install other apps (Android 10+) | Notice | a user app other than a known app store may install apps |
+| [APPS-4105](#apps-4105-apps-with-usage-access) | Apps with usage access (Android 10+) | Notice | a user app has usage access |
+| [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
+| [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
 
 ### Apps and permissions
 
@@ -362,13 +368,92 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 
 Notice · Android 10 and later · fails when a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone)
 
-Lists user-installed apps that used the camera, the microphone or your location while you were not using them, in the last 7 days. Spyware works this way; so do fitness, navigation and smart-home apps, so check that each one is expected. Android keeps this record in its app-ops service, which needs the ADB tier to read.
+Lists user-installed apps that used the camera, the microphone or your location while you were not using them, in the last 7 days. Spyware works this way; so do fitness, navigation and smart-home apps, so check that each one is expected. Android keeps this record in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** For each app listed, open Settings › Apps › the app › Permissions. Set Location to "Allow only while using the app" or "Don't allow", and remove Camera and Microphone from apps that don't need them. Uninstall apps you don't recognize.
 
+#### APPS-4102 Apps that can draw over other apps
+
+Notice · Android 10 and later · fails when a user app may display over other apps
+
+Apps allowed to "Display over other apps" (on Samsung: "Appear on top") can put windows on top of anything on the screen. Chat bubbles and screen filters use this; malware uses it to cover real apps with fake login forms or to trick you into tapping something else. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › Display over other apps and turn it off for every app listed that doesn't need it. Uninstall apps you don't recognize.
+
+#### APPS-4103 Apps with access to all files
+
+Notice · Android 11 and later · fails when a user app has all files access
+
+"All files access" lets an app read, change and delete every file in shared storage: photos, downloads and documents, whatever app made them. File managers and backup apps need it; most other apps don't. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › All files access and turn it off for every app listed that doesn't manage or back up your files.
+
+#### APPS-4104 Apps that can install other apps
+
+Notice · Android 10 and later · fails when a user app other than a known app store may install apps
+
+Apps allowed to "Install unknown apps" can offer you APK files to install. You still confirm each one, but a malicious or hacked app with this right can push malware at you. App stores need it and don't count. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › Install unknown apps and turn it off for the apps listed. Turn it on again only while you install something you trust.
+
+#### APPS-4105 Apps with usage access
+
+Notice · Android 10 and later · fails when a user app has usage access
+
+"Usage access" (on Samsung: "Usage data access") shows an app which other apps you use, when and for how long. Launchers and digital wellbeing apps use it; so does stalkerware, to follow what you do on the phone. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › Usage access and turn it off for every app listed that doesn't need it.
+
+#### APPS-4106 Apps that can change system settings
+
+Info · Android 10 and later · fails when a user app may change system settings (information only)
+
+"Modify system settings" (on Samsung: "Change system settings") lets an app change everyday settings such as brightness, ringtone and screen timeout. It can't reach security settings, so this check is for your information and doesn't count in the score. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › Modify system settings and turn it off for apps you don't expect there.
+
+#### APPS-4107 Apps that can manage your media
+
+Info · Android 12 and later · fails when a user app may change or delete media without asking (information only)
+
+"Media management" (on Samsung: "Manage media") lets an app that can see your photos, videos and audio also change, move or delete them without asking you each time. Gallery apps use it. This check is for your information and doesn't count in the score. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Open Settings › Apps › Special app access › Media management apps and turn it off for apps that don't organize your media.
+
 ## Shizuku tier
 
-Planned. Shizuku gives apps the rights adb has, without a computer once it runs; Droynis will use it, read-only, for settings Android hides from apps.
+[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the real USB debugging state on Android 17, and also runs every ADB-tier check.
+
+1. Install Shizuku and start it: with Wireless debugging on Android 11 and later, or from a
+   computer with adb. Shizuku's own guide shows each step.
+2. In Droynis open ⋮ › Check catalog › Shizuku and tap Allow access.
+3. Tap Scan again. After a reboot, start Shizuku again; to take access back, turn Droynis off in
+   Shizuku's list of authorized apps.
+
+| ID | Check | Severity | Fails when |
+|---|---|---|---|
+| [INTG-1201](#intg-1201-selinux-mode) | SELinux mode | Critical | SELinux is permissive or disabled |
+| [NETW-3201](#netw-3201-always-on-vpn-lockdown) | Always-on VPN lockdown | Notice | an always-on VPN lets traffic out while it is down |
+
+### Device integrity
+
+#### INTG-1201 SELinux mode
+
+Critical · Android 8.0 and later · fails when SELinux is permissive or disabled
+
+SELinux confines every app and system service to what its policy allows, so a bug in one of them can't take over the whole phone. Production Android always enforces it; a permissive or disabled SELinux usually means a modified kernel or ROM. Apps can't read the mode, but the shell user Shizuku runs as can.
+
+**What to do:** Settings can't turn SELinux back on. Install firmware that keeps it enforcing, such as the manufacturer's stock firmware or a ROM whose kernel enforces SELinux.
+
+### Network and radios
+
+#### NETW-3201 Always-on VPN lockdown
+
+Notice · Android 8.0 and later · fails when an always-on VPN lets traffic out while it is down
+
+An always-on VPN starts with the phone and stays connected. Only with "Block connections without VPN" does traffic also stop while the VPN is down or reconnecting; without it, apps quietly use the normal network. Apps can't see which app is the always-on VPN, but the shell user Shizuku runs as can.
+
+**What to do:** Open Settings › Network & internet › VPN, tap the gear next to your VPN, and turn on both "Always-on VPN" and "Block connections without VPN".
 
 ## Root tier
 

@@ -4,6 +4,8 @@ import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
+import java.io.Reader
 import java.util.concurrent.TimeUnit
 
 /**
@@ -15,38 +17,59 @@ internal object AndroidDumpsys : Dumpsys {
 
     private const val DUMPSYS = "/system/bin/dumpsys"
 
-    // dumpsys appops on a phone with a few hundred apps prints a few MB at most.
-    private const val MAX_CHARS = 16 * 1024 * 1024
-
     override fun dump(service: String, vararg args: String): Reading<String> {
         val source = Source((listOf("dumpsys", service) + args).joinToString(" "), Grant.DUMP)
         return probe(source) {
             val process = ProcessBuilder(listOf(DUMPSYS, service) + args).redirectErrorStream(true).start()
             try {
                 process.outputStream.close()
-                val text = StringBuilder()
-                val buffer = CharArray(64 * 1024)
-                process.inputStream.bufferedReader().use { reader ->
-                    while (true) {
-                        val n = reader.read(buffer)
-                        if (n < 0) break
-                        text.appendRange(buffer, 0, n)
-                        if (text.length > MAX_CHARS) {
-                            return@probe Reading.Unavailable("output longer than $MAX_CHARS characters", source)
-                        }
-                    }
-                }
+                val result = process.inputStream.bufferedReader().use { readDumpsys(it, source) }
                 process.waitFor(5, TimeUnit.SECONDS)
-                val firstLine = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
-                when {
-                    firstLine.isEmpty() -> Reading.Unavailable("dumpsys printed nothing", source)
-                    firstLine.startsWith("Permission Denial") -> Reading.Unavailable(firstLine, source)
-                    firstLine.startsWith("Can't find service") -> Reading.Unsupported(firstLine, source)
-                    else -> Reading.Value(text.toString(), source)
-                }
+                result
             } finally {
                 process.destroy()
             }
         }
+    }
+}
+
+/**
+ * Runs dumpsys as Droynis while it holds the adb grants, and otherwise through the Shizuku shell
+ * when that is connected: Shizuku covers the ADB tier.
+ */
+internal class RoutedDumpsys(
+    private val grants: AndroidGrants,
+    private val shizuku: ShizukuShell,
+) : Dumpsys {
+
+    override fun dump(service: String, vararg args: String): Reading<String> {
+        val ownGrants = grants.detect().containsAll(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))
+        return if (!ownGrants && args.isEmpty() && shizuku.isConnected) {
+            shizuku.dumpsys(service)
+        } else {
+            AndroidDumpsys.dump(service, *args)
+        }
+    }
+}
+
+// dumpsys appops on a phone with a few hundred apps prints a few MB at most.
+private const val MAX_CHARS = 16 * 1024 * 1024
+
+/** Reads dumpsys output up to a size limit and turns refusals into readings without a value. */
+internal fun readDumpsys(reader: Reader, source: Source): Reading<String> {
+    val text = StringBuilder()
+    val buffer = CharArray(64 * 1024)
+    while (true) {
+        val n = reader.read(buffer)
+        if (n < 0) break
+        text.appendRange(buffer, 0, n)
+        if (text.length > MAX_CHARS) return Reading.Unavailable("output longer than $MAX_CHARS characters", source)
+    }
+    val firstLine = text.lineSequence().firstOrNull { it.isNotBlank() }?.trim().orEmpty()
+    return when {
+        firstLine.isEmpty() -> Reading.Unavailable("dumpsys printed nothing", source)
+        firstLine.startsWith("Permission Denial") -> Reading.Unavailable(firstLine, source)
+        firstLine.startsWith("Can't find service") -> Reading.Unsupported(firstLine, source)
+        else -> Reading.Value(text.toString(), source)
     }
 }

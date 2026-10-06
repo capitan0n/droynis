@@ -5,11 +5,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.core.Status
 import kotlinx.coroutines.flow.toList
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuState
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -21,6 +25,9 @@ import org.junit.runner.RunWith
 class AndroidPlatformTest {
 
     private val platform = AndroidPlatform(InstrumentationRegistry.getInstrumentation().targetContext)
+
+    @After
+    fun close() = platform.close()
 
     @Test
     fun probesReadRealValues() {
@@ -77,7 +84,7 @@ class AndroidPlatformTest {
 
     @Test
     fun noCheckCrashesOrTimesOutOnARealDevice(): Unit = runBlocking {
-        val checks = baseChecks(platform) + adbChecks(platform)
+        val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform)
 
         val findings = Scanner().scan(checks, platform.newScanContext()).toList()
 
@@ -96,6 +103,16 @@ class AndroidPlatformTest {
 
         val dump = platform.dumpsys.dump("appops")
         assertTrue("expected a refusal, got $dump", dump is Reading.Unavailable)
+    }
+
+    @Test
+    fun withoutShizukuItsShellIsUnavailableRatherThanAnException() {
+        // Test devices rarely run Shizuku; with it allowed, the scan above covers the shell instead.
+        if (platform.shizuku.status().state == ShizukuState.CONNECTED) return
+
+        assertFalse(Grant.SHIZUKU in platform.detectGrants())
+        assertTrue(platform.shizuku.selinuxMode() is Reading.Unavailable)
+        assertTrue(platform.shizuku.readSetting("global", "adb_enabled") is Reading.Unavailable)
     }
 
     private fun assertValue(reading: Reading<*>) {

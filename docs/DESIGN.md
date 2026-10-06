@@ -10,7 +10,7 @@ Compose UI with dashboard, checks, tools and help screens. This file records how
 |---|---|---|---|
 | 1 | Verify boot state with on-device key attestation, like Auditor | The chain is signed in hardware, but the code that verifies it runs inside the OS being judged; a rooted OS can hook the verifier. Auditor is trustworthy because a *second* device or server verifies and pins. | Present it as posture ("self-attested"), never as proof. Allow exporting the raw chain for off-device verification. Trust both Google roots: the legacy RSA root and the ECDSA P-384 root that RKP devices use exclusively since April 2026. Reuse Auditor's (MIT) verified-boot key table and keep it current. |
 | 2 | List apps with permissions, accessibility, admins… | Since API 30 package visibility hides most apps unless the app holds `QUERY_ALL_PACKAGES`. Without it, invisible apps produce false PASSes. | Declare `QUERY_ALL_PACKAGES` (fine on F-Droid; Play restricts it). |
-| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via Shizuku (`appops get`, `settings get`). Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). |
+| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via `dumpsys appops` (ADB tier, or Shizuku) for the app-op switches and `settings get` through Shizuku for hidden keys. Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). |
 | 4 | Probe at runtime instead of branching on Android version | Calling an API newer than the device throws `NoSuchMethodError`, and lint's `NewApi` fails the build without an `SDK_INT` guard. | Version checks decide *whether an API exists* (`CheckSpec.minSdk`, `SDK_INT` guards in adapters). Runtime probing handles *content*: missing settings, OEM differences, `SecurityException`. Every probe returns a `Reading` instead of throwing. |
 | 5 | `PACKAGE_USAGE_STATS` is an ADB grant | Settings › Usage access sets only the app-op, which is enough for `UsageStatsManager`. dumpsys services that show per-app data (`DumpUtils.checkUsageStatsPermission`, Android 17) also require the permission itself, which only `pm grant` gives. | `Grant.PACKAGE_USAGE_STATS` means the permission (ADB tier). A future `UsageStatsManager` check would add a base-tier usage-access grant. |
 | 6 | `READ_LOGS` grant survives reboots and unlocks logcat | Since Android 13 every logcat session also needs a per-session "Allow access to all device logs?" dialog, shown only while the app is in the foreground. SELinux denials are noisy on production builds. | Logcat scan is interactive only. For crash loops, evaluate `DropBoxManager` (`READ_LOGS` + usage access) instead of parsing logcat. |
@@ -22,7 +22,7 @@ Compose UI with dashboard, checks, tools and help screens. This file records how
 | 12 | Security patch age | Since mid-2025 most fixes ship in quarterly bulletins (March, June, September, December); monthly ones can be empty. `SECURITY_PATCH` is self-reported and vendors have over-claimed it before. | PASS up to 90 days, WARNING up to a year, CRITICAL beyond. Cross-check with the attested `osPatchLevel` once attestation lands. |
 | 13 | Reports exclude IMEI, serial, phone number, account names | The base tier cannot read those anyway: IMEI and serial are privileged since API 29, and phone number and accounts need permissions Droynis does not request. The real leaks are the installed-app list (health, religion, politics…), CA certificate subjects (employer), Private DNS hostname and raw dumpsys text. | Export redacted by default (package names omitted or hashed); raw only on explicit choice. |
 | 14 | Advanced Protection (API 36+) | Readable with the normal permission `QUERY_ADVANCED_PROTECTION_MODE`. It also blocks installs from unknown sources, which conflicts with F-Droid users. | INFO (no score impact), with that trade-off in the remediation text. |
-| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. The Shizuku tier (shell UID) will read the real value. |
+| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. |
 
 Smaller points: StrongBox absence is not user-fixable (INFO, no score impact). Emulators have
 adb on and no lock screen, so instrumented tests assert that a verdict was reached, not which.
@@ -63,14 +63,47 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 core-model        Kotlin/JVM  Check contract, results, evidence, tiers, Scanner
 checks-base       Kotlin/JVM  base-tier checks + the probe interfaces they read
 checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys` probe they read
+checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
 report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category summaries,
                               Markdown export (later: JSON, diff between scans)
 platform-android  Android     probe implementations; the only framework calls for checks;
-                              grant detection; the permission overview on the Tools screen
+                              grant detection; the permission overview on the Tools screen;
+                              the Shizuku client and its read-only UserService (AIDL)
 app               Android     Compose UI (dashboard, checks, tools, help), registry wiring,
                               settings deep links, report save/share
-checks-shizuku    (later)     Android, Shizuku UserService + parsers
 ```
+
+### Shizuku
+
+Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from Droynis' own APK,
+in a separate process as the shell user (root if Shizuku was started with root), and hands its
+binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
+(table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, and `dumpsys` for an
+allowlist of services (`appops`). Commands run without a shell, with absolute paths, a timeout and
+an output cap; `dumpsys` streams through a pipe because its output can exceed one binder call.
+There is no general "run" method, so even a compromised app process can only ask for these reads.
+The service is not a daemon: Shizuku stops it when the app unbinds or dies. Transaction 16777115
+(`destroy`) is reserved by Shizuku and exits the process.
+
+`Grant.SHIZUKU` is held only while that shell is connected, not merely when Shizuku runs. Its shell
+holds every permission adb can grant, so `Capabilities.has` lets SHIZUKU cover the ADB-tier
+grants, and `dumpsys` falls back to the shell when the app itself lacks DUMP and
+PACKAGE_USAGE_STATS. A scan connects the shell first (up to 10 s), and the app scans again when
+Shizuku starts or allows Droynis.
+
+### Special app access
+
+Settings › Apps › Special app access switches are app-ops. `dumpsys appops` prints a uid's mode
+(only when it differs from the op's default) and each package's own mode; like
+`AppOpsService.checkOperation`, a uid mode decides for every package of the uid, otherwise the
+package mode does. `cmd appops query-op` was rejected because it reports package modes only, and
+All files access is set as a uid mode, so it would miss it and pass falsely. Covered (ADB tier,
+so Shizuku too): display over other apps, all files access, install unknown apps, usage access,
+and, as INFO (listed, not scored), modify system settings and media management. App stores are
+expected to install apps; system apps and Droynis itself are listed but not counted. Not covered:
+premium SMS (not an app-op), do not disturb access (a Settings key), and low-risk switches such as
+picture-in-picture, alarms or unrestricted data. Limitation: an app holding the access through a
+permission granted at install (target SDK below 23) and a default mode is not seen.
 
 Check logic never imports `android.*`, so every check is unit-tested on the plain JVM with fakes
 (no Robolectric). The cost: a check that needs a new framework call also needs a probe method in
@@ -166,6 +199,8 @@ out. Both contain only scan results and the device facts passed in.
 - `platform-android`: instrumented tests run the real probes and all checks on an emulator
   (ADB-tier ones are gated to N/A without grants, and dumpsys must refuse rather than answer);
   a local unit test pins the SDK constants that the JVM modules hard-code.
+- Shizuku: the shell, the binder and Shizuku itself need a device with Shizuku; instrumented tests
+  only check that without it the shell readings are Unavailable and SHIZUKU is not granted.
 - `app`: a Compose UI test launches the app, waits for the scan, opens the Checks tab, scrolls to
   every check, opens one and its evidence, visits the Tools, Help and About pages and every
   catalog tab (including the adb commands), and mutes and unmutes a check.
@@ -193,8 +228,9 @@ result (red whenever a critical failure caps it) on a faded track of the same hu
 The check catalog (⋮ menu, or a link at the top of Help) lists every check in one tab per tier:
 Base, ADB, Shizuku, Root. Each tab opens with what the tier is and how to set it up; the ADB tab
 lists each grant as held or not (read live), the exact `pm grant` commands, and `pm revoke`
-commands once something is granted. Tier-gated checks show "Needs the ADB tier" with a link to
-that tab. Help keeps only the legend, the score, privacy and the FAQ.
+commands once something is granted. The Shizuku tab shows three steps (Shizuku running, Droynis
+allowed, shell connected) and one button for the next step: get Shizuku, open it, or allow access.
+Tier-gated checks show "Needs the ADB tier" with a link to that tab. Help keeps only the legend, the score, privacy and the FAQ.
 
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,
 theme), implemented by `MainActivity`; screens take plain state, which keeps them previewable.

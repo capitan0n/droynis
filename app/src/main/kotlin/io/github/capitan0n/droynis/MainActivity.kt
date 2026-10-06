@@ -19,6 +19,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.capitan0n.droynis.core.SettingsActions
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import io.github.capitan0n.droynis.ui.AppActions
 import io.github.capitan0n.droynis.ui.DroynisApp
 import io.github.capitan0n.droynis.ui.theme.DroynisTheme
@@ -78,6 +79,21 @@ class MainActivity : ComponentActivity(), AppActions {
     override fun setThemeMode(mode: ThemeMode) = viewModel.setThemeMode(mode)
 
     override fun setMuted(checkId: String, muted: Boolean) = viewModel.setMuted(checkId, muted)
+
+    override fun requestShizuku() = viewModel.requestShizuku()
+
+    override fun openShizuku() {
+        val launch = packageManager.getLaunchIntentForPackage(ShizukuShell.MANAGER_PACKAGE)
+        if (launch == null) {
+            openLink(AppInfo.SHIZUKU_URL)
+            return
+        }
+        try {
+            startActivity(launch)
+        } catch (e: ActivityNotFoundException) {
+            openLink(AppInfo.SHIZUKU_URL)
+        }
+    }
 
     /** Droynis never changes a setting itself; it opens the screen where the user can. */
     override fun openSettings(actions: List<String>) {

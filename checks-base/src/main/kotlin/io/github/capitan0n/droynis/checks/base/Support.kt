@@ -5,12 +5,12 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.toEvidence
 
-internal const val NOT_SET = "(not set)"
+const val NOT_SET = "(not set)"
 
 /** State of a 0/1 Settings switch. */
-internal enum class SwitchState { ON, OFF, UNSET, UNEXPECTED }
+enum class SwitchState { ON, OFF, UNSET, UNEXPECTED }
 
-internal fun switchState(raw: String?, on: Set<String> = setOf("1"), off: Set<String> = setOf("0")): SwitchState =
+fun switchState(raw: String?, on: Set<String> = setOf("1"), off: Set<String> = setOf("0")): SwitchState =
     when (val value = raw?.trim()) {
         null -> SwitchState.UNSET
         in on -> SwitchState.ON
@@ -18,20 +18,28 @@ internal fun switchState(raw: String?, on: Set<String> = setOf("1"), off: Set<St
         else -> SwitchState.UNEXPECTED
     }
 
-internal fun Reading<String?>.settingEvidence(label: String): Evidence = toEvidence(label) { it ?: NOT_SET }
+fun Reading<String?>.settingEvidence(label: String): Evidence = toEvidence(label) { it ?: NOT_SET }
 
 /**
- * From Android 17 (API 37) the platform may answer an ordinary app's read of `adb_enabled` or
- * `development_settings_enabled` with the placeholder "0" instead of the real value
- * (`@Settings.Readable(redactedValue = "0")`, behind a platform flag). Android 16 has no such
- * redaction. A "0" read there proves nothing, so it must never become a PASS.
+ * From Android 17 (API 37) the platform may answer an ordinary app's read of these keys with the
+ * placeholder "0" instead of the real value (`@Settings.Readable(redactedValue = "0")`, behind a
+ * platform flag). Android 16 has no such redaction.
  */
-internal const val SETTINGS_REDACTION_SDK = 37
+val REDACTED_SETTINGS: Set<String> = setOf(UsbDebuggingCheck.ADB_ENABLED, DeveloperOptionsCheck.DEVELOPMENT_SETTINGS_ENABLED)
 
-internal fun mayBeRedacted(context: ScanContext, raw: String?): Boolean =
-    context.sdkInt >= SETTINGS_REDACTION_SDK && raw?.trim() == "0"
+const val SETTINGS_REDACTION_SDK = 37
 
-internal const val REDACTED_SUMMARY = "Can't be verified: Android 17 and later report this as off to every app"
+/**
+ * A "0" an app read from a [REDACTED_SETTINGS] key on Android 17+ proves nothing, so it must never
+ * become a PASS. A read through a privileged shell (Shizuku) is not an app's read and is never
+ * redacted, so its "0" is real.
+ */
+internal fun Reading<String?>.mayBeRedacted(context: ScanContext): Boolean =
+    this is Reading.Value && source.grant == null &&
+        context.sdkInt >= SETTINGS_REDACTION_SDK && value?.trim() == "0"
+
+internal const val REDACTED_SUMMARY =
+    "Can't be verified: Android 17 and later report this as off to apps. The Shizuku tier reads the real state"
 
 internal fun Evidence.redacted(): Evidence =
     copy(note = "Android 17+ may show apps \"0\" here whatever the real state")

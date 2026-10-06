@@ -1,6 +1,8 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
+import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,6 +57,12 @@ class AccessControlChecksTest {
         assertEquals(Status.UNKNOWN, status("0", sdk = 37))
         assertEquals(Status.FAIL, status("1", sdk = 37))
         assertEquals(Status.PASS, status(null, sdk = 37))
+        val shell = Reading.Value<String?>("0", Source("settings get global development_settings_enabled", Grant.SHIZUKU))
+        assertEquals(
+            Status.PASS,
+            DeveloperOptionsCheck(FakeSettings(global = mapOf("development_settings_enabled" to shell)))
+                .run(scanContext(sdk = 37)).status,
+        )
     }
 
     @Test

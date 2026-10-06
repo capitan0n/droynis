@@ -32,6 +32,7 @@ rootProject.name = "droynis"
 include(":core-model")
 include(":checks-base")
 include(":checks-adb")
+include(":checks-shizuku")
 include(":report")
 
 // Android: the only modules that touch framework APIs.

@@ -52,6 +52,7 @@ import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.Status
+import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.verdict
 
 @Composable
@@ -80,7 +81,8 @@ fun CheckDetailScreen(
                 icon = Icons.Rounded.Layers,
                 accent = MaterialTheme.colorScheme.tertiary,
             ) {
-                Text(stringResource(R.string.detail_needs_tier_body), style = MaterialTheme.typography.bodyMedium)
+                val body = if (spec.requiredTier == Tier.SHIZUKU) R.string.detail_needs_shizuku_body else R.string.detail_needs_tier_body
+                Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
                 FilledTonalButton(onClick = onSetUpTier) {
                     Text(stringResource(R.string.detail_set_up_tier))

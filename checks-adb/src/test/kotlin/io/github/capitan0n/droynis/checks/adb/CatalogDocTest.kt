@@ -2,6 +2,8 @@ package io.github.capitan0n.droynis.checks.adb
 
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.shizuku.ShizukuProbes
+import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Severity
@@ -50,7 +52,8 @@ class CatalogDocTest {
 
         /** Every registry, built with probes nothing calls: a spec is a plain value. */
         fun allSpecs(): List<CheckSpec> =
-            (baseChecks(unused<BaseProbes>()) + adbChecks(unused<AdbProbes>())).map { it.spec }
+            (baseChecks(unused<BaseProbes>()) + adbChecks(unused<AdbProbes>()) + shizukuChecks(unused<ShizukuProbes>()))
+                .map { it.spec }
 
         inline fun <reified T : Any> unused(): T = T::class.java.cast(unusedProbe(T::class.java))
 
@@ -69,9 +72,12 @@ object CatalogDoc {
     private val INTRO = mapOf(
         Tier.BASE to "Public Android APIs only. These checks run on every phone, with no setup and no extra permissions.",
         Tier.ADB to "Two read-only permissions, granted once from a computer with adb, unlock checks that public " +
-            "Android APIs can't do. Until then these checks show as N/A and don't change the score.",
-        Tier.SHIZUKU to "Planned. Shizuku gives apps the rights adb has, without a computer once it runs; Droynis will " +
-            "use it, read-only, for settings Android hides from apps.",
+            "Android APIs can't do. Until then these checks show as N/A and don't change the score. The " +
+            "Shizuku tier covers them too, without the grants.",
+        Tier.SHIZUKU to "[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps " +
+            "the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that " +
+            "runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the " +
+            "real USB debugging state on Android 17, and also runs every ADB-tier check.",
         Tier.ROOT to "Planned, for phones that are already rooted: a fixed list of read-only commands run through " +
             "the root manager. Rooting weakens Android's security model, so don't root a phone just to audit it.",
     )
@@ -112,6 +118,7 @@ object CatalogDoc {
             appendLine()
             appendLine(INTRO.getValue(tier))
             if (tier == Tier.ADB) appendSetup(inTier)
+            if (tier == Tier.SHIZUKU && inTier.isNotEmpty()) appendShizukuSetup()
             if (inTier.isEmpty()) continue
 
             appendLine()
@@ -150,6 +157,15 @@ object CatalogDoc {
         appendLine("```")
         appendLine()
         appendLine("Then tap Scan again. The grants stay until `adb shell pm revoke …` or an uninstall.")
+    }
+
+    private fun StringBuilder.appendShizukuSetup() {
+        appendLine()
+        appendLine("1. Install Shizuku and start it: with Wireless debugging on Android 11 and later, or from a")
+        appendLine("   computer with adb. Shizuku's own guide shows each step.")
+        appendLine("2. In Droynis open ⋮ › Check catalog › Shizuku and tap Allow access.")
+        appendLine("3. Tap Scan again. After a reboot, start Shizuku again; to take access back, turn Droynis off in")
+        appendLine("   Shizuku's list of authorized apps.")
     }
 
     private fun StringBuilder.appendCheck(spec: CheckSpec) {

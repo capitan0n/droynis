@@ -9,6 +9,7 @@ import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.DeviceSummary
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.Grant
@@ -17,6 +18,8 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.platform.PermissionOverview
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuState
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuStatus
 import io.github.capitan0n.droynis.report.DeviceFact
 import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.report.JsonReport
@@ -69,6 +72,8 @@ data class UiState(
     val grants: Set<Grant> = emptySet(),
     /** Ids of checks the user muted: they still run, but the score and counts leave them out. */
     val muted: Set<String> = emptySet(),
+    /** Null until first read. */
+    val shizuku: ShizukuStatus? = null,
 ) {
     val done: Int get() = findings.size
 }
@@ -79,7 +84,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     private val prefs = application.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     // Each tier module contributes its registry here; checks above the detected tier show as N/A.
-    private val checks = baseChecks(platform) + adbChecks(platform)
+    private val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform)
     private val scanner = Scanner()
 
     /** Every check in display order, whether or not it has run. */
@@ -98,17 +103,45 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
 
     private var scanJob: Job? = null
 
+    /** Whether Droynis already scanned again for the Shizuku that runs now. */
+    private var rescannedForShizuku = false
+
+    /** Shizuku started or stopped, answered the permission request, or connected the shell. */
+    private val onShizukuChanged: () -> Unit = {
+        viewModelScope.launch {
+            val status = refreshShizuku()
+            when (status.state) {
+                // Shizuku just became usable (started, or Droynis was allowed): scan so its checks run.
+                ShizukuState.ALLOWED -> if (!rescannedForShizuku) {
+                    rescannedForShizuku = true
+                    scan()
+                }
+                ShizukuState.NOT_RUNNING, ShizukuState.NOT_INSTALLED -> rescannedForShizuku = false
+                else -> Unit
+            }
+        }
+    }
+
     init {
+        platform.shizuku.addListener(onShizukuChanged)
         scan()
         refreshTools()
+    }
+
+    override fun onCleared() {
+        platform.shizuku.removeListener(onShizukuChanged)
+        platform.close()
     }
 
     fun scan() {
         scanJob?.cancel()
         scanJob = viewModelScope.launch {
             val started = TimeSource.Monotonic.markNow()
+            // Starting the Shizuku shell can take a few seconds, so show the scan as running first.
+            _state.update { it.copy(scanning = true, findings = emptyMap()) }
             val context = withContext(Dispatchers.IO) { platform.newScanContext() }
-            _state.update { it.copy(scanning = true, findings = emptyMap(), grants = context.capabilities.grants) }
+            _state.update { it.copy(grants = context.capabilities.grants) }
+            refreshShizuku()
             scanner.scan(checks, context).collect { finding ->
                 _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
             }
@@ -131,6 +164,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val network = withContext(Dispatchers.IO) { platform.network.activeNetwork() }
             val permissions = withContext(Dispatchers.IO) { platform.permissionAudit.overview() }
             val grants = withContext(Dispatchers.IO) { platform.detectGrants() }
+            refreshShizuku()
             _state.update {
                 it.copy(
                     device = device,
@@ -141,6 +175,22 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 )
             }
         }
+    }
+
+    /** Shows Shizuku's dialog asking to allow Droynis; once allowed, Droynis scans again. */
+    fun requestShizuku() {
+        viewModelScope.launch {
+            val shown = withContext(Dispatchers.IO) { platform.shizuku.requestPermission() }
+            if (!shown) message(R.string.shizuku_not_reachable)
+        }
+    }
+
+    /** Re-reads Shizuku's state and the grants it brings. */
+    private suspend fun refreshShizuku(): ShizukuStatus {
+        val (status, grants) = withContext(Dispatchers.IO) { platform.shizuku.status() to platform.detectGrants() }
+        // A running scan keeps the grants it started with.
+        _state.update { if (it.scanning) it.copy(shizuku = status) else it.copy(shizuku = status, grants = grants) }
+        return status
     }
 
     /** Mutes or unmutes one check. The score updates at once; no new scan is needed. */

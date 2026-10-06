@@ -86,6 +86,8 @@ data class InstalledApp(
     val targetSdk: Int,
     /** False when the app is disabled, for example a system app the user turned off. */
     val isEnabled: Boolean = true,
+    /** The app's Linux uid, which dumpsys prints instead of package names in places. */
+    val uid: Int? = null,
 )
 
 interface PackageInventory {

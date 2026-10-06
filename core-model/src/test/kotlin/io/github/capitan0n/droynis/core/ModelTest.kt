@@ -37,6 +37,16 @@ class ModelTest {
     }
 
     @Test
+    fun `shizuku covers the adb grants, but adb grants never cover shizuku`() {
+        val adbCheck = spec(requires = setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))
+        val shizukuCheck = spec(requires = setOf(Grant.SHIZUKU))
+
+        assertEquals(emptySet(), Capabilities(setOf(Grant.SHIZUKU)).missingFor(adbCheck))
+        assertEquals(setOf(Grant.SHIZUKU), Capabilities(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS)).missingFor(shizukuCheck))
+        assertEquals(Tier.SHIZUKU, Capabilities(setOf(Grant.SHIZUKU)).tier)
+    }
+
+    @Test
     fun `adb commands name the permission behind a grant`() {
         assertEquals(
             "adb shell pm grant org.example android.permission.DUMP",

@@ -34,7 +34,7 @@ class BackgroundSensorUseCheck(
         explanation = "Lists user-installed apps that used the camera, the microphone or your location " +
             "while you were not using them, in the last ${WINDOW.inWholeDays} days. Spyware works this way; " +
             "so do fitness, navigation and smart-home apps, so check that each one is expected. " +
-            "Android keeps this record in its app-ops service, which needs the ADB tier to read.",
+            "Android keeps this record in its app-ops service, which only the ADB or Shizuku tier can read.",
         remediation = Remediation(
             text = "For each app listed, open Settings › Apps › the app › Permissions. Set Location to " +
                 "\"Allow only while using the app\" or \"Don't allow\", and remove Camera and Microphone " +

@@ -27,6 +27,7 @@ internal class AndroidPackages(private val context: Context) : PackageInventory 
                         installer = installerOf(info.packageName),
                         targetSdk = info.targetSdkVersion,
                         isEnabled = info.enabled,
+                        uid = info.uid,
                     )
                 }
             Reading.Value(apps, source)

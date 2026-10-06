@@ -38,6 +38,7 @@ import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Tier
+import io.github.capitan0n.droynis.platform.shizuku.ShizukuStatus
 import io.github.capitan0n.droynis.report.verdict
 import androidx.compose.material3.Tab as MaterialTab
 
@@ -52,6 +53,7 @@ fun CatalogScreen(
     findings: Map<String, Finding>,
     muted: Set<String>,
     grants: Set<Grant>,
+    shizuku: ShizukuStatus?,
     selected: Tier,
     onSelect: (Tier) -> Unit,
     scanning: Boolean,
@@ -80,7 +82,7 @@ fun CatalogScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item(key = "tier") {
-                    TierCard(selected, tierState(selected, grants, needed.toSet()), grants, needed, scanning, actions)
+                    TierCard(selected, tierState(selected, grants, needed.toSet()), grants, needed, shizuku, scanning, actions)
                 }
                 if (specs.isEmpty()) {
                     item(key = "none") {

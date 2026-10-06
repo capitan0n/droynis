@@ -50,6 +50,18 @@ object SettingsActions {
     /** `Settings.ACTION_USAGE_ACCESS_SETTINGS` */
     const val USAGE_ACCESS = "android.settings.USAGE_ACCESS_SETTINGS"
 
+    /** `Settings.ACTION_MANAGE_OVERLAY_PERMISSION`: Display over other apps. */
+    const val OVERLAY = "android.settings.action.MANAGE_OVERLAY_PERMISSION"
+
+    /** `Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION`: All files access, Android 11+. */
+    const val ALL_FILES_ACCESS = "android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"
+
+    /** `Settings.ACTION_MANAGE_WRITE_SETTINGS`: Modify system settings. */
+    const val WRITE_SETTINGS = "android.settings.action.MANAGE_WRITE_SETTINGS"
+
+    /** `Settings.ACTION_REQUEST_MANAGE_MEDIA`: Media management apps, Android 12+. */
+    const val MANAGE_MEDIA = "android.settings.REQUEST_MANAGE_MEDIA"
+
     /** `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS` */
     const val NOTIFICATION_ACCESS = "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"
 

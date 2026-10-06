@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
+import io.github.capitan0n.droynis.core.Capabilities
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Tier
@@ -93,6 +94,12 @@ interface AppActions {
 
     /** A muted check still runs and shows its result, but the score and counts leave it out. */
     fun setMuted(checkId: String, muted: Boolean)
+
+    /** Shows Shizuku's own dialog asking the user to allow Droynis. */
+    fun requestShizuku()
+
+    /** Opens the Shizuku app, or its download page when it is not installed. */
+    fun openShizuku()
 
     /** Opens the first Settings screen in [actions] that this phone has. */
     fun openSettings(actions: List<String>)
@@ -273,6 +280,7 @@ fun DroynisApp(
                         findings = state.findings,
                         muted = state.muted,
                         grants = state.grants,
+                        shizuku = state.shizuku,
                         selected = catalogTier,
                         onSelect = { catalogTier = it },
                         scanning = state.scanning,
@@ -286,7 +294,7 @@ fun DroynisApp(
                         onCopy = actions::copy,
                         muted = target.id in state.muted,
                         onMute = { actions.setMuted(target.id, it) },
-                        onSetUpTier = if (state.grants.containsAll(target.requires)) {
+                        onSetUpTier = if (Capabilities(state.grants).missingFor(target).isEmpty()) {
                             null
                         } else {
                             {

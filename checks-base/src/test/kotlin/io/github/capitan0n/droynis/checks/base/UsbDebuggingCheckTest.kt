@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis.checks.base
 
 import io.github.capitan0n.droynis.core.Evidence
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
@@ -33,6 +34,13 @@ class UsbDebuggingCheckTest {
         assertTrue(outcome.summary.startsWith("Can't be verified"))
         assertTrue(outcome.evidence.single().note!!.contains("Android 17"))
         assertEquals(Status.FAIL, statusFor(value("1"), sdk = 37)) // a real value is never redacted to 1
+    }
+
+    @Test
+    fun `a 0 read through the Shizuku shell is real, so it is a PASS`() = runTest {
+        val shell = Reading.Value<String?>("0", Source("settings get global adb_enabled", Grant.SHIZUKU))
+
+        assertEquals(Status.PASS, statusFor(shell, sdk = 37))
     }
 
     @Test

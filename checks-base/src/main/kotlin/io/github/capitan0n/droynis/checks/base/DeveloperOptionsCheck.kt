@@ -35,7 +35,7 @@ class DeveloperOptionsCheck(private val settings: SystemSettings) : Check {
             when (switchState(raw)) {
                 SwitchState.ON -> Outcome.fail("Developer options are enabled", evidence)
                 SwitchState.OFF ->
-                    if (mayBeRedacted(context, raw)) {
+                    if (enabled.mayBeRedacted(context)) {
                         Outcome.unknown(REDACTED_SUMMARY, evidence.map { it.redacted() })
                     } else {
                         Outcome.pass("Developer options are disabled", evidence)

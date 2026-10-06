@@ -23,7 +23,10 @@ enum class Grant(val tier: Tier, val permission: String?) {
     /** `adb shell pm grant <package> android.permission.READ_LOGS`; Android 13+ also asks per session. */
     READ_LOGS(Tier.ADB, "android.permission.READ_LOGS"),
 
-    /** Shizuku is running and has authorized this app. */
+    /**
+     * Shizuku is running, has authorized this app, and Droynis' read-only shell is connected. That
+     * shell has every permission adb can grant, so it also covers the ADB-tier grants.
+     */
     SHIZUKU(Tier.SHIZUKU, null),
 }
 
@@ -32,7 +35,10 @@ data class Capabilities(val grants: Set<Grant> = emptySet()) {
     /** Highest tier reached by any held grant. */
     val tier: Tier get() = grants.maxOfOrNull { it.tier } ?: Tier.BASE
 
-    fun missingFor(spec: CheckSpec): Set<Grant> = spec.requires - grants
+    /** Held directly, or covered by Shizuku: its shell has every permission adb can grant. */
+    fun has(grant: Grant): Boolean = grant in grants || (grant.tier == Tier.ADB && Grant.SHIZUKU in grants)
+
+    fun missingFor(spec: CheckSpec): Set<Grant> = spec.requires.filterNotTo(LinkedHashSet()) { has(it) }
 }
 
 /** The adb command that gives [packageName] this grant, or null when adb cannot. */

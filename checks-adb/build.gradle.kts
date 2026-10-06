@@ -20,6 +20,8 @@ dependencies {
     api(project(":checks-base"))
 
     testImplementation(project(":report"))
+    // CatalogDocTest documents every tier, so it sees the tiers above this one too.
+    testImplementation(project(":checks-shizuku"))
     testImplementation(kotlin("test"))
     testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)

@@ -16,6 +16,7 @@ import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.SecurityPatchAgeCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.ui.CHECKS_LIST_TAG
 import org.junit.Assert.assertTrue
@@ -45,8 +46,7 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tab_checks)).performClick()
 
         val list = compose.onNodeWithTag(CHECKS_LIST_TAG)
-        val platform = AndroidPlatform(compose.activity)
-        val checks = baseChecks(platform) + adbChecks(platform)
+        val checks = AndroidPlatform(compose.activity).use { baseChecks(it) + adbChecks(it) + shizukuChecks(it) }
         for (title in checks.map { it.spec.title }) {
             list.performScrollToNode(hasText(title))
         }
@@ -98,14 +98,16 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tab_checks)).performClick()
 
         compose.onNodeWithText(text(R.string.tier_adb)).performClick()
-        val adb = adbChecks(AndroidPlatform(compose.activity)).first().spec.title
+        val (adb, patch) = AndroidPlatform(compose.activity).use { platform ->
+            adbChecks(platform).first().spec.title to
+                baseChecks(platform).single { it is SecurityPatchAgeCheck }.spec.title
+        }
         compose.onNodeWithText(adb).assertExists()
-        val patch = baseChecks(AndroidPlatform(compose.activity)).single { it is SecurityPatchAgeCheck }.spec.title
         compose.onNodeWithText(patch).assertDoesNotExist()
     }
 
     @Test
-    fun catalogListsTheTiersAndHowToSetUpAdb() {
+    fun catalogListsTheTiersAndHowToSetThemUp() {
         waitForScan()
 
         compose.onNodeWithContentDescription(text(R.string.more_options)).performClick()
@@ -116,6 +118,10 @@ class DroynisAppTest {
         // Without adb grants the ADB tab offers the setup commands.
         compose.onNodeWithText("pm grant", substring = true).assertExists()
 
+        // The Shizuku tab always explains how to set Shizuku up, whatever its state on this phone.
+        compose.onNodeWithText(text(R.string.tier_shizuku)).performClick()
+        compose.onNodeWithText(text(R.string.tier_shizuku_body)).assertExists()
+
         compose.onNodeWithText(text(R.string.tier_root)).performClick()
         compose.onNodeWithText(text(R.string.tier_root_note)).assertExists()
     }
@@ -124,7 +130,9 @@ class DroynisAppTest {
     fun mutingACheckTakesItOutOfTheScoreAndBackIn() {
         waitForScan()
         compose.onNodeWithText(text(R.string.tab_checks)).performClick()
-        val patch = baseChecks(AndroidPlatform(compose.activity)).single { it is SecurityPatchAgeCheck }.spec.title
+        val patch = AndroidPlatform(compose.activity).use { platform ->
+            baseChecks(platform).single { it is SecurityPatchAgeCheck }.spec.title
+        }
         compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(patch))
         compose.onNodeWithText(patch).performClick()
 

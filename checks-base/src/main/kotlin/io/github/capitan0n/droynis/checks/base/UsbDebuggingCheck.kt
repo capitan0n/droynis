@@ -35,7 +35,7 @@ class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
             when (switchState(raw)) {
                 SwitchState.ON -> Outcome.fail("USB debugging is enabled", evidence)
                 SwitchState.OFF ->
-                    if (mayBeRedacted(context, raw)) {
+                    if (adb.mayBeRedacted(context)) {
                         Outcome.unknown(REDACTED_SUMMARY, evidence.map { it.redacted() })
                     } else {
                         Outcome.pass("USB debugging is disabled", evidence)

@@ -33,4 +33,23 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!--
+        Optional Shizuku tier. The Shizuku library adds moe.shizuku.manager.permission.API_V23, a
+        permission Shizuku itself defines; Droynis can use Shizuku only after the user allows it there.
+    -->
+
+    <application>
+        <!--
+            Shizuku hands its binder to Droynis through this provider. Only the system, the shell
+            and root hold INTERACT_ACROSS_USERS_FULL, so no other app can call it.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    </application>
+
 </manifest>
