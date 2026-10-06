@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.checks.adb
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 
 class AppOpModesTest {
@@ -73,6 +74,36 @@ class AppOpModesTest {
 
         allowed(changed, "SYSTEM_ALERT_WINDOW")
         assertIs<AppOpModes.Result.Failed>(AppOpModes.allowed(changed, setOf("WAKE_LOCK")))
+    }
+
+    @Test
+    fun `android 11 and older have no section header, and the first uid counts too`() {
+        val android11 = """
+            Current AppOps Service state:
+              Settings:
+                top_state_settle_time=+30s0ms
+              Uid 0:
+                state=pers
+                Package root:
+                  GET_USAGE_STATS (allow):
+                Package com.android.shell:
+                  SYSTEM_ALERT_WINDOW (allow):
+              Uid u0a130:
+                state=cch
+                Package org.example.bubbles:
+                  SYSTEM_ALERT_WINDOW (allow):
+        """.trimIndent()
+
+        val result = allowed(android11, "SYSTEM_ALERT_WINDOW", "GET_USAGE_STATS")
+        assertEquals(3, result.packages)
+        assertEquals(setOf("root", "com.android.shell", "org.example.bubbles"), result.grants.map { it.packageName }.toSet())
+    }
+
+    @Test
+    fun `a failure quotes the first unexpected line`() {
+        val changed = SAMPLE.replace("SYSTEM_ALERT_WINDOW (allow):", "SYSTEM_ALERT_WINDOW (allow): time=+1h ago")
+        val failed = assertIs<AppOpModes.Result.Failed>(AppOpModes.allowed(changed, setOf("SYSTEM_ALERT_WINDOW")))
+        assertTrue(failed.reason.endsWith("\"SYSTEM_ALERT_WINDOW (allow): time=+1h ago\""), failed.reason)
     }
 
     @Test

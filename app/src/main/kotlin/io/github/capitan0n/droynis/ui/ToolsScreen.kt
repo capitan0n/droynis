@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -49,6 +50,8 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Sms
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.VpnKey
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Button
@@ -114,13 +117,25 @@ fun ToolsScreen(state: UiState, actions: AppActions) {
 
 @Composable
 private fun NetworkCard(network: Reading<NetworkSnapshot?>?, refreshing: Boolean, onRefresh: () -> Unit) {
+    // Hidden by default, so a screenshot of this screen doesn't give away an address. Not stored:
+    // every new start of the app hides them again.
+    var showAddresses by rememberSaveable { mutableStateOf(false) }
     SectionCard(
         title = stringResource(R.string.tools_network),
         icon = Icons.Rounded.NetworkCheck,
         accent = MaterialTheme.colorScheme.tertiary,
         trailing = {
+            IconButton(onClick = { showAddresses = !showAddresses }) {
+                Icon(
+                    if (showAddresses) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    stringResource(if (showAddresses) R.string.net_hide_addresses else R.string.net_show_addresses),
+                )
+            }
             if (refreshing) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                // Same size as the button it replaces, so the eye doesn't jump.
+                Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                }
             } else {
                 IconButton(onClick = onRefresh) { Icon(Icons.Rounded.Refresh, stringResource(R.string.tools_refresh)) }
             }
@@ -133,7 +148,7 @@ private fun NetworkCard(network: Reading<NetworkSnapshot?>?, refreshing: Boolean
                 if (net == null) {
                     InfoRow(stringResource(R.string.net_connection), stringResource(R.string.net_offline), verdict = Verdict.UNKNOWN)
                 } else {
-                    NetworkRows(net)
+                    NetworkRows(net, showAddresses)
                 }
             }
             is Reading.Unsupported -> Text(stringResource(R.string.net_unavailable, network.reason))
@@ -148,8 +163,10 @@ private fun NetworkCard(network: Reading<NetworkSnapshot?>?, refreshing: Boolean
     }
 }
 
+/** [showAddresses] false shows IP addresses, DNS servers and the proxy as dots. */
 @Composable
-private fun NetworkRows(net: NetworkSnapshot) {
+private fun NetworkRows(net: NetworkSnapshot, showAddresses: Boolean) {
+    val address = { value: String -> if (showAddresses) value else maskAddress(value) }
     val transports = net.transports.sortedBy { it.ordinal }.map { stringResource(it.labelRes) }
     InfoRow(stringResource(R.string.net_connection), transports.joinToString(" + "))
     InfoRow(
@@ -179,7 +196,7 @@ private fun NetworkRows(net: NetworkSnapshot) {
     )
     InfoRow(
         stringResource(R.string.net_dns_servers),
-        net.dnsServers.joinToString("\n").ifEmpty { stringResource(R.string.net_not_reported) },
+        net.dnsServers.joinToString("\n", transform = address).ifEmpty { stringResource(R.string.net_not_reported) },
         monospace = true,
     )
     if (Transport.WIFI in net.transports) {
@@ -196,17 +213,35 @@ private fun NetworkRows(net: NetworkSnapshot) {
     }
     InfoRow(
         stringResource(R.string.net_proxy),
-        net.httpProxy ?: stringResource(R.string.net_none),
+        net.httpProxy?.let(address) ?: stringResource(R.string.net_none),
         monospace = net.httpProxy != null,
         verdict = if (net.httpProxy == null) Verdict.PASSED else Verdict.ATTENTION,
     )
     InfoRow(
         stringResource(R.string.net_addresses),
-        net.addresses.joinToString("\n").ifEmpty { stringResource(R.string.net_not_reported) },
+        net.addresses.joinToString("\n", transform = address).ifEmpty { stringResource(R.string.net_not_reported) },
         monospace = true,
     )
     net.interfaceName?.let { InfoRow(stringResource(R.string.net_interface), it, monospace = true) }
 }
+
+/**
+ * The same shape for every address of a kind, so nothing about it shows: "•••.•••.•••.•••" for
+ * IPv4, "••••:••••:••••:••••" for IPv6 (with or without a /prefix), dots for anything else.
+ */
+internal fun maskAddress(value: String): String {
+    val host = value.substringBefore('/')
+    return when {
+        IPV4.matches(host) -> "•••.•••.•••.•••"
+        host.count { it == ':' } >= 2 && IPV6.matches(host) -> "••••:••••:••••:••••"
+        else -> "••••••••"
+    }
+}
+
+private val IPV4 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
+
+/** Hex groups and colons, maybe an IPv4 tail ("::ffff:1.2.3.4") and a zone ("fe80::1%wlan0"). */
+private val IPV6 = Regex("""[0-9A-Fa-f:.]+(%\w+)?""")
 
 private val Transport.labelRes: Int
     get() = when (this) {

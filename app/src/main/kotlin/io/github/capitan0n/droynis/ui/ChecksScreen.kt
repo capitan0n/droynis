@@ -15,21 +15,31 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FilterAltOff
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.core.Category
@@ -39,12 +49,14 @@ import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Verdict
 import io.github.capitan0n.droynis.report.verdict
 
-/** Every check with its ✓ – ✗ ? result, filterable by verdict, category and privilege tier. */
+/** Every check with its ✓ – ✗ ? result, searchable and filterable by verdict, category and privilege tier. */
 @Composable
 fun ChecksScreen(
     catalog: List<CheckSpec>,
     findings: Map<String, Finding>,
     muted: Set<String>,
+    query: String,
+    onQuery: (String) -> Unit,
     filter: CheckFilter,
     onFilter: (CheckFilter) -> Unit,
     category: Category?,
@@ -55,24 +67,33 @@ fun ChecksScreen(
 ) {
     // Derived once per scan or filter change, not on every frame while the list scrolls.
     val verdicts = remember(findings) { findings.mapValues { it.value.verdict } }
-    val counts = remember(catalog, verdicts, muted) {
-        CheckFilter.entries.associateWith { option -> catalog.count { option.matches(verdicts[it.id], it.id in muted) } }
-    }
     // Tiers with at least one check; Shizuku and root chips appear once they have checks.
     val tiers = remember(catalog) { catalog.map { it.requiredTier }.distinct().sorted() }
-    val groups = remember(catalog, verdicts, muted, filter, category, tier) {
+    // Built once per scan, so typing only compares strings.
+    val searchTexts = remember(catalog, findings) { catalog.associate { it.id to searchText(it, findings[it.id]) } }
+    val words = remember(query) { searchWords(query) }
+    // What the search, category and tier leave; the verdict chips count within it.
+    val scope = remember(catalog, searchTexts, words, category, tier) {
+        catalog.filter {
+            (category == null || it.category == category) &&
+                (tier == null || it.requiredTier == tier) &&
+                matchesSearch(searchTexts.getValue(it.id), words)
+        }
+    }
+    val counts = remember(scope, verdicts, muted) {
+        CheckFilter.entries.associateWith { option ->
+            scope.count { option.matches(verdicts[it.id], it.id in muted) }
+        }
+    }
+    val groups = remember(catalog, scope, verdicts, muted, filter, tier) {
         Category.entries.mapNotNull { group ->
-            val all = catalog.filter { it.category == group && (tier == null || it.requiredTier == tier) }
-            val shown = all.filter {
-                (category == null || group == category) && filter.matches(verdicts[it.id], it.id in muted)
+            val shown = scope.filter { it.category == group && filter.matches(verdicts[it.id], it.id in muted) }
+            if (shown.isEmpty()) return@mapNotNull null
+            // Over the whole category, and like the score, without muted checks.
+            val scored = catalog.filter {
+                it.category == group && (tier == null || it.requiredTier == tier) && it.id !in muted
             }
-            // Like the score, the pass count leaves muted checks out.
-            val scored = all.filterNot { it.id in muted }
-            if (shown.isEmpty()) {
-                null
-            } else {
-                CheckGroup(group, shown, scored.count { verdicts[it.id] == Verdict.PASSED }, scored.size)
-            }
+            CheckGroup(group, shown, scored.count { verdicts[it.id] == Verdict.PASSED }, scored.size)
         }
     }
 
@@ -81,7 +102,8 @@ fun ChecksScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        item(key = "legend", contentType = "legend") { LegendCard() }
+        item(key = "search", contentType = "search") { SearchField(query, onQuery) }
+        item(key = "legend", contentType = "legend") { LegendCard(Modifier.padding(top = 8.dp)) }
         item(key = "filters", contentType = "chips") {
             FilterChips(counts, filter, onFilter, Modifier.padding(top = 8.dp))
         }
@@ -100,16 +122,33 @@ fun ChecksScreen(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(stringResource(R.string.checks_empty), style = MaterialTheme.typography.bodyLarge)
+                    val filtered = filter != CheckFilter.ALL || category != null || tier != null
+                    Text(
+                        if (words.isEmpty()) {
+                            stringResource(R.string.checks_empty)
+                        } else {
+                            stringResource(R.string.checks_no_match, query.trim())
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(onClick = {
+                        onQuery("")
                         onFilter(CheckFilter.ALL)
                         onCategory(null)
                         onTier(null)
                     }) {
                         Icon(Icons.Rounded.FilterAltOff, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(stringResource(R.string.clear_filters))
+                        Text(
+                            stringResource(
+                                when {
+                                    words.isEmpty() -> R.string.clear_filters
+                                    filtered -> R.string.clear_search_and_filters
+                                    else -> R.string.clear_search
+                                },
+                            ),
+                        )
                     }
                 }
             }
@@ -136,9 +175,38 @@ fun ChecksScreen(
 private class CheckGroup(val category: Category, val specs: List<CheckSpec>, val passed: Int, val total: Int)
 
 @Composable
-private fun LegendCard() {
+private fun SearchField(query: String, onQuery: (String) -> Unit, modifier: Modifier = Modifier) {
+    val focus = LocalFocusManager.current
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQuery,
+        modifier = modifier.fillMaxWidth().testTag(CHECKS_SEARCH_TAG),
+        placeholder = {
+            Text(stringResource(R.string.checks_search_hint), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        trailingIcon = if (query.isEmpty()) {
+            null
+        } else {
+            {
+                IconButton(onClick = { onQuery("") }) {
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.clear_search))
+                }
+            }
+        },
+        singleLine = true,
+        shape = CircleShape,
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        // The list updates while typing; Search only puts the keyboard away.
+        keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+    )
+}
+
+@Composable
+private fun LegendCard(modifier: Modifier = Modifier) {
     ExpandableCard(
         title = stringResource(R.string.legend_title),
+        modifier = modifier,
         leading = {
             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 for (verdict in listOf(Verdict.PASSED, Verdict.ATTENTION, Verdict.CRITICAL)) {

@@ -125,7 +125,7 @@ class ShellService : IShellService.Stub() {
         /** Settings keys are lower case with digits and underscores; a few use dots or dashes. */
         val KEY = Regex("[a-z0-9_.-]{1,100}")
 
-        val DUMPSYS_SERVICES = setOf("appops")
+        val DUMPSYS_SERVICES = setOf("appops", "trust")
 
         const val COMMAND_TIMEOUT_SECONDS = 10L
         const val DUMPSYS_TIMEOUT_SECONDS = 30L

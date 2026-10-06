@@ -15,6 +15,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     AdvancedProtectionCheck(probes.policy),
     // Access control
     LockScreenCheck(probes.keyguard),
+    LockStrengthCheck(probes.keyguard),
     ScreenTimeoutCheck(probes.settings),
     LockDelayCheck(probes.settings, probes.keyguard),
     StayAwakeCheck(probes.settings),
@@ -25,9 +26,10 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     UsbDebuggingCheck(probes.settings),
     WirelessDebuggingCheck(probes.settings),
     // Apps and permissions
-    AccessibilityServicesCheck(probes.accessibility),
-    DeviceAdminsCheck(probes.policy),
+    AccessibilityServicesCheck(probes.accessibility, probes.packages),
+    DeviceAdminsCheck(probes.policy, probes.packages),
     NotificationAccessCheck(probes.settings, probes.packages),
+    SmsAccessCheck(probes.permissions, probes.defaultApps, probes.packages),
     KeyboardAppsCheck(probes.inputMethods),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),

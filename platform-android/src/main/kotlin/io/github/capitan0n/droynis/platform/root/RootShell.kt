@@ -357,7 +357,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
 
         val TABLES = setOf("global", "secure", "system")
         val KEY = Regex("[a-z0-9_.-]{1,100}")
-        val DUMPSYS_SERVICES = setOf("appops")
+        val DUMPSYS_SERVICES = setOf("appops", "trust")
 
         /** Manager apps by package; a hidden (renamed) Magisk app is not among them. */
         val MANAGER_APPS = linkedMapOf(

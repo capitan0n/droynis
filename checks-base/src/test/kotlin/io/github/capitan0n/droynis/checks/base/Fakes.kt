@@ -164,4 +164,18 @@ class FakeProbes(
     override val files: FileProbe = FakeFiles(),
     override val attestation: AttestationProbe = FakeAttestation(),
     override val webView: WebViewProbe = FakeWebView(),
+    override val permissions: PermissionProbe = FakePermissions(),
+    override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
 ) : BaseProbes
+
+class FakePermissions(private val holders: Reading<Map<String, Set<String>>> = value(emptyMap())) : PermissionProbe {
+    override fun holders(permissions: Set<String>) = holders
+}
+
+class FakeDefaultApps(
+    private val sms: Reading<String?> = value(null),
+    private val phone: Reading<String?> = value(null),
+) : DefaultAppsProbe {
+    override fun smsApp() = sms
+    override fun phoneApp() = phone
+}

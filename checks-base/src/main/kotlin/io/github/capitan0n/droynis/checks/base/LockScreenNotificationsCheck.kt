@@ -18,7 +18,7 @@ class LockScreenNotificationsCheck(private val settings: SystemSettings) : Check
         title = "Lock screen notifications",
         severity = Severity.NOTICE,
         explanation = "Notifications on the lock screen can be read without unlocking the phone. Message " +
-            "previews and one-time login codes are then visible to anyone who picks it up.",
+            "previews and one-time login codes sent by SMS are then visible to anyone who picks it up.",
         remediation = Remediation(
             text = "In the notification settings, set notifications on the lock screen to hide sensitive " +
                 "content, or not to show at all.",

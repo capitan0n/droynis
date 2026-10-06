@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 47 checks.
+Every check Droynis runs, by privilege tier and category: 50 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,8 +13,8 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 34 |
-| [ADB](#adb-tier) | 7 |
+| [Base](#base-tier) | 36 |
+| [ADB](#adb-tier) | 8 |
 | [Shizuku](#shizuku-tier) | 2 |
 | [Root](#root-tier) | 4 |
 
@@ -38,17 +38,19 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [ACCS-2004](#accs-2004-lock-screen-notifications) | Lock screen notifications | Notice | notification content is visible while the phone is locked |
 | [ACCS-2005](#accs-2005-stay-awake-while-charging) | Stay awake while charging | Notice | the screen never turns off, so never locks, while charging |
 | [ACCS-2006](#accs-2006-lock-after-screen-timeout) | Lock after screen timeout | Notice | the phone stays unlocked for more than 30 seconds after the screen turns off |
+| [ACCS-2007](#accs-2007-screen-lock-strength) | Screen lock strength (Android 10+) | Notice | the screen lock is a pattern or a PIN with repeated or ordered digits |
 | [ACCS-2010](#accs-2010-developer-options) | Developer options | Notice | developer options are on |
 | [ACCS-2011](#accs-2011-usb-debugging) | USB debugging | Warning | adb over USB is on |
 | [ACCS-2012](#accs-2012-wireless-debugging) | Wireless debugging (Android 11+) | Warning | adb over Wi-Fi is on |
 | [ACCS-2020](#accs-2020-remote-lock-and-erase) | Remote lock and erase | Notice | no app or known service can lock and erase the phone remotely |
-| [APPS-4001](#apps-4001-accessibility-services) | Accessibility services | Notice | any accessibility service is enabled |
-| [APPS-4002](#apps-4002-device-admin-apps) | Device admin apps | Notice | any device admin is active |
+| [APPS-4001](#apps-4001-accessibility-services) | Accessibility services | Notice | any accessibility service is enabled (a warning when its app came from outside an app store) |
+| [APPS-4002](#apps-4002-device-admin-apps) | Device admin apps | Notice | a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store) |
 | [APPS-4003](#apps-4003-debuggable-apps) | Debuggable apps | Warning | an installed app is debuggable |
 | [APPS-4004](#apps-4004-apps-from-unknown-sources) | Apps from unknown sources | Notice | an app came from outside a known app store |
-| [APPS-4005](#apps-4005-notification-access) | Notification access | Notice | an app can read all notifications |
+| [APPS-4005](#apps-4005-notification-access) | Notification access | Notice | an app you installed can read all notifications (a warning when it came from outside an app store) |
 | [APPS-4006](#apps-4006-keyboard-apps) | Keyboard apps | Notice | a third-party keyboard is enabled |
 | [APPS-4007](#apps-4007-apps-built-for-old-android) | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
+| [APPS-4008](#apps-4008-apps-that-can-read-your-sms-or-call-log) | Apps that can read your SMS or call log | Notice | an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -155,7 +157,7 @@ With "Show passwords" on, each character you type into a password field stays vi
 
 Notice · Android 8.0 and later · fails when notification content is visible while the phone is locked
 
-Notifications on the lock screen can be read without unlocking the phone. Message previews and one-time login codes are then visible to anyone who picks it up.
+Notifications on the lock screen can be read without unlocking the phone. Message previews and one-time login codes sent by SMS are then visible to anyone who picks it up.
 
 **What to do:** In the notification settings, set notifications on the lock screen to hide sensitive content, or not to show at all.
 
@@ -174,6 +176,14 @@ Notice · Android 8.0 and later · fails when the phone stays unlocked for more 
 When the screen turns off by itself, Android waits this long before it asks for your PIN again. Anyone who picks the phone up in that window gets in without it, which is how many phone thefts work. The power button can lock at once, but apps can't read that setting.
 
 **What to do:** Under Settings › Security › Screen lock (gear icon), set Lock after screen timeout to 30 seconds or less, and turn on "Power button instantly locks".
+
+#### ACCS-2007 Screen lock strength
+
+Notice · Android 10 and later · fails when the screen lock is a pattern or a PIN with repeated or ordered digits
+
+A pattern can be read from smudges on the screen or by watching over your shoulder, and a PIN such as 1234 or 1111 is among the first anyone tries. Android rates the screen lock low, medium or high without revealing it: low means a pattern, or a PIN with repeated or ordered digits.
+
+**What to do:** Change the screen lock to a PIN of 6 or more digits without repeated or ordered digits, or to a password (Settings › Security › Screen lock).
 
 #### ACCS-2010 Developer options
 
@@ -211,17 +221,17 @@ If the phone is lost or stolen, a find-my-device service lets you locate, lock a
 
 #### APPS-4001 Accessibility services
 
-Notice · Android 8.0 and later · fails when any accessibility service is enabled
+Notice · Android 8.0 and later · fails when any accessibility service is enabled (a warning when its app came from outside an app store)
 
-An accessibility service can read everything on screen and tap on your behalf. Screen readers and password managers need this, but it is also the favorite tool of Android banking trojans.
+An accessibility service can read everything on screen and tap on your behalf. Screen readers and password managers need this, but it is also the favorite tool of Android banking trojans, which arrive as apps installed from outside an app store: such an app with this access is a warning.
 
 **What to do:** Keep only services you recognize and still use; turn the others off under Settings › Accessibility.
 
 #### APPS-4002 Device admin apps
 
-Notice · Android 8.0 and later · fails when any device admin is active
+Notice · Android 8.0 and later · fails when a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store)
 
-Device admin apps can lock or wipe the phone and enforce password rules; a device or profile owner can manage it completely. Find-my-device and work profiles use this legitimately; anything you do not recognize deserves a closer look.
+Device admin apps can lock or wipe the phone and enforce password rules; a device or profile owner can manage it completely. Find-my-device and work profiles use this legitimately; anything you do not recognize deserves a closer look, and one installed from outside an app store is a warning. Admins that came with the phone are listed but don't count, unless they own the device.
 
 **What to do:** Review them under Settings › Security › Device admin apps (the location varies by vendor) and deactivate the ones you do not need.
 
@@ -243,9 +253,9 @@ Apps installed from a downloaded file or over adb skip the review an app store p
 
 #### APPS-4005 Notification access
 
-Notice · Android 8.0 and later · fails when an app can read all notifications
+Notice · Android 8.0 and later · fails when an app you installed can read all notifications (a warning when it came from outside an app store)
 
-An app with notification access reads every notification as it arrives, including message previews and one-time login codes, and can act on them. Watch and automation apps need it; any other app that has it deserves a second look.
+An app with notification access reads every notification as it arrives, including message previews and one-time login codes sent by SMS, and can act on them. Watch and automation apps need it; any other app that has it deserves a second look, and one installed from outside an app store is a warning. Apps that came with the phone, like the launcher's badges, are listed but don't count.
 
 **What to do:** Under Special app access › Notification access (the name varies by vendor), turn it off for apps that do not need it.
 
@@ -264,6 +274,14 @@ Notice · Android 8.0 and later · fails when a user app targets Android 8.1 (AP
 Android applies many protections only to apps that declare a recent target version, for example scoped storage and limits on reading device identifiers. Apps built for Android 8.1 or older skip them and are usually no longer maintained; Android 14 even refuses to install apps built for Android 5.1 or older.
 
 **What to do:** Update these apps, or replace the ones that are no longer maintained.
+
+#### APPS-4008 Apps that can read your SMS or call log
+
+Notice · Android 8.0 and later · fails when an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store)
+
+One-time login codes arrive by SMS, so an app that reads SMS can take over accounts protected by them; SMS-stealing apps are among the most common Android malware. The call log shows who you talk to. Your SMS and phone apps need these permissions and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning.
+
+**What to do:** Open Settings › Apps › the app › Permissions and set SMS and Call logs to "Don't allow" for apps that don't need them. Uninstall apps you don't recognize.
 
 ### Network and radios
 
@@ -354,6 +372,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
+| [ACCS-2101](#accs-2101-smart-lock-and-extend-unlock) | Smart Lock and Extend Unlock | Notice | a trust agent such as Smart Lock can keep the phone unlocked |
 | [APPS-4101](#apps-4101-background-camera-microphone-and-location-use) | Background camera, microphone and location use (Android 10+) | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
 | [APPS-4102](#apps-4102-apps-that-can-draw-over-other-apps) | Apps that can draw over other apps (Android 10+) | Notice | a user app may display over other apps |
 | [APPS-4103](#apps-4103-apps-with-access-to-all-files) | Apps with access to all files (Android 11+) | Notice | a user app has all files access |
@@ -361,6 +380,16 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4105](#apps-4105-apps-with-usage-access) | Apps with usage access (Android 10+) | Notice | a user app has usage access |
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
+
+### Access control
+
+#### ACCS-2101 Smart Lock and Extend Unlock
+
+Notice · Android 8.0 and later · fails when a trust agent such as Smart Lock can keep the phone unlocked
+
+Smart Lock (Extend Unlock on newer phones) keeps the phone unlocked near a trusted device or place, or while you carry it. Whoever takes it from your pocket, or picks it up next to your car's Bluetooth, gets an unlocked phone. Android keeps this in its trust service, which only the ADB, Shizuku or root tier can read.
+
+**What to do:** Open Settings › Security › Smart Lock or Extend Unlock (the location varies by vendor) and remove trusted devices, trusted places and on-body detection you don't need.
 
 ### Apps and permissions
 

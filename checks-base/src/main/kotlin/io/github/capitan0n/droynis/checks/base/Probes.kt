@@ -210,6 +210,22 @@ interface WebViewProbe {
     fun provider(): Reading<WebViewInfo?>
 }
 
+interface PermissionProbe {
+    /**
+     * Apps other than Droynis that hold any of [permissions] right now (granted, not just
+     * requested), with the ones each holds.
+     */
+    fun holders(permissions: Set<String>): Reading<Map<String, Set<String>>>
+}
+
+interface DefaultAppsProbe {
+    /** `Telephony.Sms.getDefaultSmsPackage`: null on a phone without SMS or a default SMS app. */
+    fun smsApp(): Reading<String?>
+
+    /** `TelecomManager.getDefaultDialerPackage`: null without a default phone app. */
+    fun phoneApp(): Reading<String?>
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -226,4 +242,6 @@ interface BaseProbes {
     val files: FileProbe
     val attestation: AttestationProbe
     val webView: WebViewProbe
+    val permissions: PermissionProbe
+    val defaultApps: DefaultAppsProbe
 }

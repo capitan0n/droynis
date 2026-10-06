@@ -10,12 +10,14 @@ import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BuildInfo
 import io.github.capitan0n.droynis.checks.base.CertificateStore
+import io.github.capitan0n.droynis.checks.base.DefaultAppsProbe
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.FileProbe
 import io.github.capitan0n.droynis.checks.base.InputMethodProbe
 import io.github.capitan0n.droynis.checks.base.Keyguard
 import io.github.capitan0n.droynis.checks.base.NetworkProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
@@ -59,6 +61,8 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val files: FileProbe = AndroidFiles
     override val attestation: AttestationProbe = AndroidAttestation
     override val webView: WebViewProbe = AndroidWebView
+    override val permissions: PermissionProbe = AndroidPermissions(app)
+    override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
     override val dumpsys: Dumpsys = RoutedDumpsys(grants, shells)
     override val shell: PrivilegedShell = shells
 

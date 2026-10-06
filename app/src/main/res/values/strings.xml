@@ -35,7 +35,7 @@
     <string name="about_source">Source code</string>
     <string name="about_feedback">Feedback</string>
     <string name="about_send_feedback">Send feedback</string>
-    <string name="about_open_repo">GitHub</string>
+    <string name="about_open_profile">GitHub</string>
     <string name="about_license_title">License</string>
     <string name="feedback_subject">Droynis feedback (v%1$s)</string>
     <string name="no_app_for_link">No app can open links, so the address was copied.</string>
@@ -116,6 +116,10 @@
     <string name="checks_count">%1$d checks</string>
     <string name="checks_empty">No checks match these filters.</string>
     <string name="clear_filters">Clear filters</string>
+    <string name="checks_search_hint">Search checks, e.g. SMS</string>
+    <string name="checks_no_match">No checks match “%1$s”.</string>
+    <string name="clear_search">Clear search</string>
+    <string name="clear_search_and_filters">Clear search and filters</string>
     <string name="legend_title">What the symbols mean</string>
     <string name="check_pending_summary">Waiting for the scan…</string>
 
@@ -173,6 +177,8 @@
     <string name="net_proxy">HTTP proxy</string>
     <string name="net_none">None</string>
     <string name="net_addresses">IP addresses</string>
+    <string name="net_show_addresses">Show IP addresses</string>
+    <string name="net_hide_addresses">Hide IP addresses</string>
     <string name="net_interface">Interface</string>
     <string name="net_local_note">Read from Android on this phone. Droynis never connects to the internet.</string>
     <string name="net_unavailable">Could not read the network state: %1$s</string>

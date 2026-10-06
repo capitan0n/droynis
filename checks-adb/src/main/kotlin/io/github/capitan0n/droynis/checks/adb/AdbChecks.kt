@@ -8,5 +8,6 @@ import io.github.capitan0n.droynis.core.Check
  * they show as N/A.
  */
 fun adbChecks(probes: AdbProbes): List<Check> = listOf(
+    SmartLockCheck(probes.dumpsys, probes.packages),
     BackgroundSensorUseCheck(probes.dumpsys, probes.packages),
 ) + SpecialAccessCheck.Access.entries.map { SpecialAccessCheck(it, probes.dumpsys, probes.packages) }

@@ -22,14 +22,16 @@ class NotificationAccessCheck(
         title = "Notification access",
         severity = Severity.NOTICE,
         explanation = "An app with notification access reads every notification as it arrives, including " +
-            "message previews and one-time login codes, and can act on them. Watch and automation apps " +
-            "need it; any other app that has it deserves a second look.",
+            "message previews and one-time login codes sent by SMS, and can act on them. Watch and automation apps " +
+            "need it; any other app that has it deserves a second look, and one installed from outside " +
+            "an app store is a warning. Apps that came with the phone, like the launcher's badges, are " +
+            "listed but don't count.",
         remediation = Remediation(
             text = "Under Special app access › Notification access (the name varies by vendor), turn it off " +
                 "for apps that do not need it.",
             settingsActions = listOf(SettingsActions.NOTIFICATION_ACCESS),
         ),
-        failsWhen = "an app can read all notifications",
+        failsWhen = "an app you installed can read all notifications (a warning when it came from outside an app store)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -43,16 +45,23 @@ class NotificationAccessCheck(
             is Reading.Unsupported -> setting
             is Reading.Unavailable -> setting
         }
-        val evidence = appEvidence("Notification listeners", listeners)
-        return listeners.evaluate("Notification access", evidence) { apps ->
+        return listeners.evaluate("Notification access", appEvidence("Notification listeners", listeners)) { apps ->
             if (apps.isEmpty()) {
-                Outcome.pass("No app can read your notifications", evidence)
-            } else {
-                Outcome.fail(
-                    "${count(apps.size, "app")} can read your notifications: ${apps.map { it.label }.joinNames()}",
-                    evidence,
-                )
+                return@evaluate Outcome.pass("No app can read your notifications", appEvidence("Notification listeners", listeners))
             }
+            // Apps that came with the phone, such as the launcher showing badges, are part of the system.
+            val all = holders(apps, packages.byPackage())
+            val counted = all.filter { it.origin != AppOrigin.PREINSTALLED }
+            val evidence = all.map { it.evidence("Notification listener", listeners.source, counted = it in counted) }
+            if (counted.isEmpty()) {
+                return@evaluate Outcome.pass("Only apps that came with the phone can read your notifications", evidence)
+            }
+            Outcome.fail(
+                "${count(counted.size, "app")} can read your notifications: ${counted.map { it.app.label }.joinNames()}" +
+                    sideloadedSuffix(counted),
+                evidence,
+                escalation = sideloadedEscalation(counted),
+            )
         }
     }
 

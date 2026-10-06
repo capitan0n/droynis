@@ -13,7 +13,10 @@ import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
 import io.github.capitan0n.droynis.core.toEvidence
 
-class AccessibilityServicesCheck(private val accessibility: AccessibilityProbe) : Check {
+class AccessibilityServicesCheck(
+    private val accessibility: AccessibilityProbe,
+    private val packages: PackageInventory,
+) : Check {
 
     override val spec = CheckSpec(
         id = "APPS-4001",
@@ -22,27 +25,30 @@ class AccessibilityServicesCheck(private val accessibility: AccessibilityProbe) 
         severity = Severity.NOTICE,
         explanation = "An accessibility service can read everything on screen and tap on your behalf. " +
             "Screen readers and password managers need this, but it is also the favorite tool of " +
-            "Android banking trojans.",
+            "Android banking trojans, which arrive as apps installed from outside an app store: such " +
+            "an app with this access is a warning.",
         remediation = Remediation(
             text = "Keep only services you recognize and still use; turn the others off under " +
                 "Settings › Accessibility.",
             settingsActions = listOf(SettingsActions.ACCESSIBILITY),
         ),
-        failsWhen = "any accessibility service is enabled",
+        failsWhen = "any accessibility service is enabled (a warning when its app came from outside an app store)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
         val services = accessibility.enabledServices()
-        val evidence = appEvidence("Enabled services", services)
-        return services.evaluate("Accessibility services", evidence) { apps ->
+        return services.evaluate("Accessibility services", appEvidence("Enabled services", services)) { apps ->
             if (apps.isEmpty()) {
-                Outcome.pass("No accessibility services are enabled", evidence)
-            } else {
-                Outcome.fail(
-                    "${count(apps.size, "accessibility service")} enabled: ${apps.map { it.label }.joinNames()}",
-                    evidence,
-                )
+                return@evaluate Outcome.pass("No accessibility services are enabled", appEvidence("Enabled services", services))
             }
+            // Every enabled service counts, preinstalled ones too: Android turns none on by itself.
+            val enabled = holders(apps, packages.byPackage())
+            Outcome.fail(
+                "${count(enabled.size, "accessibility service")} enabled: ${enabled.map { it.app.label }.joinNames()}" +
+                    sideloadedSuffix(enabled),
+                enabled.map { it.evidence("Enabled service", services.source) },
+                escalation = sideloadedEscalation(enabled),
+            )
         }
     }
 }

@@ -115,8 +115,9 @@ class RootAppsCheck(
         policyUid == appUid || (policyUid < PER_USER_RANGE && appUid % PER_USER_RANGE == policyUid)
 
     private fun describe(uid: Int, apps: List<String>, withPackage: Boolean = true): String = when {
-        apps.isNotEmpty() -> apps.joinToString { pkg -> if (withPackage) "${packages.label(pkg)} ($pkg)" else packages.label(pkg) }
+        // The shell uid is adb's, whatever label its package has.
         uid % PER_USER_RANGE == SHELL_UID -> "adb shell"
+        apps.isNotEmpty() -> apps.joinToString { pkg -> if (withPackage) "${packages.label(pkg)} ($pkg)" else packages.label(pkg) }
         else -> "uid $uid"
     }
 

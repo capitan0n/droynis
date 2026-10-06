@@ -63,8 +63,9 @@ object AppOpModes {
     /** Apps allowed any of [ops], by the rules `AppOpsService.checkOperation` applies. */
     fun allowed(text: String, ops: Set<String>): Result {
         val lines = text.lines().map { it.trimEnd() }
-        val start = lines.indexOfFirst { it.trim() == SECTION }
-            .takeIf { it >= 0 }
+        // Android 12 and later put the per-app part under a header; older releases start it with
+        // the first Uid line, which must then be read too.
+        val first = lines.indexOfFirst { it.trim() == SECTION }.takeIf { it >= 0 }?.plus(1)
             ?: lines.indexOfFirst { UID.matches(it) }.takeIf { it >= 0 }
             ?: return Result.Failed("no per-app section in the output")
 
@@ -72,8 +73,13 @@ object AppOpModes {
         var block: UidBlock? = null
         var pkg: MutableMap<String, PackageMode>? = null
         var unexpected = 0
+        var firstUnexpected: String? = null
+        fun unexpected(line: String) {
+            unexpected++
+            if (firstUnexpected == null) firstUnexpected = line.trim().take(MAX_QUOTE)
+        }
 
-        for (line in lines.subList(start + 1, lines.size)) {
+        for (line in lines.subList(first, lines.size)) {
             // Every line of the per-app part is indented; the next part of the dump is not.
             if (line.isNotEmpty() && !line[0].isWhitespace()) break
             when {
@@ -84,28 +90,30 @@ object AppOpModes {
                 PACKAGE.matches(line) -> {
                     val name = PACKAGE.find(line)!!.groupValues[1]
                     pkg = block?.packages?.getOrPut(name) { mutableMapOf() }
-                    if (pkg == null) unexpected++
+                    if (pkg == null) unexpected(line)
                 }
                 OP.matches(line) -> {
                     val (op, mode, switchOp, switchMode) = OP.find(line)!!.destructured
                     val record = PackageMode(mode, switchOp.ifEmpty { null }, switchMode.ifEmpty { null })
                     val current = pkg
-                    if (current != null) current[op] = record else if (op in ops) unexpected++
+                    if (current != null) current[op] = record else if (op in ops) unexpected(line)
                 }
                 UID_MODE.matches(line) -> {
                     val (op, mode) = UID_MODE.find(line)!!.destructured
                     val current = block
                     // Uid modes come before the uid's packages; anywhere else the line would be misread.
-                    if (current != null && pkg == null) current.uidModes[op] = mode else if (op in ops) unexpected++
+                    if (current != null && pkg == null) current.uidModes[op] = mode else if (op in ops) unexpected(line)
                 }
                 else -> {
                     val near = OP_LIKE.find(line) ?: UID_MODE_LIKE.find(line)
-                    if (near != null && near.groupValues[1] in ops) unexpected++
+                    if (near != null && near.groupValues[1] in ops) unexpected(line)
                 }
             }
         }
 
-        if (unexpected > 0) return Result.Failed("$unexpected app-op lines in an unexpected format")
+        if (unexpected > 0) {
+            return Result.Failed("$unexpected app-op lines in an unexpected format, the first: \"$firstUnexpected\"")
+        }
         if (blocks.isEmpty()) return Result.Failed("no apps listed")
         return Result.Parsed(blocks.flatMap { grantsIn(it, ops) }, blocks.sumOf { it.packages.size })
     }
@@ -144,5 +152,8 @@ object AppOpModes {
     }
 
     private const val PER_USER_RANGE = 100_000
+
+    /** How much of an unexpected line the failure quotes, enough to fix the parser from a report. */
+    private const val MAX_QUOTE = 100
     private const val FIRST_APPLICATION_UID = 10_000
 }

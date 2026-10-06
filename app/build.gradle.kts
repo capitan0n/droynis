@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.capitan0n.droynis"
         minSdk = 26
         targetSdk = 37
-        versionCode = 11
-        versionName = "0.9.0"
+        versionCode = 14
+        versionName = "0.10.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -81,6 +81,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.android)
+
+    testImplementation(libs.junit4)
 
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

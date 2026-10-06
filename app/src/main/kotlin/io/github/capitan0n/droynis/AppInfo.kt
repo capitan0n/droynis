@@ -4,6 +4,11 @@ package io.github.capitan0n.droynis
 object AppInfo {
     const val AUTHOR = "Alexandros"
     const val HANDLE = "capitan0n"
+
+    /** The author's GitHub profile, for the GitHub button. */
+    const val PROFILE = "https://github.com/capitan0n"
+
+    /** The source code, for the Source code row. */
     const val REPOSITORY = "https://github.com/capitan0n/droynis"
     const val FEEDBACK_EMAIL = "capitan0n@protonmail.com"
 

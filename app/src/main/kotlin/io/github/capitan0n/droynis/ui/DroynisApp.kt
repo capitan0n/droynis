@@ -154,9 +154,10 @@ private object AboutPage
 /** The check catalog, shown full screen over the tabs. */
 private object CatalogPage
 
-/** Tags of the scrolling lists, for UI tests. */
+/** Tags of the scrolling lists and the check search, for UI tests. */
 const val CHECKS_LIST_TAG = "checks_list"
 const val CATALOG_LIST_TAG = "catalog_list"
+const val CHECKS_SEARCH_TAG = "checks_search"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,6 +174,7 @@ fun DroynisApp(
 ) {
     var tab by rememberSaveable { mutableStateOf(initialTab) }
     var openCheckId by rememberSaveable { mutableStateOf(initialCheckId) }
+    var query by rememberSaveable { mutableStateOf("") }
     var filter by rememberSaveable { mutableStateOf(CheckFilter.ALL) }
     var category by rememberSaveable { mutableStateOf<Category?>(null) }
     var tier by rememberSaveable { mutableStateOf<Tier?>(null) }
@@ -194,6 +196,8 @@ fun DroynisApp(
     val openSpec = catalog.firstOrNull { it.id == openCheckId }
     val issueCount = state.result?.findings?.withoutMuted(state.muted)?.issues()?.size ?: 0
     val showChecks = { newFilter: CheckFilter, newCategory: Category? ->
+        // A search left from before would hide some of what the dashboard points to.
+        query = ""
         filter = newFilter
         category = newCategory
         tier = null
@@ -325,6 +329,8 @@ fun DroynisApp(
                                 catalog = catalog,
                                 findings = state.findings,
                                 muted = state.muted,
+                                query = query,
+                                onQuery = { query = it },
                                 filter = filter,
                                 onFilter = { filter = it },
                                 category = category,

@@ -253,7 +253,7 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
         const val MANAGER_PACKAGE = "moe.shizuku.privileged.api"
 
         /** Bump when [ShellService] changes, so Shizuku replaces a shell left from an older Droynis. */
-        private const val SERVICE_VERSION = 1
+        private const val SERVICE_VERSION = 2
 
         private const val REQUEST_CODE = 0x0D50
         private const val CONNECT_TIMEOUT_MILLIS = 10_000L

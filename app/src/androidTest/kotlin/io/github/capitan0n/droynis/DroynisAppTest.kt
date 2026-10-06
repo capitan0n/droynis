@@ -11,15 +11,18 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.SecurityPatchAgeCheck
+import io.github.capitan0n.droynis.checks.base.SmsAccessCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
 import io.github.capitan0n.droynis.checks.base.baseChecks
 import io.github.capitan0n.droynis.checks.root.rootChecks
 import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.ui.CHECKS_LIST_TAG
+import io.github.capitan0n.droynis.ui.CHECKS_SEARCH_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -71,6 +74,10 @@ class DroynisAppTest {
 
         compose.onNodeWithText(text(R.string.tab_tools)).performClick()
         compose.onNodeWithText(text(R.string.tools_network)).assertExists()
+        // IP addresses start hidden; the eye shows them and hides them again.
+        compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.net_hide_addresses)).performClick()
+        compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).assertExists()
 
         compose.onNodeWithText(text(R.string.tab_help)).performClick()
         compose.onNodeWithText(text(R.string.help_legend)).assertExists()
@@ -105,6 +112,23 @@ class DroynisAppTest {
         }
         compose.onNodeWithText(adb).assertExists()
         compose.onNodeWithText(patch).assertDoesNotExist()
+    }
+
+    @Test
+    fun searchFindsTheChecksAboutATopic() {
+        waitForScan()
+        compose.onNodeWithText(text(R.string.tab_checks)).performClick()
+
+        compose.onNodeWithTag(CHECKS_SEARCH_TAG).performTextInput("sms")
+        val (sms, patch) = AndroidPlatform(compose.activity).use { platform ->
+            val checks = baseChecks(platform)
+            checks.single { it is SmsAccessCheck }.spec.title to checks.single { it is SecurityPatchAgeCheck }.spec.title
+        }
+        compose.onNodeWithText(sms).assertExists()
+        compose.onNodeWithText(patch).assertDoesNotExist()
+
+        compose.onNodeWithContentDescription(text(R.string.clear_search)).performClick()
+        compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(patch))
     }
 
     @Test

@@ -126,17 +126,18 @@ class ListeningAppsCheck(
             )
         }
         val ports = mutableListOf<OpenPort>()
-        var source: Source? = null
         for ((table, reading) in readings) {
             // A kernel without IPv6 has no tcp6 or udp6 table: nothing listens there.
             if (reading !is Reading.Value) continue
-            source = reading.source
             ports += ProcNetSockets.parse(reading.value, table) ?: return Outcome.unknown(
                 "/proc/net/${table.file} is in a format Droynis doesn't recognize",
                 listOf(Evidence("/proc/net/${table.file}", null, reading.source, note = "unexpected row")),
             )
         }
-        val src = source ?: return Outcome.unsupported("This kernel has no socket tables")
+        val read = readings.filterValues { it is Reading.Value }.keys
+        if (read.isEmpty()) return Outcome.unsupported("This kernel has no socket tables")
+        val grant = readings.values.first { it is Reading.Value }.source.grant
+        val src = Source("su: cat " + read.joinToString { "/proc/net/${it.file}" }, grant)
 
         val apps = (packages.installedApps() as? Reading.Value)?.value.orEmpty().filter { it.uid != null }.groupBy { it.uid }
         // System services (uids below 10000) and system apps are part of the OS: listed, not counted.

@@ -53,9 +53,23 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   on is not visible to apps, and those services need no device admin. `hasGrantedPolicy()` answers
   only the admin itself in Android 17, so Droynis parses each active admin's declared policies
   (`DeviceAdminInfo`): an admin that declares both force-lock and wipe-data, and is not just a work
-  profile, is a PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL.
+  profile, is a PASS when it answers to the user: the device owner, a known anti-theft service, or
+  an app the user installed. A preinstalled admin with those powers (Samsung's Knox Guard, a
+  carrier's or lender's lock) may answer to someone else, so on its own it gives UNKNOWN, never
+  PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL.
   The theft protection switches (Theft Detection Lock, Offline Device Lock, Identity Check) are not
   in the Android 17 Settings provider (only Identity Check promo flags are), so no check reads them.
+- **Lock strength** (ACCS-2007): `KeyguardManager.getPasswordComplexity()` (API 29+). LOW, a
+  pattern or a PIN with repeating or ordered digits, is a FAIL; MEDIUM and HIGH pass; no lock is
+  N/A here because ACCS-2001 already fails it.
+- **SMS and call log** (APPS-4008): apps granted READ_SMS or RECEIVE_SMS, or READ_CALL_LOG, from
+  `PackageManager` (granted flags, not just requested). The default SMS app is expected to hold the
+  SMS ones and the default phone app the call log; preinstalled apps are listed, not counted.
+- **Who installed an app**: system apps came with the phone; an installer on the known store list
+  is an app store; anything else, including the package installer, is sideloaded. For
+  accessibility services, notification access, device admins and SMS or call log access, a
+  sideloaded holder raises the FAIL to WARNING, since that is how banking trojans and stalkerware
+  arrive. Preinstalled notification listeners and device admins are listed but not counted.
 
 ## 2. Modules
 
@@ -81,8 +95,9 @@ Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from
 in a separate process as the shell user (root if Shizuku was started with root), and hands its
 binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
 (table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, and `dumpsys` for an
-allowlist of services (`appops`). Commands run without a shell, with absolute paths, a timeout and
-an output cap; `dumpsys` streams through a pipe because its output can exceed one binder call.
+allowlist of services (`appops`, `trust`). Commands run without a shell, with absolute paths, a
+timeout and an output cap; `dumpsys` streams through a pipe because its output can exceed one
+binder call.
 There is no general "run" method, so even a compromised app process can only ask for these reads.
 The service is not a daemon: Shizuku stops it when the app unbinds or dies. Transaction 16777115
 (`destroy`) is reserved by Shizuku and exits the process.
@@ -127,6 +142,19 @@ expected to install apps; system apps and Droynis itself are listed but not coun
 premium SMS (not an app-op), do not disturb access (a Settings key), and low-risk switches such as
 picture-in-picture, alarms or unrestricted data. Limitation: an app holding the access through a
 permission granted at install (target SDK below 23) and a default mode is not seen.
+
+Android 12 and later put the per-app part under an `AppOps Uid Op State` header; Android 11 and
+older start it with the first `Uid` line, so the parser starts there when the header is missing.
+A line about a requested op in an unknown shape fails the parse rather than hide a grant, and the
+failure quotes the first such line (up to 100 characters), so a shared report is enough to fix it.
+
+### Smart Lock
+
+ACCS-2101 (ADB tier, DUMP only) reads `dumpsys trust`: for the current user, whether a trust agent
+manages trust (`trustManaged`) or Extend Unlock (active unlock) runs, and which agents are enabled.
+Either one on is a FAIL, because the phone may stay unlocked without the PIN. The dump also holds
+the user's name and each agent's own message (for example the name of a trusted place or device);
+Droynis reads neither into the report. Only the per-user part is read, up to the event log.
 
 Check logic never imports `android.*`, so every check is unit-tested on the plain JVM with fakes
 (no Robolectric). The cost: a check that needs a new framework call also needs a probe method in
@@ -259,6 +287,17 @@ allowed, shell connected) and one button for the next step: get Shizuku, open it
 The Root tab shows the root manager it can see and whether root is on, with Allow root access,
 Try again or Turn off root tier.
 Tier-gated checks show "Needs the ADB tier" with a link to that tab. Help keeps only the legend, the score, privacy and the FAQ.
+
+The Checks tab has a search field above the filters. Every word must start a word somewhere in
+the check's id, title, explanation, fix, failure rule or category, or, after a scan, in its
+summary and evidence, so "sms" finds the SMS check and the two whose texts mention SMS codes, and
+an app's name finds the checks that named it; "pin" does not match "keeping", and hyphens are
+optional ("wifi" finds "Wi-Fi"). The search combines with the verdict, category and tier filters,
+the verdict chips count within it, and the dashboard's links clear it.
+
+The network inspector on the Tools tab shows IP addresses, DNS servers and the HTTP proxy as dots
+until the eye in its header is tapped, so a screenshot gives none of them away. The choice is not
+stored: every new start of the app hides them again.
 
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,
 theme), implemented by `MainActivity`; screens take plain state, which keeps them previewable.

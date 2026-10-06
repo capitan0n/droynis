@@ -14,8 +14,11 @@ import io.github.capitan0n.droynis.core.toEvidence
 
 /**
  * Android doesn't let apps read whether Google's or the phone maker's find-my-device service is on,
- * so a PASS needs a device admin that declares both the lock and the erase policy. A known service
- * that may be on is UNKNOWN, never PASS.
+ * so a PASS needs a device admin that declares both the lock and the erase policy and answers to the
+ * owner: a known find-my-device service, an app the user installed, or the device owner (MDM). A
+ * preinstalled admin outside that list, such as Samsung's Knox Guard financing lock, may answer to
+ * the maker, a carrier or a lender, so it never makes a PASS. A known service that may be on is
+ * UNKNOWN, never PASS.
  */
 class RemoteLockCheck(private val policy: DevicePolicy, private val packages: PackageInventory) : Check {
 
@@ -47,16 +50,24 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
             evidence += admins.toEvidence("Device admins")
             return Outcome.unknown("The list of device admins could not be read", evidence)
         }
-        evidence += if (admins.value.isEmpty()) {
-            listOf(Evidence("Device admins", "none", admins.source))
-        } else {
-            admins.value.map { Evidence("Device admin", "${it.app.label} (${it.app.packageName})", admins.source, note = it.abilities()) }
-        }
+        val installed = (apps as? Reading.Value)?.value?.associateBy { it.packageName }
 
         // A profile owner's "erase" removes only the work profile, not the phone's data.
         val capable = admins.value.filter { it.canLock == true && it.canWipe == true && (it.isDeviceOwner || !it.isProfileOwner) }
-        if (capable.isNotEmpty()) {
-            return Outcome.pass("${capable.map { it.app.label }.joinNames()} can lock and erase this phone", evidence)
+        val yours = capable.filter {
+            it.isDeviceOwner || it.app.packageName in KNOWN_SERVICES || installed?.get(it.app.packageName)?.isSystem == false
+        }
+        val unclear = capable - yours.toSet()
+        evidence += if (admins.value.isEmpty()) {
+            listOf(Evidence("Device admins", "none", admins.source))
+        } else {
+            admins.value.map { admin ->
+                val owner = if (admin in unclear) "; came with the phone, so it may answer to the maker, a carrier or a lender" else ""
+                Evidence("Device admin", "${admin.app.label} (${admin.app.packageName})", admins.source, note = admin.abilities() + owner)
+            }
+        }
+        if (yours.isNotEmpty()) {
+            return Outcome.pass("${yours.map { it.app.label }.joinNames()} can lock and erase this phone", evidence)
         }
 
         if (apps !is Reading.Value) {
@@ -69,6 +80,13 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
             return Outcome.unknown(
                 "${services.values.toList().joinNames()} can lock and erase a lost phone, but Android doesn't " +
                     "tell apps whether it is turned on",
+                evidence,
+            )
+        }
+        if (unclear.isNotEmpty()) {
+            return Outcome.unknown(
+                "${unclear.map { it.app.label }.joinNames()} can lock and erase this phone, but came with it: " +
+                    "Droynis can't tell whether it answers to you",
                 evidence,
             )
         }

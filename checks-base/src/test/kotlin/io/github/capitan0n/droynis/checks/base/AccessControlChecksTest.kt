@@ -6,6 +6,7 @@ import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -182,6 +183,21 @@ class AccessControlChecksTest {
         assertEquals(Status.FAIL, check(admin("org.example.work", lock = true, wipe = true, profileOwner = true)).status())
         assertEquals(Status.PASS, check(admin("org.example.mdm", lock = true, wipe = true, deviceOwner = true, profileOwner = true)).status())
         assertEquals(Status.FAIL, check().status())
+
+        // An app the user installed counts; a preinstalled one, like Samsung's Knox Guard financing
+        // lock, may answer to someone else, and so may an admin when the app list can't be read.
+        fun installed(pkg: String, system: Boolean) =
+            InstalledApp(pkg, isSystem = system, isDebuggable = false, installer = null, targetSdk = 30)
+        val prey = admin("com.prey", lock = true, wipe = true)
+        assertEquals(Status.PASS, check(prey, apps = listOf(installed("com.prey", system = false))).status())
+        val knoxGuard = admin("com.samsung.android.kgclient", lock = true, wipe = true)
+        val preinstalled = check(knoxGuard, apps = listOf(installed("com.samsung.android.kgclient", system = true))).outcome()
+        assertEquals(Status.UNKNOWN, preinstalled.status)
+        assertTrue(preinstalled.evidence.single().note!!.contains("may answer to the maker"))
+        assertEquals(
+            Status.UNKNOWN,
+            RemoteLockCheck(FakePolicy(admins = value(listOf(prey))), FakePackages(unavailable("denied"))).status(),
+        )
     }
 
     @Test

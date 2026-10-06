@@ -1,38 +1,66 @@
 package io.github.capitan0n.droynis.checks.base
 
 import io.github.capitan0n.droynis.core.Reading
+import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
 class AppsChecksTest {
 
     private val talkback = AppRef("com.google.android.marvin.talkback", "TalkBack")
+
+    private fun app(pkg: String, system: Boolean = false, installer: String? = "org.fdroid.fdroid") =
+        InstalledApp(pkg, isSystem = system, isDebuggable = false, installer = installer, targetSdk = 35)
     private val tasker = AppRef("net.dinglisch.android.taskerm", "Tasker")
 
     @Test
     fun `accessibility services`() = runTest {
-        assertEquals(Status.PASS, AccessibilityServicesCheck(FakeAccessibility()).status())
+        assertEquals(Status.PASS, AccessibilityServicesCheck(FakeAccessibility(), FakePackages()).status())
 
-        val outcome = AccessibilityServicesCheck(FakeAccessibility(value(listOf(talkback, tasker)))).outcome()
+        val outcome = AccessibilityServicesCheck(FakeAccessibility(value(listOf(talkback, tasker))), FakePackages()).outcome()
         assertEquals(Status.FAIL, outcome.status)
+        assertNull(outcome.escalation)
         assertEquals("2 accessibility services enabled: TalkBack and Tasker", outcome.summary)
         assertEquals(2, outcome.evidence.size)
 
-        assertEquals(Status.UNKNOWN, AccessibilityServicesCheck(FakeAccessibility(unavailable())).status())
+        assertEquals(Status.UNKNOWN, AccessibilityServicesCheck(FakeAccessibility(unavailable()), FakePackages()).status())
+    }
+
+    @Test
+    fun `a sideloaded app with accessibility is a warning`() = runTest {
+        val apps = FakePackages(value(listOf(app(talkback.packageName, system = true), app(tasker.packageName, installer = null))))
+        val outcome = AccessibilityServicesCheck(FakeAccessibility(value(listOf(talkback, tasker))), apps).outcome()
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(Severity.WARNING, outcome.escalation)
+        assertEquals("2 accessibility services enabled: TalkBack and Tasker; Tasker comes from outside an app store", outcome.summary)
+        assertEquals(listOf("came with the phone", "installed from outside an app store"), outcome.evidence.map { it.note })
     }
 
     @Test
     fun `device admins`() = runTest {
-        assertEquals(Status.PASS, DeviceAdminsCheck(FakePolicy()).status())
+        assertEquals(Status.PASS, DeviceAdminsCheck(FakePolicy(), FakePackages()).status())
 
         val owner = AdminApp(AppRef("com.example.mdm", "Work MDM"), isDeviceOwner = true, isProfileOwner = false)
-        val outcome = DeviceAdminsCheck(FakePolicy(admins = value(listOf(owner)))).outcome()
+        val outcome = DeviceAdminsCheck(FakePolicy(admins = value(listOf(owner))), FakePackages()).outcome()
         assertEquals(Status.FAIL, outcome.status)
         assertTrue("managed by an organization" in outcome.summary)
         assertTrue(outcome.evidence.single().value!!.endsWith("device owner)"))
+
+        // Samsung's Knox Guard comes with the phone: listed, not counted. A sideloaded admin is a warning.
+        val knoxGuard = AdminApp(AppRef("com.samsung.android.kgclient", "Device Services"), isDeviceOwner = false, isProfileOwner = false)
+        val locker = AdminApp(AppRef("org.example.locker", "Locker"), isDeviceOwner = false, isProfileOwner = false)
+        val apps = FakePackages(value(listOf(app(knoxGuard.app.packageName, system = true), app(locker.app.packageName, installer = null))))
+        val preinstalled = DeviceAdminsCheck(FakePolicy(admins = value(listOf(knoxGuard))), apps).outcome()
+        assertEquals(Status.PASS, preinstalled.status)
+        assertEquals("came with the phone; not counted", preinstalled.evidence.single().note)
+        val sideloaded = DeviceAdminsCheck(FakePolicy(admins = value(listOf(knoxGuard, locker))), apps).outcome()
+        assertEquals("1 device admin app: Locker; Locker comes from outside an app store", sideloaded.summary)
+        assertEquals(Severity.WARNING, sideloaded.escalation)
     }
 
     @Test
@@ -52,6 +80,26 @@ class AppsChecksTest {
         assertEquals(Status.FAIL, outcome.status)
         assertEquals("2 apps can read your notifications: Watch and Tasker", outcome.summary)
         assertEquals("Watch (com.example.watch)", outcome.evidence.first().value)
+    }
+
+    @Test
+    fun `notification listeners that came with the phone do not count`() = runTest {
+        val listeners = FakeSettings(
+            secure = mapOf("enabled_notification_listeners" to value("com.sec.android.app.launcher/.Badges:org.example.spy/.L")),
+        )
+        val launcherOnly = FakePackages(value(listOf(app("com.sec.android.app.launcher", system = true))))
+        val stock = NotificationAccessCheck(
+            FakeSettings(secure = mapOf("enabled_notification_listeners" to value("com.sec.android.app.launcher/.Badges"))),
+            launcherOnly,
+        ).outcome()
+        assertEquals(Status.PASS, stock.status)
+        assertEquals("Only apps that came with the phone can read your notifications", stock.summary)
+
+        val withSpy = FakePackages(value(listOf(app("com.sec.android.app.launcher", system = true), app("org.example.spy", installer = null))))
+        val outcome = NotificationAccessCheck(listeners, withSpy).outcome()
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(Severity.WARNING, outcome.escalation)
+        assertEquals("came with the phone; not counted", outcome.evidence.first().note)
     }
 
     @Test

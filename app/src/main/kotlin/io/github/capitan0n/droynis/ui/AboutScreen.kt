@@ -122,8 +122,9 @@ fun AboutScreen(appVersion: String, onOpenLink: (String) -> Unit, onFeedback: ()
                     Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                     Text(stringResource(R.string.about_send_feedback))
                 }
-                OutlinedButton(onClick = { onOpenLink(AppInfo.REPOSITORY) }) {
-                    Text(stringResource(R.string.about_open_repo))
+                // The Source code row above already opens the repository.
+                OutlinedButton(onClick = { onOpenLink(AppInfo.PROFILE) }) {
+                    Text(stringResource(R.string.about_open_profile))
                 }
             }
         }
