@@ -9,6 +9,7 @@ import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.DeviceSummary
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.root.rootChecks
 import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
@@ -18,6 +19,8 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.platform.PermissionOverview
+import io.github.capitan0n.droynis.platform.root.RootState
+import io.github.capitan0n.droynis.platform.root.RootStatus
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuState
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuStatus
 import io.github.capitan0n.droynis.report.DeviceFact
@@ -32,6 +35,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -74,6 +78,8 @@ data class UiState(
     val muted: Set<String> = emptySet(),
     /** Null until first read. */
     val shizuku: ShizukuStatus? = null,
+    /** Null until first read. */
+    val root: RootStatus? = null,
 ) {
     val done: Int get() = findings.size
 }
@@ -84,7 +90,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     private val prefs = application.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     // Each tier module contributes its registry here; checks above the detected tier show as N/A.
-    private val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform)
+    private val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform) + rootChecks(platform)
     private val scanner = Scanner()
 
     /** Every check in display order, whether or not it has run. */
@@ -123,6 +129,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     }
 
     init {
+        platform.root.enabled = prefs.getBoolean(KEY_ROOT, false)
         platform.shizuku.addListener(onShizukuChanged)
         scan()
         refreshTools()
@@ -134,16 +141,25 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun scan() {
-        scanJob?.cancel()
+        val previous = scanJob
+        previous?.cancel()
         scanJob = viewModelScope.launch {
+            // Let a cancelled scan close its root shell first, so it can't close this scan's.
+            previous?.join()
             val started = TimeSource.Monotonic.markNow()
             // Starting the Shizuku shell can take a few seconds, so show the scan as running first.
             _state.update { it.copy(scanning = true, findings = emptyMap()) }
             val context = withContext(Dispatchers.IO) { platform.newScanContext() }
             _state.update { it.copy(grants = context.capabilities.grants) }
             refreshShizuku()
-            scanner.scan(checks, context).collect { finding ->
-                _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
+            refreshRoot()
+            try {
+                scanner.scan(checks, context).collect { finding ->
+                    _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
+                }
+            } finally {
+                // The root shell lives only as long as a scan, even a cancelled one.
+                withContext(NonCancellable + Dispatchers.IO) { platform.scanFinished() }
             }
             // Cosmetic only: a scan takes a fraction of a second, too short to see that it ran.
             delay(MIN_VISIBLE_SCAN - started.elapsedNow())
@@ -165,6 +181,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val permissions = withContext(Dispatchers.IO) { platform.permissionAudit.overview() }
             val grants = withContext(Dispatchers.IO) { platform.detectGrants() }
             refreshShizuku()
+            refreshRoot()
             _state.update {
                 it.copy(
                     device = device,
@@ -183,6 +200,33 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val shown = withContext(Dispatchers.IO) { platform.shizuku.requestPermission() }
             if (!shown) message(R.string.shizuku_not_reachable)
         }
+    }
+
+    /** Turns the root tier on and scans, so the root manager asks the user. */
+    fun enableRoot() {
+        prefs.edit().putBoolean(KEY_ROOT, true).apply()
+        platform.root.enabled = true
+        viewModelScope.launch {
+            scan()
+            scanJob?.join()
+            if (refreshRoot().state != RootState.GRANTED) message(R.string.root_not_granted)
+        }
+    }
+
+    /** Turns the root tier off: Droynis runs su no more. */
+    fun disableRoot() {
+        prefs.edit().putBoolean(KEY_ROOT, false).apply()
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { platform.root.disable() }
+            refreshRoot()
+            message(R.string.root_turned_off)
+        }
+    }
+
+    private suspend fun refreshRoot(): RootStatus {
+        val (status, grants) = withContext(Dispatchers.IO) { platform.root.status() to platform.detectGrants() }
+        _state.update { if (it.scanning) it.copy(root = status) else it.copy(root = status, grants = grants) }
+        return status
     }
 
     /** Re-reads Shizuku's state and the grants it brings. */
@@ -265,6 +309,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         private const val PREFS = "settings"
         private const val KEY_THEME = "theme"
         private const val KEY_MUTED = "muted_checks"
+        private const val KEY_ROOT = "root_tier"
         private val MIN_VISIBLE_SCAN = 700.milliseconds
 
         private val FILE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm")

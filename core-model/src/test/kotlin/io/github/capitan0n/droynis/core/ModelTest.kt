@@ -47,6 +47,16 @@ class ModelTest {
     }
 
     @Test
+    fun `root covers every lower tier, and nothing below covers root`() {
+        val root = Capabilities(setOf(Grant.ROOT))
+
+        assertEquals(emptySet(), root.missingFor(spec(requires = setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))))
+        assertEquals(emptySet(), root.missingFor(spec(requires = setOf(Grant.SHIZUKU))))
+        assertEquals(setOf(Grant.ROOT), Capabilities(setOf(Grant.SHIZUKU, Grant.DUMP)).missingFor(spec(requires = setOf(Grant.ROOT))))
+        assertEquals(Tier.ROOT, root.tier)
+    }
+
+    @Test
     fun `adb commands name the permission behind a grant`() {
         assertEquals(
             "adb shell pm grant org.example android.permission.DUMP",

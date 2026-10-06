@@ -82,6 +82,10 @@ class MainActivity : ComponentActivity(), AppActions {
 
     override fun requestShizuku() = viewModel.requestShizuku()
 
+    override fun enableRoot() = viewModel.enableRoot()
+
+    override fun disableRoot() = viewModel.disableRoot()
+
     override fun openShizuku() {
         val launch = packageManager.getLaunchIntentForPackage(ShizukuShell.MANAGER_PACKAGE)
         if (launch == null) {

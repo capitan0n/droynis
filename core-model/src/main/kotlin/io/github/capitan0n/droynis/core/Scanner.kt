@@ -22,6 +22,8 @@ data class ScanContext(
     val capabilities: Capabilities = Capabilities(),
     /** Droynis' own package, so a check can tell the auditor's own entries apart. */
     val appPackage: String? = null,
+    /** Droynis' own uid, for lists that name apps by uid. */
+    val appUid: Int? = null,
 )
 
 /**

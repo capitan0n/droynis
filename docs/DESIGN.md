@@ -64,11 +64,13 @@ core-model        Kotlin/JVM  Check contract, results, evidence, tiers, Scanner
 checks-base       Kotlin/JVM  base-tier checks + the probe interfaces they read
 checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys` probe they read
 checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
+checks-root       Kotlin/JVM  root-tier checks, their parsers and the `RootShellProbe` they read
 report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category summaries,
                               Markdown export (later: JSON, diff between scans)
 platform-android  Android     probe implementations; the only framework calls for checks;
                               grant detection; the permission overview on the Tools screen;
-                              the Shizuku client and its read-only UserService (AIDL)
+                              the Shizuku client and its read-only UserService (AIDL);
+                              the opt-in root shell
 app               Android     Compose UI (dashboard, checks, tools, help), registry wiring,
                               settings deep links, report save/share
 ```
@@ -90,6 +92,27 @@ holds every permission adb can grant, so `Capabilities.has` lets SHIZUKU cover t
 grants, and `dumpsys` falls back to the shell when the app itself lacks DUMP and
 PACKAGE_USAGE_STATS. A scan connects the shell first (up to 10 s), and the app scans again when
 Shizuku starts or allows Droynis.
+
+### Root
+
+Root is off until the user turns it on in the Root tab, so a rooted phone never sees a root
+manager prompt it didn't ask for. When on, each scan runs `su` once (the root manager asks the
+first time), confirms `id -u` is 0, runs its reads, and closes the shell when the scan ends, even a
+cancelled one; scans are serialized so one can't close another's shell. Commands are constants in
+`RootShell`; the only arguments, a settings table and key, are checked like in `ShellService`. Each
+command runs as `{ cmd; } </dev/null 2>&1` followed by a line with a random per-session marker and
+the exit code, so no output can end a command early and no command can read the session's stdin.
+A command that doesn't answer in time kills the shell.
+
+`Grant.ROOT` is held while root is on and the last shell ran as root. Root covers the Shizuku and
+ADB grants (`Capabilities.has`); reads go through Shizuku while it is connected (fewer rights) and
+through root otherwise. Root-only checks: computers trusted for USB debugging (`adb_keys`, with the
+MD5 fingerprint the "Allow USB debugging?" dialog shows), apps with root (Magisk's `policies` table
+through `magisk --sqlite`, whose `col=value|…` rows and Query/Deny/Allow/Restrict values were checked
+in Magisk's source; KernelSU and APatch store theirs in their own formats, so the check is N/A
+there), root modules in `/data/adb/modules` (shared by all three managers; INFO, not scored), and
+apps listening on the network (`/proc/net/{tcp,udp}{,6}`: TCP in LISTEN and unconnected UDP on a
+port below 32768, on any address but loopback; system uids and system apps are listed, not counted).
 
 ### Special app access
 
@@ -201,6 +224,9 @@ out. Both contain only scan results and the device facts passed in.
   a local unit test pins the SDK constants that the JVM modules hard-code.
 - Shizuku: the shell, the binder and Shizuku itself need a device with Shizuku; instrumented tests
   only check that without it the shell readings are Unavailable and SHIZUKU is not granted.
+- Root: the parsers (modules, Magisk policies, `/proc/net`, `adb_keys`) are JVM-tested; the `su`
+  session needs a rooted device. Instrumented tests check that root is off by default and that
+  nothing runs `su` then.
 - `app`: a Compose UI test launches the app, waits for the scan, opens the Checks tab, scrolls to
   every check, opens one and its evidence, visits the Tools, Help and About pages and every
   catalog tab (including the adb commands), and mutes and unmutes a check.
@@ -230,6 +256,8 @@ Base, ADB, Shizuku, Root. Each tab opens with what the tier is and how to set it
 lists each grant as held or not (read live), the exact `pm grant` commands, and `pm revoke`
 commands once something is granted. The Shizuku tab shows three steps (Shizuku running, Droynis
 allowed, shell connected) and one button for the next step: get Shizuku, open it, or allow access.
+The Root tab shows the root manager it can see and whether root is on, with Allow root access,
+Try again or Turn off root tier.
 Tier-gated checks show "Needs the ADB tier" with a link to that tab. Help keeps only the legend, the score, privacy and the FAQ.
 
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,

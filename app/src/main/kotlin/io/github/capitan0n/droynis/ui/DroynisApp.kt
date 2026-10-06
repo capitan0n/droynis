@@ -101,6 +101,12 @@ interface AppActions {
     /** Opens the Shizuku app, or its download page when it is not installed. */
     fun openShizuku()
 
+    /** Turns the root tier on; the root manager asks the user at the scan that follows. */
+    fun enableRoot()
+
+    /** Turns the root tier off: Droynis runs su no more. */
+    fun disableRoot()
+
     /** Opens the first Settings screen in [actions] that this phone has. */
     fun openSettings(actions: List<String>)
     fun saveReport(format: ReportFormat)
@@ -281,6 +287,7 @@ fun DroynisApp(
                         muted = state.muted,
                         grants = state.grants,
                         shizuku = state.shizuku,
+                        root = state.root,
                         selected = catalogTier,
                         onSelect = { catalogTier = it },
                         scanning = state.scanning,

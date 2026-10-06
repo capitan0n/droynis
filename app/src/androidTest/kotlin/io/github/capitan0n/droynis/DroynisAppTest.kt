@@ -16,6 +16,7 @@ import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.SecurityPatchAgeCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.root.rootChecks
 import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.ui.CHECKS_LIST_TAG
@@ -46,7 +47,7 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tab_checks)).performClick()
 
         val list = compose.onNodeWithTag(CHECKS_LIST_TAG)
-        val checks = AndroidPlatform(compose.activity).use { baseChecks(it) + adbChecks(it) + shizukuChecks(it) }
+        val checks = AndroidPlatform(compose.activity).use { baseChecks(it) + adbChecks(it) + shizukuChecks(it) + rootChecks(it) }
         for (title in checks.map { it.spec.title }) {
             list.performScrollToNode(hasText(title))
         }
@@ -124,6 +125,8 @@ class DroynisAppTest {
 
         compose.onNodeWithText(text(R.string.tier_root)).performClick()
         compose.onNodeWithText(text(R.string.tier_root_note)).assertExists()
+        // Root stays off until the user turns it on, so no root manager prompt appears in tests.
+        compose.onNodeWithText(text(R.string.root_allow)).assertExists()
     }
 
     @Test

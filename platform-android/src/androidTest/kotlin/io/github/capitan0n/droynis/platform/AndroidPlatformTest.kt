@@ -5,12 +5,14 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.root.rootChecks
 import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.core.Status
 import kotlinx.coroutines.flow.toList
+import io.github.capitan0n.droynis.platform.root.RootState
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuState
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -84,7 +86,7 @@ class AndroidPlatformTest {
 
     @Test
     fun noCheckCrashesOrTimesOutOnARealDevice(): Unit = runBlocking {
-        val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform)
+        val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform) + rootChecks(platform)
 
         val findings = Scanner().scan(checks, platform.newScanContext()).toList()
 
@@ -113,6 +115,14 @@ class AndroidPlatformTest {
         assertFalse(Grant.SHIZUKU in platform.detectGrants())
         assertTrue(platform.shizuku.selinuxMode() is Reading.Unavailable)
         assertTrue(platform.shizuku.readSetting("global", "adb_enabled") is Reading.Unavailable)
+    }
+
+    @Test
+    fun rootIsOffByDefaultAndNeverRunsSu() {
+        assertEquals(RootState.OFF, platform.root.status().state)
+        assertFalse(platform.root.open())
+        assertFalse(Grant.ROOT in platform.detectGrants())
+        assertTrue(platform.root.adbKeys() is Reading.Unavailable)
     }
 
     private fun assertValue(reading: Reading<*>) {

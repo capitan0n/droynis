@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 43 checks.
+Every check Droynis runs, by privilege tier and category: 47 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -16,7 +16,7 @@ Any critical failure caps the score at 40, and muted checks don't count.
 | [Base](#base-tier) | 34 |
 | [ADB](#adb-tier) | 7 |
 | [Shizuku](#shizuku-tier) | 2 |
-| Root | planned |
+| [Root](#root-tier) | 4 |
 
 ## Base tier
 
@@ -457,4 +457,55 @@ An always-on VPN starts with the phone and stays connected. Only with "Block con
 
 ## Root tier
 
-Planned, for phones that are already rooted: a fixed list of read-only commands run through the root manager. Rooting weakens Android's security model, so don't root a phone just to audit it.
+For phones that are already rooted. Once you turn it on, Droynis asks the root manager (Magisk, KernelSU, APatch…) for a root shell at each scan and runs only a fixed list of read-only commands. Root also runs every ADB and Shizuku check. Rooting weakens Android's security model, so don't root a phone just to audit it; root access (INTG-1050) stays a critical finding.
+
+1. In Droynis open ⋮ › Check catalog › Root and tap Allow root access.
+2. Allow Droynis when the root manager asks. Droynis scans again by itself.
+3. To stop, tap Turn off in the same tab, and revoke Droynis in the root manager's Superuser list.
+
+| ID | Check | Severity | Fails when |
+|---|---|---|---|
+| [INTG-1301](#intg-1301-root-modules) | Root modules | Info | an enabled root module is installed (information only) |
+| [ACCS-2301](#accs-2301-computers-trusted-for-usb-debugging) | Computers trusted for USB debugging | Notice | a computer is trusted for USB debugging |
+| [APPS-4301](#apps-4301-apps-with-root-access) | Apps with root access | Warning | an app other than Droynis may get root |
+| [NETW-3301](#netw-3301-apps-listening-on-the-network) | Apps listening on the network | Notice | a user app accepts connections from the network |
+
+### Device integrity
+
+#### INTG-1301 Root modules
+
+Info · Android 8.0 and later · fails when an enabled root module is installed (information only)
+
+Magisk, KernelSU and APatch modules change the system at every boot, with full root rights and before any app or security setting can stop them. Each one is code you trust completely. This check lists them for your review and doesn't count in the score.
+
+**What to do:** Open your root manager's Modules screen and remove modules you no longer use or don't fully trust. Install modules only from their authors' own pages.
+
+### Access control
+
+#### ACCS-2301 Computers trusted for USB debugging
+
+Notice · Android 8.0 and later · fails when a computer is trusted for USB debugging
+
+Every computer you once allowed for USB debugging keeps its key on the phone, and gets adb again without asking whenever debugging is on, even after you turn it off and back on. Android 11 and later forget a computer after 7 days without a connection, unless that timeout is turned off. Only root can read the list.
+
+**What to do:** In Developer options tap "Revoke USB debugging authorizations". Your own computer asks again the next time you connect it.
+
+### Apps and permissions
+
+#### APPS-4301 Apps with root access
+
+Warning · Android 8.0 and later · fails when an app other than Droynis may get root
+
+An app with root can read every other app's data, change the system and hide what it does: Android's app sandbox no longer limits it. Grant root only to apps you trust completely, and take it back from apps you no longer use. Droynis reads Magisk's list; KernelSU and APatch keep theirs in formats it can't read yet.
+
+**What to do:** Open your root manager's Superuser screen and revoke root from apps you don't use or don't fully trust. Revoking adb shell's root means a computer with adb gets no root.
+
+### Network and radios
+
+#### NETW-3301 Apps listening on the network
+
+Notice · Android 8.0 and later · fails when a user app accepts connections from the network
+
+An app that listens on a network port accepts connections from other devices on the same network, such as everyone on a public Wi-Fi. SSH servers, file sharing and sync apps do this on purpose; a bug in them is then reachable by anyone nearby. Since Android 10 apps can't see each other's ports; root can.
+
+**What to do:** Stop the server in apps that don't need to be reachable, or use it only on networks you trust. Uninstall apps you don't recognize.

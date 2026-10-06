@@ -2,6 +2,8 @@ package io.github.capitan0n.droynis.checks.adb
 
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.baseChecks
+import io.github.capitan0n.droynis.checks.root.RootProbes
+import io.github.capitan0n.droynis.checks.root.rootChecks
 import io.github.capitan0n.droynis.checks.shizuku.ShizukuProbes
 import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.Category
@@ -52,8 +54,10 @@ class CatalogDocTest {
 
         /** Every registry, built with probes nothing calls: a spec is a plain value. */
         fun allSpecs(): List<CheckSpec> =
-            (baseChecks(unused<BaseProbes>()) + adbChecks(unused<AdbProbes>()) + shizukuChecks(unused<ShizukuProbes>()))
-                .map { it.spec }
+            (
+                baseChecks(unused<BaseProbes>()) + adbChecks(unused<AdbProbes>()) +
+                    shizukuChecks(unused<ShizukuProbes>()) + rootChecks(unused<RootProbes>())
+                ).map { it.spec }
 
         inline fun <reified T : Any> unused(): T = T::class.java.cast(unusedProbe(T::class.java))
 
@@ -78,8 +82,10 @@ object CatalogDoc {
             "the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that " +
             "runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the " +
             "real USB debugging state on Android 17, and also runs every ADB-tier check.",
-        Tier.ROOT to "Planned, for phones that are already rooted: a fixed list of read-only commands run through " +
-            "the root manager. Rooting weakens Android's security model, so don't root a phone just to audit it.",
+        Tier.ROOT to "For phones that are already rooted. Once you turn it on, Droynis asks the root manager " +
+            "(Magisk, KernelSU, APatch…) for a root shell at each scan and runs only a fixed list of read-only " +
+            "commands. Root also runs every ADB and Shizuku check. Rooting weakens Android's security model, so " +
+            "don't root a phone just to audit it; root access (INTG-1050) stays a critical finding.",
     )
 
     private val ANDROID = mapOf(
@@ -119,6 +125,7 @@ object CatalogDoc {
             appendLine(INTRO.getValue(tier))
             if (tier == Tier.ADB) appendSetup(inTier)
             if (tier == Tier.SHIZUKU && inTier.isNotEmpty()) appendShizukuSetup()
+            if (tier == Tier.ROOT && inTier.isNotEmpty()) appendRootSetup()
             if (inTier.isEmpty()) continue
 
             appendLine()
@@ -166,6 +173,13 @@ object CatalogDoc {
         appendLine("2. In Droynis open ⋮ › Check catalog › Shizuku and tap Allow access.")
         appendLine("3. Tap Scan again. After a reboot, start Shizuku again; to take access back, turn Droynis off in")
         appendLine("   Shizuku's list of authorized apps.")
+    }
+
+    private fun StringBuilder.appendRootSetup() {
+        appendLine()
+        appendLine("1. In Droynis open ⋮ › Check catalog › Root and tap Allow root access.")
+        appendLine("2. Allow Droynis when the root manager asks. Droynis scans again by itself.")
+        appendLine("3. To stop, tap Turn off in the same tab, and revoke Droynis in the root manager's Superuser list.")
     }
 
     private fun StringBuilder.appendCheck(spec: CheckSpec) {

@@ -13,6 +13,7 @@ import io.github.capitan0n.droynis.checks.shizuku.PrivilegedShell
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import io.github.capitan0n.droynis.platform.ShellAccess
 import io.github.capitan0n.droynis.platform.probe
 import io.github.capitan0n.droynis.platform.readDumpsys
 import java.util.concurrent.CopyOnWriteArrayList
@@ -58,7 +59,7 @@ data class ShizukuStatus(
  * Droynis' side of Shizuku: its state, the permission request, and the read-only [ShellService],
  * which starts on demand and stops with the app. Shizuku calls back on the main thread.
  */
-class ShizukuShell(context: Context) : PrivilegedShell {
+class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
 
     private val app = context.applicationContext
     private val lock = Any()
@@ -115,6 +116,8 @@ class ShizukuShell(context: Context) : PrivilegedShell {
 
     /** True while Droynis' shell is running and reachable. */
     val isConnected: Boolean get() = service?.asBinder()?.isBinderAlive == true
+
+    override val isReady: Boolean get() = isConnected
 
     /** Called on the main thread whenever Shizuku starts, stops, answers a permission request or connects. */
     fun addListener(listener: () -> Unit) {
@@ -206,8 +209,7 @@ class ShizukuShell(context: Context) : PrivilegedShell {
         service = null
     }
 
-    /** `settings get` as the shell user, which Android never redacts or denies. */
-    fun readSetting(table: String, key: String): Reading<String?> =
+    override fun readSetting(table: String, key: String): Reading<String?> =
         call(Source("settings get $table $key", Grant.SHIZUKU)) { shell, source ->
             Reading.Value(shell.readSetting(table, key, Process.myUid() / PER_USER_RANGE), source)
         }
@@ -215,8 +217,8 @@ class ShizukuShell(context: Context) : PrivilegedShell {
     override fun selinuxMode(): Reading<String> =
         call(Source("getenforce", Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.selinuxMode(), source) }
 
-    /** `dumpsys <service>` as the shell user, streamed through a pipe. */
-    fun dumpsys(service: String): Reading<String> =
+    /** Streamed through a pipe: the output can be larger than one binder call carries. */
+    override fun dumpsys(service: String): Reading<String> =
         call(Source("dumpsys $service", Grant.SHIZUKU)) { shell, source ->
             val pipe = shell.dumpsys(service) ?: return@call Reading.Unavailable("the shell returned no output", source)
             ParcelFileDescriptor.AutoCloseInputStream(pipe).bufferedReader().use { readDumpsys(it, source) }

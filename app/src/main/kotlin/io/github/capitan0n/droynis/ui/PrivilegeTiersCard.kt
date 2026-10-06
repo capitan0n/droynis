@@ -40,24 +40,23 @@ import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.core.adbGrantCommand
 import io.github.capitan0n.droynis.core.adbRevokeCommand
+import io.github.capitan0n.droynis.platform.root.RootState
+import io.github.capitan0n.droynis.platform.root.RootStatus
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuState
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuStatus
 import io.github.capitan0n.droynis.ui.theme.StatusColors
 
-/** Whether a tier works on this phone right now, can be set up, or is still to come. */
-enum class TierState { ACTIVE, AVAILABLE, PLANNED }
+/** Whether a tier works on this phone right now, or can be set up. */
+enum class TierState { ACTIVE, AVAILABLE }
 
 /**
- * Base is always active. ADB and Shizuku are active once every grant their checks need is held,
- * directly or (for ADB) through Shizuku. Root is planned until its checks ship.
+ * Base is always active. The others are active once every grant their checks need is held,
+ * directly or through a higher tier (Shizuku covers ADB; root covers both).
  */
-fun tierState(tier: Tier, grants: Set<Grant>, needed: Set<Grant>): TierState = when (tier) {
-    Tier.BASE -> TierState.ACTIVE
-    Tier.ADB, Tier.SHIZUKU -> {
-        val capabilities = Capabilities(grants)
-        if (needed.isNotEmpty() && needed.all(capabilities::has)) TierState.ACTIVE else TierState.AVAILABLE
-    }
-    Tier.ROOT -> TierState.PLANNED
+fun tierState(tier: Tier, grants: Set<Grant>, needed: Set<Grant>): TierState {
+    if (tier == Tier.BASE) return TierState.ACTIVE
+    val capabilities = Capabilities(grants)
+    return if (needed.isNotEmpty() && needed.all(capabilities::has)) TierState.ACTIVE else TierState.AVAILABLE
 }
 
 val Tier.icon: ImageVector
@@ -76,6 +75,7 @@ fun TierCard(
     grants: Set<Grant>,
     needed: List<Grant>,
     shizuku: ShizukuStatus?,
+    root: RootStatus?,
     scanning: Boolean,
     actions: AppActions,
 ) {
@@ -89,12 +89,7 @@ fun TierCard(
             Tier.BASE -> Text(stringResource(R.string.tier_base_body), style = MaterialTheme.typography.bodyMedium)
             Tier.ADB -> AdbSetup(grants, needed, scanning, actions)
             Tier.SHIZUKU -> ShizukuSetup(shizuku, scanning, actions)
-            Tier.ROOT -> PlannedTier(
-                R.string.tier_root_body,
-                R.string.tier_root_steps,
-                R.string.tier_root_unlocks,
-                note = R.string.tier_root_note,
-            )
+            Tier.ROOT -> RootSetup(root, scanning, actions)
         }
     }
 }
@@ -106,7 +101,6 @@ fun TierStatePill(state: TierState) {
             when (state) {
                 TierState.ACTIVE -> R.string.tier_active
                 TierState.AVAILABLE -> R.string.tier_available
-                TierState.PLANNED -> R.string.tier_planned
             },
         ),
         container = if (state == TierState.ACTIVE) {
@@ -286,29 +280,98 @@ private fun MainButton(text: String, onClick: () -> Unit) {
     Spacer(Modifier.height(8.dp))
 }
 
-/** A tier that does not exist yet: what it is, how setting it up will work, what it will add. */
+/**
+ * The opt-in root tier: what Droynis can see of the root manager, whether root is on and granted,
+ * and the button for the next step.
+ */
 @Composable
-private fun ColumnScope.PlannedTier(body: Int, steps: Int, unlocks: Int, note: Int? = null) {
-    Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(12.dp))
-    Text(stringResource(R.string.tier_how_it_will_work), style = MaterialTheme.typography.titleSmall)
-    Spacer(Modifier.height(4.dp))
-    Text(stringResource(steps), style = MaterialTheme.typography.bodyMedium)
-    Spacer(Modifier.height(12.dp))
-    Text(
-        stringResource(unlocks),
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+private fun ColumnScope.RootSetup(status: RootStatus?, scanning: Boolean, actions: AppActions) {
+    Text(stringResource(R.string.tier_root_body), style = MaterialTheme.typography.bodyMedium)
+    Spacer(Modifier.height(10.dp))
+    Pill(
+        text = stringResource(R.string.tier_root_note),
+        container = StatusColors.Critical.copy(alpha = 0.14f),
+        content = MaterialTheme.colorScheme.onSurface,
+        maxLines = Int.MAX_VALUE,
     )
-    if (note != null) {
-        Spacer(Modifier.height(10.dp))
-        Pill(
-            text = stringResource(note),
-            container = StatusColors.Critical.copy(alpha = 0.14f),
-            content = MaterialTheme.colorScheme.onSurface,
-            maxLines = Int.MAX_VALUE,
+    if (status != null) {
+        val state = status.state
+        val manager = status.manager
+        val managerApp = status.managerApp
+        val found = manager != null || managerApp != null || status.suVisible
+        Spacer(Modifier.height(12.dp))
+        StatusRow(
+            title = stringResource(R.string.root_manager),
+            detail = when {
+                manager != null -> manager.label
+                managerApp != null -> stringResource(R.string.root_manager_app, managerApp)
+                status.suVisible -> stringResource(R.string.root_manager_su)
+                else -> stringResource(R.string.root_manager_none)
+            },
+            ok = found,
+            pill = stringResource(if (found) R.string.root_found else R.string.root_not_found),
         )
+        HorizontalDivider(Modifier.padding(vertical = 6.dp))
+        StatusRow(
+            title = stringResource(R.string.root_access),
+            detail = status.error ?: stringResource(
+                when (state) {
+                    RootState.OFF -> R.string.root_access_off
+                    RootState.ON -> R.string.root_access_on
+                    RootState.GRANTED -> R.string.root_access_granted
+                    RootState.DENIED -> R.string.root_access_denied
+                    RootState.NO_SU -> R.string.root_access_no_su
+                },
+            ),
+            ok = state == RootState.GRANTED,
+            pill = stringResource(
+                when (state) {
+                    RootState.OFF -> R.string.root_off
+                    RootState.ON -> R.string.root_on
+                    RootState.GRANTED -> R.string.root_allowed
+                    RootState.DENIED -> R.string.root_denied
+                    RootState.NO_SU -> R.string.root_no_su
+                },
+            ),
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            stringResource(
+                when (state) {
+                    RootState.OFF -> R.string.root_hint_off
+                    RootState.ON -> R.string.root_hint_on
+                    RootState.GRANTED -> R.string.root_hint_granted
+                    RootState.DENIED -> R.string.root_hint_denied
+                    RootState.NO_SU -> R.string.root_hint_no_su
+                },
+            ),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(10.dp))
+        when (state) {
+            RootState.OFF -> MainButton(stringResource(R.string.root_allow), actions::enableRoot)
+            RootState.DENIED, RootState.NO_SU -> MainButton(stringResource(R.string.root_try_again), actions::enableRoot)
+            RootState.ON, RootState.GRANTED -> Unit
+        }
+        if (state == RootState.ON) {
+            Button(onClick = actions::scan, enabled = !scanning, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.menu_scan_again))
+            }
+        } else {
+            OutlinedButton(onClick = actions::scan, enabled = !scanning, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.menu_scan_again))
+            }
+        }
+        if (state != RootState.OFF) {
+            TextButton(onClick = actions::disableRoot, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.root_turn_off))
+            }
+        }
     }
+    Spacer(Modifier.height(12.dp))
+    Text(stringResource(R.string.shizuku_how_to), style = MaterialTheme.typography.titleSmall)
+    Spacer(Modifier.height(4.dp))
+    Text(stringResource(R.string.tier_root_steps), style = MaterialTheme.typography.bodyMedium)
 }
 
 /** One step of a tier's setup: done (green) or still to do. */
@@ -370,5 +433,5 @@ private val Grant.descriptionRes: Int?
     get() = when (this) {
         Grant.DUMP -> R.string.grant_dump
         Grant.PACKAGE_USAGE_STATS -> R.string.grant_usage_stats
-        Grant.READ_LOGS, Grant.SHIZUKU -> null
+        Grant.READ_LOGS, Grant.SHIZUKU, Grant.ROOT -> null
     }

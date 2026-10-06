@@ -81,7 +81,11 @@ fun CheckDetailScreen(
                 icon = Icons.Rounded.Layers,
                 accent = MaterialTheme.colorScheme.tertiary,
             ) {
-                val body = if (spec.requiredTier == Tier.SHIZUKU) R.string.detail_needs_shizuku_body else R.string.detail_needs_tier_body
+                val body = when (spec.requiredTier) {
+                    Tier.SHIZUKU -> R.string.detail_needs_shizuku_body
+                    Tier.ROOT -> R.string.detail_needs_root_body
+                    else -> R.string.detail_needs_tier_body
+                }
                 Text(stringResource(body), style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(12.dp))
                 FilledTonalButton(onClick = onSetUpTier) {

@@ -28,6 +28,7 @@ dependencies {
     api(project(":checks-base"))
     api(project(":checks-adb"))
     api(project(":checks-shizuku"))
+    api(project(":checks-root"))
 
     implementation(libs.shizuku.api)
     implementation(libs.shizuku.provider)

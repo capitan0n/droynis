@@ -4,7 +4,6 @@ import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
-import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import java.io.Reader
 import java.util.concurrent.TimeUnit
 
@@ -34,21 +33,18 @@ internal object AndroidDumpsys : Dumpsys {
 }
 
 /**
- * Runs dumpsys as Droynis while it holds the adb grants, and otherwise through the Shizuku shell
- * when that is connected: Shizuku covers the ADB tier.
+ * Runs dumpsys as Droynis while it holds the adb grants, and otherwise through a privileged shell
+ * (Shizuku or root) while one is ready: both cover the ADB tier.
  */
 internal class RoutedDumpsys(
     private val grants: AndroidGrants,
-    private val shizuku: ShizukuShell,
+    private val shells: ShellRouter,
 ) : Dumpsys {
 
     override fun dump(service: String, vararg args: String): Reading<String> {
         val ownGrants = grants.detect().containsAll(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))
-        return if (!ownGrants && args.isEmpty() && shizuku.isConnected) {
-            shizuku.dumpsys(service)
-        } else {
-            AndroidDumpsys.dump(service, *args)
-        }
+        val shell = if (ownGrants || args.isNotEmpty()) null else shells.active()
+        return shell?.dumpsys(service) ?: AndroidDumpsys.dump(service, *args)
     }
 }
 

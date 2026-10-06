@@ -28,6 +28,13 @@ enum class Grant(val tier: Tier, val permission: String?) {
      * shell has every permission adb can grant, so it also covers the ADB-tier grants.
      */
     SHIZUKU(Tier.SHIZUKU, null),
+
+    /**
+     * The user turned the root tier on in Droynis and their root manager (Magisk, KernelSU,
+     * APatch…) granted a root shell. Root can do everything the tiers below can, so it covers
+     * their grants too.
+     */
+    ROOT(Tier.ROOT, null),
 }
 
 /** The grants detected for this scan. */
@@ -35,11 +42,17 @@ data class Capabilities(val grants: Set<Grant> = emptySet()) {
     /** Highest tier reached by any held grant. */
     val tier: Tier get() = grants.maxOfOrNull { it.tier } ?: Tier.BASE
 
-    /** Held directly, or covered by Shizuku: its shell has every permission adb can grant. */
-    fun has(grant: Grant): Boolean = grant in grants || (grant.tier == Tier.ADB && Grant.SHIZUKU in grants)
+    /**
+     * Held directly, or covered by a higher tier's shell: Shizuku has every permission adb can
+     * grant, and root has everything Shizuku has.
+     */
+    fun has(grant: Grant): Boolean = grant in grants || grants.any { it.covers(grant) }
 
     fun missingFor(spec: CheckSpec): Set<Grant> = spec.requires.filterNotTo(LinkedHashSet()) { has(it) }
 }
+
+/** Shizuku and root are shells, with every right of the tiers below them. */
+private fun Grant.covers(other: Grant): Boolean = tier >= Tier.SHIZUKU && tier > other.tier
 
 /** The adb command that gives [packageName] this grant, or null when adb cannot. */
 fun Grant.adbGrantCommand(packageName: String): String? =
