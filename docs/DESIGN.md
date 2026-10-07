@@ -1,8 +1,8 @@
 # Droynis design notes
 
-Status: 34 base-tier checks and one ADB-tier check (listed in [CHECKS.md](CHECKS.md)), and a
-Compose UI with dashboard, checks, tools and help screens. This file records how the brief maps onto current Android
-(API 37, October 2026) and the decisions taken so far.
+Status: 54 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+dashboard, checks, tools and help screens. This file records how the brief maps onto current
+Android (API 37, October 2026) and the decisions taken so far.
 
 ## 1. Brief review: what does not hold on current Android
 
@@ -80,7 +80,7 @@ checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys`
 checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
 checks-root       Kotlin/JVM  root-tier checks, their parsers and the `RootShellProbe` they read
 report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category summaries,
-                              Markdown export (later: JSON, diff between scans)
+                              Markdown and JSON reports, hiding personal details
 platform-android  Android     probe implementations; the only framework calls for checks;
                               grant detection; the permission overview on the Tools screen;
                               the Shizuku client and its read-only UserService (AIDL);
@@ -279,8 +279,8 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
    1 (checked in `TextKeyListener`), i.e. passwords are shown.
 7. GPL-3.0-only or GPL-3.0-or-later? The LICENSE file is the same; the source headers and F-Droid
    metadata are not.
-8. The Markdown report lists app labels and package names in evidence (accessibility services,
-   notification listeners, keyboards, sideloaded apps). Redact them by default, as point 13 says?
+8. Reports hide addresses, DNS and proxy hosts and trusted computers by default, but keep app
+   labels and package names, which the findings are about. Hide user-installed apps too?
 9. Muting is allowed for every check, critical ones included, and lifts the cap. Should a muted
    critical failure still be flagged on the dashboard beyond the muted count?
 
@@ -305,8 +305,10 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
 - `app`: a Compose UI test launches the app, waits for the scan, opens the Checks tab, scrolls to
   every check, opens one and its evidence, visits the Tools, Help and About pages and every
   catalog tab (including the adb commands), and mutes and unmutes a check.
-- CI on every push: unit tests, lint, release build, and a check that the release APK does not
-  request `INTERNET`. The emulator matrix is a manual workflow. API 37 system images use the new
+- CI on pushes to main and pull requests: unit tests, lint, debug and release builds, and a gate
+  that the release APK does not request `INTERNET`; the debug APK is kept as an artifact. A tag
+  runs the release workflow (signed, attested APK; [RELEASING.md](RELEASING.md)) and the
+  reproducible-build check. The emulator matrix is a manual workflow; API 37 system images use the
   `37.0` package naming and need cmdline-tools 22+
   ([android-emulator-runner#482](https://github.com/ReactiveCircus/android-emulator-runner/issues/482)).
 
@@ -314,8 +316,8 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
 
 AGP 9.3.3, Gradle 9.7.1, Kotlin 2.4.20 (the newest combination Kotlin officially supports),
 compileSdk and targetSdk 37, minSdk 26, JDK 17. Release builds drop AGP's dependency-info block
-and VCS info for reproducibility; still to verify with a second build and `diffoscope`, in
-particular baseline profiles.
+and VCS info for reproducibility; the reproducible-build workflow builds each tag twice, from two
+directories, and compares the APKs (baseline profiles are the usual suspect if they ever differ).
 
 ## 8. UI
 

@@ -1,0 +1,20 @@
+Droynis checks the security and privacy settings of the phone it runs on, explains every finding in plain words, shows the raw evidence and opens the Settings screen that fixes it. It never changes anything itself.
+
+<b>What it checks</b>
+<ul>
+<li>Device integrity: security patch age, vendor and kernel patches, encryption, bootloader lock, root, SELinux, WebView updates</li>
+<li>Access control: screen lock and its strength, lock delay, remote lock and erase, USB and wireless debugging, Smart Lock, SIM PIN</li>
+<li>Apps and permissions: accessibility services, device admins, notification access, SMS and call log access, sideloaded and debuggable apps, special app access</li>
+<li>Network and radios: Private DNS, VPN, Wi-Fi security, HTTP proxies, user certificates, 2G, Bluetooth, NFC, location</li>
+</ul>
+
+<b>Four tiers</b>
+Most checks need no setup. Two read-only adb grants, Shizuku or root unlock the rest; privileged tiers run only a fixed list of read-only commands.
+
+<b>Honest results</b>
+A check passes only on a value it actually read. When Android won't say, the result is Unknown, never Passed. A score from 0 to 100 sums it up; checks you can't fix can be muted.
+
+<b>Private by design</b>
+No internet permission, no Google Play Services, no analytics. Reports (Markdown or JSON) leave out IP addresses, DNS and proxy servers and trusted computers by default.
+
+Droynis is not affiliated with Lynis or CISOfy.

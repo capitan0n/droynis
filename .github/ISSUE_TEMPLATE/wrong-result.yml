@@ -1,0 +1,39 @@
+name: Wrong result
+description: A check passed, failed or stayed unknown when it shouldn't have.
+labels: [wrong result]
+body:
+  - type: input
+    id: check
+    attributes:
+      label: Check
+      description: Its id, shown on the check's page, e.g. ACCS-2020.
+    validations:
+      required: true
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What Droynis says, and what is true
+      description: How do you know? A Settings screenshot or an adb command helps.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone, Android version and Droynis version
+      placeholder: Samsung Galaxy A20e, Android 11, Droynis 0.12.0
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Tier
+      options: [Base, ADB, Shizuku, Root]
+    validations:
+      required: true
+  - type: textarea
+    id: report
+    attributes:
+      label: Report
+      description: >
+        ⋮ › Save report (JSON), with "Hide personal details" on (the default). Attach the file or
+        paste the finding. It holds app names, the phone model and results; nothing else personal.

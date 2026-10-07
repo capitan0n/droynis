@@ -1,0 +1,1 @@
+First public release: 54 read-only checks in four tiers (base, ADB, Shizuku, root), a 0–100 score, search and filters, muting, and Markdown and JSON reports that hide personal details by default. New in this version: 2G networks, SIM PIN, vendor and kernel patch level, apps that can send SMS, proxies on mobile data.

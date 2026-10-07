@@ -5,12 +5,17 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
-// Optional local release signing; keystore.properties and the keystore stay out of git.
-// F-Droid ignores this and signs its own build.
+// Optional release signing: keystore.properties for local builds, DROYNIS_* environment variables
+// for the release workflow. Neither is in git; F-Droid ignores both and signs its own build.
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.isFile) file.inputStream().use { load(it) }
 }
+
+fun signingValue(key: String, env: String): String? =
+    keystoreProperties.getProperty(key) ?: providers.environmentVariable(env).orNull?.takeIf { it.isNotEmpty() }
+
+val releaseKeystore = signingValue("storeFile", "DROYNIS_KEYSTORE")
 
 android {
     namespace = "io.github.capitan0n.droynis"
@@ -26,12 +31,12 @@ android {
     }
 
     signingConfigs {
-        if (keystoreProperties.isNotEmpty()) {
+        if (releaseKeystore != null) {
             create("release") {
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                storeFile = rootProject.file(releaseKeystore)
+                storePassword = signingValue("storePassword", "DROYNIS_KEYSTORE_PASSWORD")
+                keyAlias = signingValue("keyAlias", "DROYNIS_KEY_ALIAS")
+                keyPassword = signingValue("keyPassword", "DROYNIS_KEY_PASSWORD")
             }
         }
     }

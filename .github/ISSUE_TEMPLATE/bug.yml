@@ -1,0 +1,21 @@
+name: Bug
+description: A crash, a broken screen or anything else that doesn't work.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: input
+    id: device
+    attributes:
+      label: Phone, Android version and Droynis version
+      placeholder: Pixel 9a, Android 17, Droynis 0.12.0
+    validations:
+      required: true

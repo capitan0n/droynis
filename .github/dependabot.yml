@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # AGP, Kotlin and Gradle must move together (see gradle/libs.versions.toml), so one grouped PR.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      gradle:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

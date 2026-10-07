@@ -1,0 +1,61 @@
+name: Reproducible build
+
+# F-Droid can publish the developer's own signed APK only when its build from source matches it
+# byte for byte. This builds the unsigned release twice, from two directories, and compares.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: first
+          persist-credentials: false
+
+      - uses: actions/checkout@v7
+        with:
+          path: second/elsewhere
+          persist-credentials: false
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+
+      - name: Build twice
+        run: |
+          for dir in first second/elsewhere; do
+            (cd "$dir" && ./gradlew --stacktrace --no-build-cache --no-configuration-cache assembleRelease)
+          done
+
+      - name: Compare
+        run: |
+          a=first/app/build/outputs/apk/release/app-release-unsigned.apk
+          b=second/elsewhere/app/build/outputs/apk/release/app-release-unsigned.apk
+          sha256sum "$a" "$b"
+          if ! cmp -s "$a" "$b"; then
+            echo "::error::The two builds differ; compare the uploaded APKs with diffoscope"
+            exit 1
+          fi
+
+      - name: Upload both APKs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: differing-apks
+          path: |
+            first/app/build/outputs/apk/release/app-release-unsigned.apk
+            second/elsewhere/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 7

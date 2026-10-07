@@ -1,0 +1,112 @@
+name: Release
+
+# Push a tag such as v1.0.0 to build, sign and publish that version. Setup: docs/RELEASING.md.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Add required reviewers to this environment in the repository settings to approve each release.
+    environment: release
+    permissions:
+      contents: write # the GitHub release
+      id-token: write # signing the provenance attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: The tag must match versionName
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! grep -qF "versionName = \"$version\"" app/build.gradle.kts; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match versionName in app/build.gradle.kts"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # No cache: a release is built from the tagged sources alone.
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-disabled: true
+
+      - name: Decode the signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::The signing secrets are missing; see docs/RELEASING.md"
+            exit 1
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Test and build the signed release
+        env:
+          DROYNIS_KEYSTORE: ${{ runner.temp }}/release.jks
+          DROYNIS_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          DROYNIS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          DROYNIS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        # No configuration cache: it would store the signing passwords.
+        run: ./gradlew --stacktrace --no-configuration-cache --no-build-cache check assembleRelease
+
+      - name: Check and name the APK
+        id: apk
+        run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          version="${GITHUB_REF_NAME#v}"
+          tools="$(printf '%s\n' "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)"
+          built=app/build/outputs/apk/release/app-release.apk
+          if [ ! -f "$built" ]; then
+            echo "::error::No signed APK was built"
+            exit 1
+          fi
+          "${tools}aapt2" dump permissions "$built" > permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "::error::The release APK requests android.permission.INTERNET"
+            exit 1
+          fi
+          "${tools}apksigner" verify --print-certs "$built" | tee certificates.txt
+          mkdir dist
+          cp "$built" "dist/droynis-$version.apk"
+          (cd dist && sha256sum "droynis-$version.apk" > "droynis-$version.apk.sha256")
+          cat dist/*.sha256
+          echo "certificate=$(sed -n 's/.*certificate SHA-256 digest: //p' certificates.txt | head -n 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Attest where the APK was built
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/droynis-*.apk
+
+      - name: Publish the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CERTIFICATE: ${{ steps.apk.outputs.certificate }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          code="$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts)"
+          changelog="fastlane/metadata/android/en-US/changelogs/$code.txt"
+          {
+            if [ -f "$changelog" ]; then
+              cat "$changelog"
+              echo
+            fi
+            echo "Signing certificate SHA-256: \`$CERTIFICATE\`"
+            echo
+            echo "Verify the download: \`sha256sum -c droynis-$version.apk.sha256\`, and that GitHub built it"
+            echo "from this tag: \`gh attestation verify droynis-$version.apk --repo $GITHUB_REPOSITORY\`."
+          } > notes.md
+          prerelease=()
+          case "$version" in *-*) prerelease=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Droynis $version" --notes-file notes.md "${prerelease[@]}"
