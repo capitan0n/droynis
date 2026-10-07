@@ -259,6 +259,14 @@ values that could not be read. Fields added since (`scan.grants`, `score.muted`,
 finding) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
 out. Both contain only scan results and the device facts passed in.
 
+Reports are made to be shared, so by default they leave out personal details (`PersonalDetails`):
+evidence a check marks `personal` (DNS servers, proxies, the Private DNS host, which can carry a
+NextDNS-style profile ID, and computers trusted for USB debugging), those values wherever a summary
+repeats them, and every IPv4, IPv6 and MAC address in the text, except "any address" and loopback.
+App names, the model and the Android version stay: findings are about them and they don't single
+out one phone. One menu switch, saved on the device, covers saving, sharing and copying; JSON says
+`"personalDetails": "hidden"` or `"included"` and marks `personal` evidence either way.
+
 ## 5. Open questions for review
 
 1. Application id `io.github.capitan0n.droynis`: cheap to change now, painful after release.

@@ -66,7 +66,8 @@ class HttpProxyCheck(private val network: NetworkProbe) : Check {
     private fun proxyEvidence(all: Reading<List<NetworkSnapshot>>): List<Evidence> {
         val networks = (all as? Reading.Value)?.value ?: return listOf(all.toEvidence("Other networks"))
         return networks.map { net ->
-            Evidence("Proxy on ${where(net)}${net.interfaceName?.let { " ($it)" } ?: ""}", net.httpProxy ?: "none", all.source)
+            val label = "Proxy on ${where(net)}${net.interfaceName?.let { " ($it)" } ?: ""}"
+            Evidence(label, net.httpProxy ?: "none", all.source, personal = net.httpProxy != null)
         } + if (networks.none { Transport.CELLULAR in it.transports }) {
             listOf(Evidence("Mobile data", "not connected", all.source, note = "its proxy is checked whenever it is connected"))
         } else {

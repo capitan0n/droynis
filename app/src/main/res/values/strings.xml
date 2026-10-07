@@ -15,6 +15,9 @@
     <string name="menu_save_json">Save report (JSON)…</string>
     <string name="menu_share_report">Share report</string>
     <string name="menu_copy_report">Copy report</string>
+    <string name="menu_hide_personal">Hide personal details</string>
+    <string name="personal_hidden">Reports leave out IP addresses, DNS and proxy servers and trusted computers.</string>
+    <string name="personal_included">Reports include IP addresses, DNS and proxy servers and trusted computers.</string>
     <string name="menu_theme">Theme</string>
     <string name="menu_help">Help</string>
     <string name="menu_about">About</string>
@@ -379,6 +382,8 @@
     <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
     <string name="faq_q8">Can I leave out a check I can\'t fix?</string>
     <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch. To undo them all at once, pick the Muted filter in the Checks tab and tap Unmute all.</string>
+    <string name="faq_q9">What does “Hide personal details” leave out of reports?</string>
+    <string name="faq_a9">It is on by default and applies to saved, shared and copied reports. It replaces every IP address, the DNS and proxy servers, the Private DNS host (a NextDNS-style host carries your personal ID) and the computers trusted for USB debugging with [hidden]. App names, the phone model and the Android version stay: the findings are about them, and they don\'t single out your phone. Droynis itself never sends a report anywhere.</string>
     <string name="faq_q7">Is Droynis part of Lynis?</string>
     <string name="faq_a7">No. Droynis is an independent project and is not affiliated with, endorsed by or connected to Lynis or CISOfy. Lynis, an audit tool for Linux and Unix, only inspired the idea of a readable audit with a hardening score. Droynis shares no code with it.</string>
 

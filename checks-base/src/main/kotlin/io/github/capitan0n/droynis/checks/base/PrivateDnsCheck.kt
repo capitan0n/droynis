@@ -58,9 +58,15 @@ internal fun networkEvidence(snapshot: Reading<NetworkSnapshot?>): List<Evidence
     return listOf(
         Evidence("Transports", net.transports.joinToString { it.name }.ifEmpty { "unknown" }, source),
         Evidence("Private DNS active", net.privateDnsActive?.toString() ?: "not reported", source),
-        Evidence("Private DNS server", net.privateDnsServer ?: "none (off or automatic)", source),
-        Evidence("DNS servers", net.dnsServers.joinToString().ifEmpty { "none reported" }, source),
-        Evidence("HTTP proxy", net.httpProxy ?: "none", source),
+        // A Private DNS hostname can carry a personal profile ID (NextDNS and the like).
+        Evidence(
+            "Private DNS server",
+            net.privateDnsServer ?: "none (off or automatic)",
+            source,
+            personal = net.privateDnsServer != null,
+        ),
+        Evidence("DNS servers", net.dnsServers.joinToString().ifEmpty { "none reported" }, source, personal = net.dnsServers.isNotEmpty()),
+        Evidence("HTTP proxy", net.httpProxy ?: "none", source, personal = net.httpProxy != null),
     ) + if (Transport.WIFI in net.transports) {
         listOf(Evidence("Wi-Fi security", net.wifiSecurity?.label ?: "not reported", source))
     } else {

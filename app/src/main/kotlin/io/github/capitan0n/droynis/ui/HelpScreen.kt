@@ -123,6 +123,7 @@ private val FAQ = listOf(
     R.string.faq_q5 to R.string.faq_a5,
     R.string.faq_q6 to R.string.faq_a6,
     R.string.faq_q8 to R.string.faq_a8,
+    R.string.faq_q9 to R.string.faq_a9,
     R.string.faq_q7 to R.string.faq_a7,
 )
 

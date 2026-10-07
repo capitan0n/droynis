@@ -53,7 +53,14 @@ class TrustedComputersCheck(private val root: RootShellProbe) : Check {
         return file.evaluate("The list of trusted computers", listOf(file.toEvidence(ADB_KEYS) { if (it == null) "no file" else "read" })) { text ->
             val keys = text?.let(::parse).orEmpty()
             val evidence = listOf(Evidence(ADB_KEYS, count(keys.size, "key"), file.source)) + keys.map { key ->
-                Evidence("Trusted computer", key.name ?: "(no name)", file.source, note = key.fingerprint?.let { "fingerprint $it" })
+                // A key's name is usually user@host of the computer: personal, like its fingerprint.
+                Evidence(
+                    "Trusted computer",
+                    key.name ?: "(no name)",
+                    file.source,
+                    note = key.fingerprint?.let { "fingerprint $it" },
+                    personal = true,
+                )
             }
             if (keys.isEmpty()) {
                 Outcome.pass("No computer is trusted for USB debugging", evidence)

@@ -20,12 +20,16 @@ object JsonReport {
         index: HardeningIndex,
         facts: List<DeviceFact>,
         appVersion: String,
+        /** Leave out what identifies the user and their network: [PersonalDetails]. */
+        hidePersonal: Boolean = false,
     ): String {
         val counts = findings.withoutMuted(index.muted).countByVerdict()
+        val shown = if (hidePersonal) PersonalDetails.hide(findings) else findings
         val root = linkedMapOf(
             "schema" to SCHEMA,
             "schemaVersion" to SCHEMA_VERSION,
             "generator" to linkedMapOf("app" to "Droynis", "version" to appVersion),
+            "personalDetails" to if (hidePersonal) "hidden" else "included",
             "scan" to linkedMapOf(
                 "startedAt" to context.startedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                 "sdkInt" to context.sdkInt,
@@ -45,7 +49,7 @@ object JsonReport {
                 "muted" to index.muted,
             ),
             "verdicts" to counts.entries.associate { it.key.name to it.value },
-            "findings" to findings.map { finding ->
+            "findings" to shown.map { finding ->
                 linkedMapOf(
                     "id" to finding.spec.id,
                     "title" to finding.spec.title,
@@ -63,6 +67,7 @@ object JsonReport {
                             "source" to it.source.method,
                             "grant" to it.source.grant?.name,
                             "note" to it.note,
+                            "personal" to it.personal,
                         )
                     },
                     "remediation" to finding.spec.remediation.text,

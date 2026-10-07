@@ -34,10 +34,12 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -70,6 +72,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.R
@@ -97,6 +103,9 @@ interface AppActions {
 
     /** Unmutes every muted check. */
     fun unmuteAll()
+
+    /** Whether reports leave out IP addresses, DNS and proxy servers and trusted computers. */
+    fun setHidePersonal(hide: Boolean)
 
     /** Shows Shizuku's own dialog asking the user to allow Droynis. */
     fun requestShizuku()
@@ -241,6 +250,7 @@ fun DroynisApp(
                 MainTopBar(
                     scanning = state.scanning,
                     reportReady = state.result != null,
+                    hidePersonal = state.hidePersonal,
                     actions = actions,
                     onHelp = { tab = Tab.HELP },
                     showAboutButton = tab == Tab.HELP,
@@ -378,6 +388,7 @@ fun DroynisApp(
 private fun MainTopBar(
     scanning: Boolean,
     reportReady: Boolean,
+    hidePersonal: Boolean,
     actions: AppActions,
     onHelp: () -> Unit,
     showAboutButton: Boolean,
@@ -440,6 +451,17 @@ private fun MainTopBar(
                         menuOpen = false
                         actions.copyReport()
                     }
+                    // Applies to all three exports above; stays open so the tick can be seen to change.
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_hide_personal)) },
+                        onClick = { actions.setHidePersonal(!hidePersonal) },
+                        leadingIcon = { Icon(Icons.Rounded.VisibilityOff, contentDescription = null) },
+                        trailingIcon = { Checkbox(checked = hidePersonal, onCheckedChange = null) },
+                        modifier = Modifier.semantics {
+                            role = Role.Checkbox
+                            toggleableState = ToggleableState(hidePersonal)
+                        },
+                    )
                     HorizontalDivider()
                     MenuItem(R.string.catalog_title, Icons.AutoMirrored.Rounded.ListAlt) {
                         menuOpen = false

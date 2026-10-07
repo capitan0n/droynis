@@ -80,6 +80,8 @@ data class UiState(
     val shizuku: ShizukuStatus? = null,
     /** Null until first read. */
     val root: RootStatus? = null,
+    /** Reports leave out IP addresses, DNS and proxy servers and trusted computers; on by default. */
+    val hidePersonal: Boolean = true,
 ) {
     val done: Int get() = findings.size
 }
@@ -96,7 +98,9 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     /** Every check in display order, whether or not it has run. */
     val catalog: List<CheckSpec> = checks.map { it.spec }
 
-    private val _state = MutableStateFlow(UiState(total = checks.size, muted = readMuted()))
+    private val _state = MutableStateFlow(
+        UiState(total = checks.size, muted = readMuted(), hidePersonal = prefs.getBoolean(KEY_HIDE_PERSONAL, true)),
+    )
     val state: StateFlow<UiState> = _state.asStateFlow()
 
     private val _themeMode = MutableStateFlow(readThemeMode())
@@ -260,6 +264,13 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    /** Whether saved, shared and copied reports leave out personal details. */
+    fun setHidePersonal(hide: Boolean) {
+        prefs.edit().putBoolean(KEY_HIDE_PERSONAL, hide).apply()
+        _state.update { it.copy(hidePersonal = hide) }
+        message(if (hide) R.string.personal_hidden else R.string.personal_included)
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME, mode.name).apply()
         _themeMode.value = mode
@@ -273,7 +284,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             ReportFormat.MARKDOWN -> MarkdownReport::render
             ReportFormat.JSON -> JsonReport::render
         }
-        return render(result.context, result.findings, result.index, facts, BuildConfig.VERSION_NAME)
+        return render(result.context, result.findings, result.index, facts, BuildConfig.VERSION_NAME, _state.value.hidePersonal)
     }
 
     /** e.g. droynis-report-2026-10-05-1402.json, so several scans a day sort and never collide. */
@@ -319,6 +330,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         private const val PREFS = "settings"
         private const val KEY_THEME = "theme"
         private const val KEY_MUTED = "muted_checks"
+        private const val KEY_HIDE_PERSONAL = "hide_personal"
         private const val KEY_ROOT = "root_tier"
         private val MIN_VISIBLE_SCAN = 700.milliseconds
 

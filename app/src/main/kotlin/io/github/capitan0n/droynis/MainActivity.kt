@@ -82,6 +82,8 @@ class MainActivity : ComponentActivity(), AppActions {
 
     override fun unmuteAll() = viewModel.unmuteAll()
 
+    override fun setHidePersonal(hide: Boolean) = viewModel.setHidePersonal(hide)
+
     override fun requestShizuku() = viewModel.requestShizuku()
 
     override fun enableRoot() = viewModel.enableRoot()

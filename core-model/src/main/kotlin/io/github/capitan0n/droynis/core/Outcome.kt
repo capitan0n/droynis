@@ -14,12 +14,18 @@ data class Source(val method: String, val grant: Grant? = null) {
     override fun toString(): String = if (grant == null) method else "$method (via $grant)"
 }
 
-/** One observed value. [value] is null when nothing could be read, and [note] says why. */
+/**
+ * One observed value. [value] is null when nothing could be read, and [note] says why.
+ *
+ * @property personal the value identifies the user, their network or their computers (a DNS server,
+ *   a proxy, a computer's name): reports leave it out unless the user asks for personal details.
+ */
 data class Evidence(
     val label: String,
     val value: String?,
     val source: Source,
     val note: String? = null,
+    val personal: Boolean = false,
 )
 
 /** What a check concluded. Build with the factory functions. */
