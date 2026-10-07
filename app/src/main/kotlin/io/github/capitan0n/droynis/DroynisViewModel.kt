@@ -239,7 +239,18 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
 
     /** Mutes or unmutes one check. The score updates at once; no new scan is needed. */
     fun setMuted(checkId: String, muted: Boolean) {
-        val ids = if (muted) _state.value.muted + checkId else _state.value.muted - checkId
+        saveMuted(if (muted) _state.value.muted + checkId else _state.value.muted - checkId)
+        message(if (muted) R.string.check_muted else R.string.check_unmuted)
+    }
+
+    /** Unmutes every check at once. */
+    fun unmuteAll() {
+        if (_state.value.muted.isEmpty()) return
+        saveMuted(emptySet())
+        message(R.string.all_unmuted)
+    }
+
+    private fun saveMuted(ids: Set<String>) {
         prefs.edit().putStringSet(KEY_MUTED, ids).apply()
         _state.update { state ->
             state.copy(
@@ -247,7 +258,6 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 result = state.result?.let { it.copy(index = HardeningIndex.of(it.findings, ids)) },
             )
         }
-        message(if (muted) R.string.check_muted else R.string.check_unmuted)
     }
 
     fun setThemeMode(mode: ThemeMode) {

@@ -6,6 +6,7 @@ import io.github.capitan0n.droynis.core.Check
 fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     // Device integrity
     SecurityPatchAgeCheck(probes.build),
+    VendorPatchCheck(probes.build, probes.attestation, probes.properties),
     StorageEncryptionCheck(probes.policy),
     BootloaderCheck(probes.attestation, probes.properties),
     OemUnlockingCheck(probes.properties),
@@ -30,6 +31,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     DeviceAdminsCheck(probes.policy, probes.packages),
     NotificationAccessCheck(probes.settings, probes.packages),
     SmsAccessCheck(probes.permissions, probes.defaultApps, probes.packages),
+    SmsSendingCheck(probes.permissions, probes.defaultApps, probes.packages),
     KeyboardAppsCheck(probes.inputMethods),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
@@ -39,6 +41,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     VpnCheck(probes.network),
     WifiSecurityCheck(probes.network),
     HttpProxyCheck(probes.network),
+    Cellular2gCheck(probes.cellular, probes.settings, probes.properties),
     UserCertificatesCheck(probes.certificates),
     BluetoothCheck(probes.settings),
     NfcCheck(probes.radios),

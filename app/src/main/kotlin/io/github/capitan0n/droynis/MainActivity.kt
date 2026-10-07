@@ -80,6 +80,8 @@ class MainActivity : ComponentActivity(), AppActions {
 
     override fun setMuted(checkId: String, muted: Boolean) = viewModel.setMuted(checkId, muted)
 
+    override fun unmuteAll() = viewModel.unmuteAll()
+
     override fun requestShizuku() = viewModel.requestShizuku()
 
     override fun enableRoot() = viewModel.enableRoot()

@@ -217,6 +217,9 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
     override fun selinuxMode(): Reading<String> =
         call(Source("getenforce", Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.selinuxMode(), source) }
 
+    override fun telephony(): Reading<String> =
+        call(Source(TELEPHONY_SOURCE, Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.telephony().orEmpty(), source) }
+
     /** Streamed through a pipe: the output can be larger than one binder call carries. */
     override fun dumpsys(service: String): Reading<String> =
         call(Source("dumpsys $service", Grant.SHIZUKU)) { shell, source ->
@@ -253,7 +256,7 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
         const val MANAGER_PACKAGE = "moe.shizuku.privileged.api"
 
         /** Bump when [ShellService] changes, so Shizuku replaces a shell left from an older Droynis. */
-        private const val SERVICE_VERSION = 2
+        private const val SERVICE_VERSION = 3
 
         private const val REQUEST_CODE = 0x0D50
         private const val CONNECT_TIMEOUT_MILLIS = 10_000L
@@ -261,5 +264,7 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
 
         /** `UserHandle.PER_USER_RANGE`: uids of each Android user start at a multiple of it. */
         private const val PER_USER_RANGE = 100_000
+
+        const val TELEPHONY_SOURCE = "telephony service: isIccLockEnabled, getAllowedNetworkTypesForReason"
     }
 }

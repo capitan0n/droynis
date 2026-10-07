@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.shizuku
 
+import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.core.Reading
@@ -15,10 +16,12 @@ interface PrivilegedShell {
 
 /**
  * Everything the Shizuku-tier checks read. Implemented by :platform-android, whose [settings]
- * fall back to the Shizuku shell for keys Android hides from apps.
+ * fall back to the Shizuku shell for keys Android hides from apps, and whose [cellular] reads SIMs
+ * as the shell user or root.
  */
 interface ShizukuProbes {
     val settings: SystemSettings
     val packages: PackageInventory
     val shell: PrivilegedShell
+    val cellular: CellularProbe
 }

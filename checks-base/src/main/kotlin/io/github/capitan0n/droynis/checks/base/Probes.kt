@@ -138,6 +138,12 @@ enum class WifiSecurity(val label: String) {
 interface NetworkProbe {
     /** The default network, or `Value(null)` when the device is offline. */
     fun activeNetwork(): Reading<NetworkSnapshot?>
+
+    /**
+     * Every connected network that carries internet traffic, the default one included: mobile data
+     * stays connected next to Wi-Fi on most phones. Each with its own proxy, such as one an APN sets.
+     */
+    fun allNetworks(): Reading<List<NetworkSnapshot>>
 }
 
 data class UserCertificate(val subject: String, val expires: LocalDate?)
@@ -196,6 +202,10 @@ data class KeyAttestation(
     val rootOfTrust: RootOfTrust?,
     /** Attested OS patch level as YYYYMM, when the certificate carries it. */
     val osPatchLevel: Int?,
+    /** Attested vendor image patch level, YYYYMMDD (some report YYYYMM); Keymaster 4 and later. */
+    val vendorPatchLevel: Int? = null,
+    /** Attested boot image (kernel) patch level, YYYYMMDD (some report YYYYMM); Keymaster 4 and later. */
+    val bootPatchLevel: Int? = null,
 )
 
 interface AttestationProbe {
@@ -244,4 +254,5 @@ interface BaseProbes {
     val webView: WebViewProbe
     val permissions: PermissionProbe
     val defaultApps: DefaultAppsProbe
+    val cellular: CellularProbe
 }

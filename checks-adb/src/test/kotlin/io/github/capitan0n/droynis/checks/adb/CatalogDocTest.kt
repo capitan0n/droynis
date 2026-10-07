@@ -81,7 +81,8 @@ object CatalogDoc {
         Tier.SHIZUKU to "[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps " +
             "the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that " +
             "runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the " +
-            "real USB debugging state on Android 17, and also runs every ADB-tier check.",
+            "real USB debugging state on Android 17, the SIM PIN lock and the Allow 2G switch, and also runs " +
+            "every ADB-tier check.",
         Tier.ROOT to "For phones that are already rooted. Once you turn it on, Droynis asks the root manager " +
             "(Magisk, KernelSU, APatch…) for a root shell at each scan and runs only a fixed list of read-only " +
             "commands. Root also runs every ADB and Shizuku check. Rooting weakens Android's security model, so " +

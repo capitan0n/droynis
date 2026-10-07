@@ -149,6 +149,13 @@
     <string name="detail_mute_body">A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out. Reports list it as muted. Use it for what you can\'t change, such as a patch level only the manufacturer can update.</string>
     <string name="check_muted">Check muted: the score leaves it out.</string>
     <string name="check_unmuted">The check counts in the score again.</string>
+    <string name="all_unmuted">All checks count in the score again.</string>
+    <string name="muted_explained">Muted checks still run, but the score and the issue lists leave them out.</string>
+    <string name="unmute_all">Unmute all</string>
+    <string name="unmute">Unmute</string>
+    <string name="unmute_all_title">Unmute all checks?</string>
+    <string name="unmute_all_body">Every muted check will count in the score and the issue lists again.</string>
+    <string name="cancel">Cancel</string>
     <string name="detail_set_up_tier">How to set it up</string>
     <string name="detail_duration">Time taken</string>
     <string name="detail_duration_value">%1$d ms</string>
@@ -278,7 +285,7 @@
     <string name="tier_adb">ADB</string>
     <string name="tier_adb_body">Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can\'t do. Droynis still never changes a setting.</string>
     <string name="tier_shizuku">Shizuku</string>
-    <string name="tier_shizuku_body">Shizuku is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands. It also runs every ADB-tier check, so the adb grants become optional.</string>
+    <string name="tier_shizuku_body">Shizuku is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands and reads what Android hides from apps, such as the SIM PIN lock and the Allow 2G switch. It also runs every ADB-tier check, so the adb grants become optional.</string>
     <string name="tier_shizuku_steps">1. Install Shizuku (open source, by RikkaApps).\n2. Open Shizuku and start it: with Wireless debugging on Android 11 and later, or from a computer with adb. Shizuku shows each step.\n3. Come back here and tap Allow access.\n4. After every reboot, start Shizuku again.</string>
     <string name="tier_root">Root</string>
     <string name="tier_root_body">For phones that are already rooted. Once you turn it on, Droynis asks your root manager (Magisk, KernelSU, APatch…) for a root shell at each scan, runs only a fixed list of read-only commands, and closes it. Root also runs every ADB and Shizuku check.</string>
@@ -371,7 +378,7 @@
     <string name="faq_q6">Does Droynis run in the background?</string>
     <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
     <string name="faq_q8">Can I leave out a check I can\'t fix?</string>
-    <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch.</string>
+    <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch. To undo them all at once, pick the Muted filter in the Checks tab and tap Unmute all.</string>
     <string name="faq_q7">Is Droynis part of Lynis?</string>
     <string name="faq_a7">No. Droynis is an independent project and is not affiliated with, endorsed by or connected to Lynis or CISOfy. Lynis, an audit tool for Linux and Unix, only inspired the idea of a readable audit with a hardening score. Droynis shares no code with it.</string>
 

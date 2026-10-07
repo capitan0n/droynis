@@ -1,7 +1,10 @@
 package io.github.capitan0n.droynis.checks.shizuku
 
+import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.checks.base.SimCard
+import io.github.capitan0n.droynis.checks.base.SimTelephony
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
@@ -47,16 +50,29 @@ class ShizukuChecksTest {
     private fun vpn(app: Reading<String?>, lockdown: Reading<String?> = value(null)) =
         AlwaysOnVpnCheck(settings(app, lockdown), inventory)
 
+    private fun cellular(
+        sims: Reading<List<SimCard>> = Reading.Value(listOf(SimCard(0, 1)), shellSource),
+        privileged: Reading<List<SimTelephony>>,
+    ) = object : CellularProbe {
+        override fun sims() = sims
+        override fun twoGDisallowed() = Reading.Unsupported("needs Android 14", shellSource)
+        override fun privileged() = privileged
+    }
+
+    private suspend fun simPin(vararg sims: SimTelephony, inUse: List<SimCard> = listOf(SimCard(0, 1))) =
+        SimPinCheck(cellular(Reading.Value(inUse, shellSource), Reading.Value(sims.toList(), shellSource))).run(context)
+
     @Test
     fun `every check needs the Shizuku tier`() {
         val probes = object : ShizukuProbes {
             override val settings = settings(value(null), value(null))
             override val packages = inventory
             override val shell = shell(Reading.Value("Enforcing", shellSource))
+            override val cellular = cellular(privileged = Reading.Value(emptyList(), shellSource))
         }
         val specs = shizukuChecks(probes).map { it.spec }
 
-        assertEquals(listOf("INTG-1201", "NETW-3201"), specs.map { it.id })
+        assertEquals(listOf("INTG-1201", "ACCS-2201", "NETW-3201"), specs.map { it.id })
         assertEquals(setOf(Tier.SHIZUKU), specs.map { it.requiredTier }.toSet())
     }
 
@@ -98,5 +114,41 @@ class ShizukuChecksTest {
         assertEquals(Status.UNSUPPORTED, vpn(value(null)).run(context).status)
         assertEquals(Status.UNSUPPORTED, vpn(value("")).run(context).status)
         assertEquals(Status.UNKNOWN, vpn(Reading.Unavailable("access denied", shellSource)).run(context).status)
+    }
+
+    @Test
+    fun `a SIM without its PIN fails, every SIM locked passes`() = runTest {
+        assertEquals(Status.PASS, simPin(SimTelephony(1, 0, pinLocked = true)).status)
+
+        val open = simPin(SimTelephony(1, 0, pinLocked = false))
+        assertEquals(Status.FAIL, open.status)
+        assertEquals("SIM 1 has no PIN: taken out, it works in any other phone", open.summary)
+        assertEquals("off", open.evidence.single { it.label == "SIM 1 PIN" }.value)
+
+        val dual = simPin(
+            SimTelephony(1, 0, pinLocked = true),
+            SimTelephony(2, 1, pinLocked = false),
+            inUse = listOf(SimCard(0, 1), SimCard(1, 2)),
+        )
+        assertEquals("SIM 2 has no PIN: taken out, it works in any other phone", dual.summary)
+    }
+
+    @Test
+    fun `the SIM PIN check never passes on what it could not read`() = runTest {
+        assertEquals(Status.UNKNOWN, simPin(SimTelephony(1, 0, pinLocked = null)).status)
+        assertEquals(Status.UNKNOWN, simPin().status)
+        // An inactive subscription the shell also lists does not count.
+        assertEquals(Status.UNKNOWN, simPin(SimTelephony(9, null, pinLocked = true)).status)
+        val unreadable = SimPinCheck(cellular(privileged = Reading.Unavailable("Shizuku stopped", shellSource))).run(context)
+        assertEquals(Status.UNKNOWN, unreadable.status)
+
+        val noSim = SimPinCheck(
+            cellular(Reading.Value(emptyList(), shellSource), Reading.Value(emptyList(), shellSource)),
+        ).run(context)
+        assertEquals(Status.UNSUPPORTED, noSim.status)
+        val noRadio = SimPinCheck(
+            cellular(Reading.Unsupported("no telephony", shellSource), Reading.Value(emptyList(), shellSource)),
+        ).run(context)
+        assertEquals(Status.UNSUPPORTED, noRadio.status)
     }
 }

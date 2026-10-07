@@ -23,6 +23,12 @@ object SettingsActions {
     /** `Settings.ACTION_WIFI_SETTINGS` */
     const val WIFI = "android.settings.WIFI_SETTINGS"
 
+    /** `Settings.ACTION_DATA_ROAMING_SETTINGS`: the Mobile network page, with network mode and Allow 2G. */
+    const val MOBILE_NETWORK = "android.settings.DATA_ROAMING_SETTINGS"
+
+    /** `Settings.ACTION_APN_SETTINGS`: Access point names, where a mobile data proxy is set. */
+    const val APN = "android.settings.APN_SETTINGS"
+
     /** `Settings.ACTION_VPN_SETTINGS` */
     const val VPN = "android.settings.VPN_SETTINGS"
 

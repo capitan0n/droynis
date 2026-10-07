@@ -94,8 +94,9 @@ app               Android     Compose UI (dashboard, checks, tools, help), regis
 Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from Droynis' own APK,
 in a separate process as the shell user (root if Shizuku was started with root), and hands its
 binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
-(table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, and `dumpsys` for an
-allowlist of services (`appops`, `trust`). Commands run without a shell, with absolute paths, a
+(table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, `dumpsys` for an
+allowlist of services (`appops`, `trust`), and `telephony()`, which runs `TelephonyReader`: a fixed
+set of telephony getters (below). Commands run without a shell, with absolute paths, a
 timeout and an output cap; `dumpsys` streams through a pipe because its output can exceed one
 binder call.
 There is no general "run" method, so even a compromised app process can only ask for these reads.
@@ -129,6 +130,30 @@ there), root modules in `/data/adb/modules` (shared by all three managers; INFO,
 apps listening on the network (`/proc/net/{tcp,udp}{,6}`: TCP in LISTEN and unconnected UDP on a
 port below 32768, on any address but loopback; system uids and system apps are listed, not counted).
 
+### Mobile network and SIM
+
+Apps get no permission-free way to read the SIM PIN lock or, from Android 12, the Allow 2G switch:
+`TelephonyManager.isIccLockEnabled` (Android 11+, system API) and `getAllowedNetworkTypesForReason`
+(Android 12+) need READ_PRIVILEGED_PHONE_STATE, which the shell user holds. `TelephonyReader` calls
+them through the `isub` and `phone` services' AIDL interfaces for each visible active subscription,
+plus `getSlotIndex`, and prints one line per SIM; only getters, no state. It runs in Droynis'
+Shizuku shell, or, with root only, in an `app_process` the root shell starts with Droynis' APK as
+class path (as Shizuku and scrcpy start their own code; hidden-API checks don't apply there). The
+APK path is Android's and is checked against a strict pattern. One read serves both checks per scan.
+`dumpsys phone` was rejected: on a Samsung Android 11 it holds no SIM lock lines.
+
+- **2G** (NETW-3010, base tier): on Android 8–11 the per-SIM `preferred_network_mode<subId>` setting
+  decides, readable by any app (checked against SettingsProvider in Android 11); unset means
+  `ro.telephony.default_network`. Modes follow `RILConstants`, with CDMA 1x counted as 2G like
+  Android's `NETWORK_CLASS_BITMASK_2G`; an unknown vendor mode is UNKNOWN. From Android 12 that
+  setting is no longer the source of truth, so it is never used there: device policy
+  (`DISALLOW_CELLULAR_2G`, Android 14+, set by Advanced Protection) passes on its own, else the
+  privileged read ANDs every reason's allowed types (network mode, power, carrier, Allow 2G, user
+  restriction), like Settings shows the switch; without Shizuku or root it is UNKNOWN.
+- **SIM PIN** (ACCS-2201, Shizuku tier, Android 11+): FAIL for any SIM in use with its lock off.
+  SIMs in use come from `getSimState` per slot and `SubscriptionManager.getSubscriptionIds`, which
+  need no permission; Droynis never reads a number, IMSI or ICCID.
+
 ### Special app access
 
 Settings › Apps › Special app access switches are app-ops. `dumpsys appops` prints a uid's mode
@@ -147,6 +172,19 @@ Android 12 and later put the per-app part under an `AppOps Uid Op State` header;
 older start it with the first `Uid` line, so the parser starts there when the header is missing.
 A line about a requested op in an unknown shape fails the parse rather than hide a grant, and the
 failure quotes the first such line (up to 100 characters), so a shared report is enough to fix it.
+
+### Patch levels and proxies
+
+INTG-1011 compares the vendor and boot (kernel) patch levels with Android's. Both come from the
+same hardware attestation as the bootloader check (tags 718 and 719, Keymaster 4 and later; one key
+per scan, cached), with `ro.vendor.build.security_patch` as the vendor fallback; a software
+attestation is ignored. Only the gap counts (over 90 days, critical beyond a year): an old stock
+phone is INTG-1010's finding, not this one's. The modem firmware version (`gsm.version.baseband`) is
+evidence only: nothing public maps it to fixes.
+
+NETW-3007 reads every connected network with the internet capability (`getAllNetworks`), so a
+proxy set in the mobile data APN counts while Wi-Fi is the default network. A proxy the default
+network reports but no network carries itself is a global proxy. MMS and IMS networks are skipped.
 
 ### Smart Lock
 
@@ -202,7 +240,8 @@ it is only left out of the index (score, cap, counts) and of the dashboard count
 lists. Muting never turns a FAIL into a PASS, and it is never silent: the dashboard shows how many
 checks are muted, and both reports list them (`score.muted`, `"muted": true` per finding in JSON).
 Muted ids are stored on the device (`SharedPreferences`) and the index is recomputed on the spot,
-without a new scan. Ids that no longer exist are dropped when read.
+without a new scan. Ids that no longer exist are dropped when read. The Checks tab's Muted filter offers
+Unmute all, after a confirmation, since re-muting means opening each check again.
 
 ### Why the critical cap stays
 

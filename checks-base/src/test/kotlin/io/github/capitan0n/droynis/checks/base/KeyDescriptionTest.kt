@@ -49,6 +49,8 @@ class KeyDescriptionTest {
         rootInSoftwareList: Boolean = false,
         patchLevel: Long? = 202609,
         bootKeyBytes: Int = 32,
+        vendorPatch: Long? = null,
+        bootPatch: Long? = null,
     ): ByteArray {
         val hardware = buildList {
             add(explicit(1, set(int(2)))) // purpose: sign
@@ -57,6 +59,8 @@ class KeyDescriptionTest {
                 add(explicit(704, if (bootKeyBytes == 32) rootOfTrust else seq(octets(ByteArray(bootKeyBytes)), bool(true), enumerated(0))))
             }
             if (patchLevel != null) add(explicit(706, int(patchLevel)))
+            if (vendorPatch != null) add(explicit(718, int(vendorPatch)))
+            if (bootPatch != null) add(explicit(719, int(bootPatch)))
         }
         val software = buildList {
             add(explicit(701, int(1_790_000_000_000))) // creationDateTime
@@ -106,11 +110,22 @@ class KeyDescriptionTest {
     }
 
     @Test
+    fun `reads the vendor and boot patch levels of Keymaster 4 and later`() {
+        val parsed = KeyDescription.parse(keyDescription(vendorPatch = 20260905, bootPatch = 202609))
+
+        assertEquals(20260905, parsed.vendorPatchLevel)
+        assertEquals(202609, parsed.bootPatchLevel)
+        assertEquals(20260905, parsed.toAttestation().vendorPatchLevel)
+    }
+
+    @Test
     fun `missing optional fields are null`() {
         val parsed = KeyDescription.parse(keyDescription(rootOfTrust = null, patchLevel = null))
 
         assertNull(parsed.rootOfTrust)
         assertNull(parsed.osPatchLevel)
+        assertNull(parsed.vendorPatchLevel)
+        assertNull(parsed.bootPatchLevel)
     }
 
     @Test

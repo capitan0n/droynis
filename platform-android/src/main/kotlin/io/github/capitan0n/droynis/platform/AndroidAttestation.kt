@@ -22,7 +22,18 @@ internal object AndroidAttestation : AttestationProbe {
 
     private const val KEYSTORE = "AndroidKeyStore"
 
-    override fun attest(): Reading<KeyAttestation> {
+    /** The bootloader and vendor patch checks read the same attestation; one key per scan is enough. */
+    private const val CACHE_NANOS = 60_000_000_000L
+    private val lock = Any()
+    private var cached: Pair<Long, Reading<KeyAttestation>>? = null
+
+    override fun attest(): Reading<KeyAttestation> = synchronized(lock) {
+        val now = System.nanoTime()
+        cached?.let { (at, reading) -> if (now - at < CACHE_NANOS) return reading }
+        generate().also { if (it is Reading.Value) cached = now to it }
+    }
+
+    private fun generate(): Reading<KeyAttestation> {
         val source = Source("Android Keystore key attestation (extension ${KeyDescription.OID})")
         return probe(source) {
             val alias = "droynis-attestation-${UUID.randomUUID()}"

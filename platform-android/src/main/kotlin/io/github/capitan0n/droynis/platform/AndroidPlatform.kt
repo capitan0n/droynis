@@ -9,6 +9,7 @@ import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BuildInfo
+import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.CertificateStore
 import io.github.capitan0n.droynis.checks.base.DefaultAppsProbe
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
@@ -63,6 +64,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val webView: WebViewProbe = AndroidWebView
     override val permissions: PermissionProbe = AndroidPermissions(app)
     override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
+    override val cellular: CellularProbe = AndroidCellular(app, shells)
     override val dumpsys: Dumpsys = RoutedDumpsys(grants, shells)
     override val shell: PrivilegedShell = shells
 

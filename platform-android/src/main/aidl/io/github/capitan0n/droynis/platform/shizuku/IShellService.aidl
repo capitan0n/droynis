@@ -18,4 +18,7 @@ interface IShellService {
 
     /** `dumpsys <service>` as a stream: its output can be larger than one binder call carries. */
     ParcelFileDescriptor dumpsys(String service) = 3;
+
+    /** The SIM lock and allowed network types of each active SIM, in TelephonyDump's format. */
+    String telephony() = 4;
 }

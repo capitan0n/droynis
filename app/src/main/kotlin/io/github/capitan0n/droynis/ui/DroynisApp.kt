@@ -95,6 +95,9 @@ interface AppActions {
     /** A muted check still runs and shows its result, but the score and counts leave it out. */
     fun setMuted(checkId: String, muted: Boolean)
 
+    /** Unmutes every muted check. */
+    fun unmuteAll()
+
     /** Shows Shizuku's own dialog asking the user to allow Droynis. */
     fun requestShizuku()
 
@@ -338,6 +341,11 @@ fun DroynisApp(
                                 tier = tier,
                                 onTier = { tier = it },
                                 onOpenCheck = { openCheckId = it },
+                                onUnmuteAll = {
+                                    actions.unmuteAll()
+                                    // Nothing is muted any more, so the Muted filter would show nothing.
+                                    filter = CheckFilter.ALL
+                                },
                             )
                             Tab.TOOLS -> ToolsScreen(state = state, actions = actions)
                             Tab.HELP -> HelpScreen(

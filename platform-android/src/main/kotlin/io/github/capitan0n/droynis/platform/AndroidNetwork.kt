@@ -15,7 +15,7 @@ import io.github.capitan0n.droynis.checks.base.WifiSecurity
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 
-/** Reads the default network's state. Needs only ACCESS_NETWORK_STATE; no internet access. */
+/** Reads the state of the default network and the others. Needs only ACCESS_NETWORK_STATE; no internet access. */
 internal class AndroidNetwork(private val context: Context) : NetworkProbe {
 
     override fun activeNetwork(): Reading<NetworkSnapshot?> {
@@ -31,6 +31,26 @@ internal class AndroidNetwork(private val context: Context) : NetworkProbe {
                     // The default proxy covers both a global proxy and the network's own.
                     connectivity.defaultProxy,
                 ),
+                source,
+            )
+        }
+    }
+
+    override fun allNetworks(): Reading<List<NetworkSnapshot>> {
+        val source = Source("ConnectivityManager.getAllNetworks() + LinkProperties")
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            ?: return Reading.Unsupported("no ConnectivityManager service", source)
+        return probe(source) {
+            // Deprecated for watching networks, still the one synchronous list of them.
+            @Suppress("DEPRECATION")
+            val networks = connectivity.allNetworks
+            Reading.Value(
+                networks.mapNotNull { network ->
+                    val capabilities = connectivity.getNetworkCapabilities(network) ?: return@mapNotNull null
+                    // MMS and IMS networks carry no web traffic; their APN proxies don't matter here.
+                    if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@mapNotNull null
+                    snapshot(capabilities, connectivity.getLinkProperties(network), proxy = null)
+                },
                 source,
             )
         }

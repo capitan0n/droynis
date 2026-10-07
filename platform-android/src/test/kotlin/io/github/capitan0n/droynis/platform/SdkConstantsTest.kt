@@ -2,6 +2,8 @@ package io.github.capitan0n.droynis.platform
 
 import android.app.admin.DevicePolicyManager
 import android.provider.Settings
+import android.telephony.TelephonyManager
+import io.github.capitan0n.droynis.checks.base.NetworkTypes
 import io.github.capitan0n.droynis.checks.base.BluetoothCheck
 import io.github.capitan0n.droynis.checks.base.DeveloperOptionsCheck
 import io.github.capitan0n.droynis.checks.base.PasswordVisibilityCheck
@@ -23,6 +25,8 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS, SettingsActions.DEVELOPER_OPTIONS)
         assertEquals(Settings.ACTION_WIRELESS_SETTINGS, SettingsActions.NETWORK)
         assertEquals(Settings.ACTION_WIFI_SETTINGS, SettingsActions.WIFI)
+        assertEquals(Settings.ACTION_DATA_ROAMING_SETTINGS, SettingsActions.MOBILE_NETWORK)
+        assertEquals(Settings.ACTION_APN_SETTINGS, SettingsActions.APN)
         assertEquals(Settings.ACTION_VPN_SETTINGS, SettingsActions.VPN)
         assertEquals(Settings.ACTION_BLUETOOTH_SETTINGS, SettingsActions.BLUETOOTH)
         assertEquals(Settings.ACTION_LOCATION_SOURCE_SETTINGS, SettingsActions.LOCATION)
@@ -40,6 +44,16 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_INPUT_METHOD_SETTINGS, SettingsActions.INPUT_METHODS)
         assertEquals(Settings.ACTION_DEVICE_INFO_SETTINGS, SettingsActions.DEVICE_INFO)
         assertEquals(Settings.ACTION_SETTINGS, SettingsActions.SETTINGS)
+    }
+
+    @Test
+    fun networkTypeBitsMatchTheSdk() {
+        assertEquals(TelephonyManager.NETWORK_TYPE_BITMASK_GSM, NetworkTypes.GSM)
+        assertEquals(TelephonyManager.NETWORK_TYPE_BITMASK_GPRS, NetworkTypes.GPRS)
+        assertEquals(TelephonyManager.NETWORK_TYPE_BITMASK_EDGE, NetworkTypes.EDGE)
+        assertEquals(TelephonyManager.NETWORK_TYPE_BITMASK_1xRTT, NetworkTypes.ONE_X_RTT)
+        assertEquals(TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_USER, 0)
+        assertEquals(TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_CARRIER, 2)
     }
 
     @Test

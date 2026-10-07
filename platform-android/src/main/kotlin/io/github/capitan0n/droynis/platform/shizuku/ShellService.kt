@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis.platform.shizuku
 
 import android.os.ParcelFileDescriptor
+import io.github.capitan0n.droynis.platform.TelephonyReader
 import java.io.IOException
 import java.io.Reader
 import java.util.concurrent.TimeUnit
@@ -12,9 +13,10 @@ import kotlin.system.exitProcess
  * (as root when Shizuku itself was started with root), creates it by class name, and hands its
  * binder to the app.
  *
- * Every method runs one fixed, read-only command with checked arguments. There is deliberately no
- * general "run this" call, so whatever reaches this binder can only ask for these reads. It runs
- * outside the app process, so it must not use the app's other classes or state.
+ * Every method runs one fixed, read-only command with checked arguments, or, for [telephony], a fixed
+ * set of telephony getters. There is deliberately no general "run this" call, so whatever reaches this
+ * binder can only ask for these reads. It runs outside the app process, so it must not use the app's
+ * state; [TelephonyReader] keeps none.
  *
  * Failures reach the app as IllegalArgumentException or IllegalStateException, the exceptions a
  * binder call carries back.
@@ -36,6 +38,8 @@ class ShellService : IShellService.Stub() {
     }
 
     override fun selinuxMode(): String = run(listOf(GETENFORCE)).trim()
+
+    override fun telephony(): String = TelephonyReader.read()
 
     override fun dumpsys(service: String?): ParcelFileDescriptor {
         require(service != null && service in DUMPSYS_SERVICES) { "dumpsys service not allowed" }

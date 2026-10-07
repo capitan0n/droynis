@@ -71,7 +71,7 @@ class NetworkChecksTest {
         assertEquals(Status.PASS, outcome(wifi()).status)
         val proxied = outcome(wifi().copy(httpProxy = "10.0.0.8:3128"))
         assertEquals(Status.FAIL, proxied.status)
-        assertEquals("Web traffic goes through the proxy 10.0.0.8:3128", proxied.summary)
+        assertEquals("Web traffic on Wi-Fi goes through the proxy 10.0.0.8:3128", proxied.summary)
         assertEquals(Status.UNKNOWN, outcome(null).status)
     }
 

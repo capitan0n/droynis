@@ -20,8 +20,8 @@ android {
         applicationId = "io.github.capitan0n.droynis"
         minSdk = 26
         targetSdk = 37
-        versionCode = 14
-        versionName = "0.10.0"
+        versionCode = 16
+        versionName = "0.11.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

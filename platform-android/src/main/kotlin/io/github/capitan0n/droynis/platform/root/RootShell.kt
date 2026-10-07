@@ -11,6 +11,7 @@ import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.platform.ShellAccess
+import io.github.capitan0n.droynis.platform.TelephonyReader
 import io.github.capitan0n.droynis.platform.readDumpsys
 import java.io.File
 import java.io.IOException
@@ -209,6 +210,23 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         }
     }
 
+    /**
+     * Runs [TelephonyReader] as root in an `app_process` with Droynis' own APK as its class path, the
+     * way Shizuku starts its server. The only variable part, the APK path, is Android's own and is
+     * checked against a strict pattern.
+     */
+    override fun telephony(): Reading<String> {
+        val apk = app.applicationInfo.sourceDir.orEmpty()
+        val main = TelephonyReader::class.java.name
+        if (!APK_PATH.matches(apk) || !CLASS_NAME.matches(main)) {
+            return Reading.Unavailable("unexpected app path", Source("su: app_process", Grant.ROOT))
+        }
+        val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main"
+        return read("app_process (telephony service)", command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+    }
+
     /** Runs one fixed [command] in the open shell and maps its exit code and output. */
     private inline fun <T> read(
         label: String,
@@ -373,6 +391,16 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         const val OPEN_TIMEOUT_MILLIS = 30_000L
         const val COMMAND_TIMEOUT_MILLIS = 10_000L
         const val DUMPSYS_TIMEOUT_MILLIS = 30_000L
+
+        /** Starting a Java process takes a second or two on older phones. */
+        const val TELEPHONY_TIMEOUT_MILLIS = 20_000L
+
+        /**
+         * Android installs apps under /data/app, or /mnt/expand/<volume>/app on adopted storage; the path
+         * may hold `~`, `=` and base64 characters, never a quote.
+         */
+        val APK_PATH = Regex("(/data/app|/mnt/expand/[A-Za-z0-9-]+/app)/[A-Za-z0-9._~=+/-]+\\.apk")
+        val CLASS_NAME = Regex("[A-Za-z0-9_.$]+")
         const val MAX_CHARS = 16L * 1024 * 1024
         const val MAX_ERROR = 200
         const val PER_USER_RANGE = 100_000

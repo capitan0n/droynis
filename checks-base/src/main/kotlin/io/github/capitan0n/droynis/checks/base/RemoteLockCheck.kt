@@ -35,7 +35,7 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
             text = "Turn on your phone's find-my-device service: with Google services, Settings › Google › " +
                 "All services › Find Hub, and Theft protection next to it; on Samsung, Find My Mobile. " +
                 "Without Google services, the open-source FMD app (on F-Droid) can locate, lock and erase " +
-                "the phone.",
+                "the phone. Once you have seen it turned on, you can mute this check.",
             settingsActions = listOf(SettingsActions.SECURITY),
         ),
         failsWhen = "no app or known service can lock and erase the phone remotely",

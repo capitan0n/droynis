@@ -76,8 +76,17 @@ class FakePackages(
     override fun label(packageName: String) = labels[packageName] ?: packageName
 }
 
-class FakeNetwork(private val snapshot: Reading<NetworkSnapshot?>) : NetworkProbe {
+/** By default [allNetworks] is just the active network, as on a phone with mobile data off. */
+class FakeNetwork(
+    private val snapshot: Reading<NetworkSnapshot?>,
+    private val all: Reading<List<NetworkSnapshot>> = when (snapshot) {
+        is Reading.Value -> value(listOfNotNull(snapshot.value))
+        is Reading.Unsupported -> snapshot
+        is Reading.Unavailable -> snapshot
+    },
+) : NetworkProbe {
     override fun activeNetwork() = snapshot
+    override fun allNetworks() = all
 }
 
 fun wifi(
@@ -166,6 +175,7 @@ class FakeProbes(
     override val webView: WebViewProbe = FakeWebView(),
     override val permissions: PermissionProbe = FakePermissions(),
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
+    override val cellular: CellularProbe = FakeCellular(),
 ) : BaseProbes
 
 class FakePermissions(private val holders: Reading<Map<String, Set<String>>> = value(emptyMap())) : PermissionProbe {
@@ -178,4 +188,14 @@ class FakeDefaultApps(
 ) : DefaultAppsProbe {
     override fun smsApp() = sms
     override fun phoneApp() = phone
+}
+
+class FakeCellular(
+    private val sims: Reading<List<SimCard>> = value(listOf(SimCard(slot = 0, subId = 1))),
+    private val policy: Reading<Boolean> = unsupported("needs Android 14"),
+    private val privileged: Reading<List<SimTelephony>> = unavailable("neither Shizuku nor root is connected"),
+) : CellularProbe {
+    override fun sims() = sims
+    override fun twoGDisallowed() = policy
+    override fun privileged() = privileged
 }

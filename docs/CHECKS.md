@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 50 checks.
+Every check Droynis runs, by privilege tier and category: 54 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,9 +13,9 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 36 |
+| [Base](#base-tier) | 39 |
 | [ADB](#adb-tier) | 8 |
-| [Shizuku](#shizuku-tier) | 2 |
+| [Shizuku](#shizuku-tier) | 3 |
 | [Root](#root-tier) | 4 |
 
 ## Base tier
@@ -25,6 +25,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [INTG-1010](#intg-1010-security-patch-age) | Security patch age | Warning | the security patch is older than 90 days (critical when over a year old) |
+| [INTG-1011](#intg-1011-vendor-and-kernel-patch-level) | Vendor and kernel patch level | Warning | the vendor or kernel patch is more than 90 days older than Android's (critical beyond a year) |
 | [INTG-1020](#intg-1020-storage-encryption) | Storage encryption | Critical | storage is unencrypted, or encrypted only with the default key |
 | [INTG-1030](#intg-1030-advanced-protection) | Advanced Protection (Android 16+) | Info | Advanced Protection is off |
 | [INTG-1040](#intg-1040-bootloader-lock) | Bootloader lock | Critical | the bootloader is unlocked or verified boot isn't passing (hardware key attestation, boot properties as a fallback) |
@@ -51,15 +52,17 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4006](#apps-4006-keyboard-apps) | Keyboard apps | Notice | a third-party keyboard is enabled |
 | [APPS-4007](#apps-4007-apps-built-for-old-android) | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
 | [APPS-4008](#apps-4008-apps-that-can-read-your-sms-or-call-log) | Apps that can read your SMS or call log | Notice | an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store) |
+| [APPS-4009](#apps-4009-apps-that-can-send-sms) | Apps that can send SMS | Notice | an app other than your SMS app can send SMS (a warning when it came from outside an app store) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
 | [NETW-3004](#netw-3004-bluetooth) | Bluetooth | Notice | Bluetooth is on |
 | [NETW-3005](#netw-3005-wi-fi-security) | Wi-Fi security (Android 12+) | Warning | the phone is on an open or WEP Wi-Fi network without a VPN |
 | [NETW-3006](#netw-3006-nfc) | NFC | Info | NFC is on |
-| [NETW-3007](#netw-3007-http-proxy) | HTTP proxy | Warning | web traffic goes through an HTTP proxy |
+| [NETW-3007](#netw-3007-http-proxy) | HTTP proxy | Warning | web traffic on Wi-Fi, mobile data or another network goes through an HTTP proxy |
 | [NETW-3008](#netw-3008-location) | Location | Notice | Location is on |
 | [NETW-3009](#netw-3009-wi-fi-and-bluetooth-scanning) | Wi-Fi and Bluetooth scanning | Notice | Wi-Fi or Bluetooth scanning is on |
+| [NETW-3010](#netw-3010-2g-mobile-networks) | 2G mobile networks | Notice | a SIM in use may connect to 2G networks |
 
 ### Device integrity
 
@@ -70,6 +73,14 @@ Warning · Android 8.0 and later · fails when the security patch is older than 
 The security patch level is the date of the newest Android security bulletin the OS says it includes. Since 2025 most fixes ship in quarterly releases, so a level older than about 90 days has missed at least one, and publicly known vulnerabilities stay open.
 
 **What to do:** Install pending system updates (Settings › System › Software update; the location varies by vendor). If the vendor no longer ships updates, the device is end-of-life: plan to replace it or move to a maintained OS that supports relocking the bootloader.
+
+#### INTG-1011 Vendor and kernel patch level
+
+Warning · Android 8.0 and later · fails when the vendor or kernel patch is more than 90 days older than Android's (critical beyond a year)
+
+Android's security patch date covers the parts Google ships. The kernel and the vendor image, with the drivers and the hardware layer, are patched separately, and the modem firmware is updated along with them. When they fall months behind Android's patch, as on custom ROMs that run on old firmware or phones whose maker updates only Android, their known holes stay open; kernel and GPU driver bugs are among the most exploited on Android.
+
+**What to do:** Install every system update. On a custom ROM, flash the newest firmware (vendor and modem images) for your device, or move to a ROM that ships it. A phone whose maker stopped firmware updates can't be fully patched.
 
 #### INTG-1020 Storage encryption
 
@@ -215,7 +226,7 @@ Notice · Android 8.0 and later · fails when no app or known service can lock a
 
 If the phone is lost or stolen, a find-my-device service lets you locate, lock and erase it from another device. Android doesn't let apps see whether Google's or the phone maker's service is turned on, so Droynis looks for an app allowed to lock and erase the phone, and for the built-in services it knows.
 
-**What to do:** Turn on your phone's find-my-device service: with Google services, Settings › Google › All services › Find Hub, and Theft protection next to it; on Samsung, Find My Mobile. Without Google services, the open-source FMD app (on F-Droid) can locate, lock and erase the phone.
+**What to do:** Turn on your phone's find-my-device service: with Google services, Settings › Google › All services › Find Hub, and Theft protection next to it; on Samsung, Find My Mobile. Without Google services, the open-source FMD app (on F-Droid) can locate, lock and erase the phone. Once you have seen it turned on, you can mute this check.
 
 ### Apps and permissions
 
@@ -283,6 +294,14 @@ One-time login codes arrive by SMS, so an app that reads SMS can take over accou
 
 **What to do:** Open Settings › Apps › the app › Permissions and set SMS and Call logs to "Don't allow" for apps that don't need them. Uninstall apps you don't recognize.
 
+#### APPS-4009 Apps that can send SMS
+
+Notice · Android 8.0 and later · fails when an app other than your SMS app can send SMS (a warning when it came from outside an app store)
+
+An app that can send SMS can text premium-rate numbers that are charged to your phone bill, or send messages in your name, without opening your messaging app; billing-fraud malware such as Joker does exactly that. Android asks before an app texts a premium number, unless its Premium SMS access is set to Always allow. Your SMS app needs this permission and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning.
+
+**What to do:** Open Settings › Apps › the app › Permissions and set SMS to "Don't allow" for apps that don't need it. Under Settings › Apps › Special app access › Premium SMS access, keep every app on Ask or Never allow. Uninstall apps you don't recognize.
+
 ### Network and radios
 
 #### NETW-3001 Private DNS
@@ -335,11 +354,11 @@ NFC talks to cards, payment terminals and tags held a few centimeters away. The 
 
 #### NETW-3007 HTTP proxy
 
-Warning · Android 8.0 and later · fails when web traffic goes through an HTTP proxy
+Warning · Android 8.0 and later · fails when web traffic on Wi-Fi, mobile data or another network goes through an HTTP proxy
 
-An HTTP proxy receives the web traffic of every app that honours it. A proxy you did not set up yourself, added by an app, a management profile or a network, can log the sites you visit and tamper with unencrypted pages.
+An HTTP proxy receives the web traffic of every app that honours it. A proxy you did not set up yourself, added by an app, a management profile, a Wi-Fi network or a mobile data access point (APN), can log the sites you visit and tamper with unencrypted pages. Droynis looks at Wi-Fi and at mobile data, which stays connected next to Wi-Fi on most phones.
 
-**What to do:** If you do not recognise the proxy, remove it: open the Wi-Fi network's details and set Proxy to None.
+**What to do:** If you do not recognise the proxy, remove it. For Wi-Fi, open the network's details and set Proxy to None. For mobile data, open Access point names (under Mobile network), pick the one in use and clear Proxy and Port, or reset to default. An operator's own APN proxy is expected, but it still sees your unencrypted traffic.
 
 #### NETW-3008 Location
 
@@ -356,6 +375,14 @@ Notice · Android 8.0 and later · fails when Wi-Fi or Bluetooth scanning is on
 With these on, the phone keeps scanning for Wi-Fi networks and Bluetooth devices even when you turn Wi-Fi and Bluetooth off, to help locate you. The radios stay active, so turning them off doesn't close their attack surface or stop location from working.
 
 **What to do:** Turn off Wi-Fi scanning and Bluetooth scanning under Settings › Location › Location services (on older Android: Location › Scanning).
+
+#### NETW-3010 2G mobile networks
+
+Notice · Android 8.0 and later · fails when a SIM in use may connect to 2G networks
+
+2G (GSM) never checks that a cell tower is genuine, and its encryption is weak or can be switched off. Fake base stations (IMSI catchers and "SMS blasters") pull nearby phones down to 2G to locate them, listen to calls, read texts or send scam SMS. With 2G off the phone ignores them; where an operator still relies on 2G, coverage can suffer. Android 12 and later hide this setting from apps, so there Droynis reads it with Shizuku or root.
+
+**What to do:** On Android 12 and later turn off Allow 2G (Settings › Network & internet › SIMs, or Mobile network; the place varies by vendor). Where there is no such switch, set Network mode to one without 2G, such as LTE/3G or 5G/LTE. Advanced Protection turns 2G off too.
 
 ## ADB tier
 
@@ -451,7 +478,7 @@ Info · Android 12 and later · fails when a user app may change or delete media
 
 ## Shizuku tier
 
-[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the real USB debugging state on Android 17, and also runs every ADB-tier check.
+[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the real USB debugging state on Android 17, the SIM PIN lock and the Allow 2G switch, and also runs every ADB-tier check.
 
 1. Install Shizuku and start it: with Wireless debugging on Android 11 and later, or from a
    computer with adb. Shizuku's own guide shows each step.
@@ -462,6 +489,7 @@ Info · Android 12 and later · fails when a user app may change or delete media
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [INTG-1201](#intg-1201-selinux-mode) | SELinux mode | Critical | SELinux is permissive or disabled |
+| [ACCS-2201](#accs-2201-sim-card-pin) | SIM card PIN (Android 11+) | Notice | a SIM in use has its PIN turned off |
 | [NETW-3201](#netw-3201-always-on-vpn-lockdown) | Always-on VPN lockdown | Notice | an always-on VPN lets traffic out while it is down |
 
 ### Device integrity
@@ -473,6 +501,16 @@ Critical · Android 8.0 and later · fails when SELinux is permissive or disable
 SELinux confines every app and system service to what its policy allows, so a bug in one of them can't take over the whole phone. Production Android always enforces it; a permissive or disabled SELinux usually means a modified kernel or ROM. Apps can't read the mode, but the shell user Shizuku runs as can.
 
 **What to do:** Settings can't turn SELinux back on. Install firmware that keeps it enforcing, such as the manufacturer's stock firmware or a ROM whose kernel enforces SELinux.
+
+### Access control
+
+#### ACCS-2201 SIM card PIN
+
+Notice · Android 11 and later · fails when a SIM in use has its PIN turned off
+
+Without a SIM PIN, whoever takes the SIM out of a lost or stolen phone can put it in another phone and receive your calls and texts, including the one-time codes that reset bank and email passwords. With the PIN on, the SIM stays locked after every restart until the PIN is entered. Most operators ship SIMs with a PIN, but it is easy to turn off.
+
+**What to do:** Turn on the SIM card lock (Settings › Security › SIM card lock, or Security & privacy › More security settings; the place varies by vendor) and change the PIN from the one printed on the SIM's card. Keep the PUK code somewhere safe: three wrong PINs lock the SIM until it is entered.
 
 ### Network and radios
 

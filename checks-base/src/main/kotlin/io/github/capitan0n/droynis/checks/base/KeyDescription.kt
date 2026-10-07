@@ -112,13 +112,17 @@ data class KeyDescription(
     val challenge: ByteArray,
     val rootOfTrust: RootOfTrust?,
     val osPatchLevel: Int?,
+    val vendorPatchLevel: Int? = null,
+    val bootPatchLevel: Int? = null,
 ) {
-    fun toAttestation() = KeyAttestation(attestationVersion, securityLevel, rootOfTrust, osPatchLevel)
+    fun toAttestation() =
+        KeyAttestation(attestationVersion, securityLevel, rootOfTrust, osPatchLevel, vendorPatchLevel, bootPatchLevel)
 
     override fun equals(other: Any?): Boolean =
         other is KeyDescription && attestationVersion == other.attestationVersion &&
             securityLevel == other.securityLevel && challenge.contentEquals(other.challenge) &&
-            rootOfTrust == other.rootOfTrust && osPatchLevel == other.osPatchLevel
+            rootOfTrust == other.rootOfTrust && osPatchLevel == other.osPatchLevel &&
+            vendorPatchLevel == other.vendorPatchLevel && bootPatchLevel == other.bootPatchLevel
 
     override fun hashCode(): Int = challenge.contentHashCode() * 31 + attestationVersion
 
@@ -126,6 +130,8 @@ data class KeyDescription(
         const val OID = "1.3.6.1.4.1.11129.2.1.17"
         private const val TAG_ROOT_OF_TRUST = 704
         private const val TAG_OS_PATCH_LEVEL = 706
+        private const val TAG_VENDOR_PATCH_LEVEL = 718
+        private const val TAG_BOOT_PATCH_LEVEL = 719
 
         /** Parses the value of `X509Certificate.getExtensionValue(OID)`: an OCTET STRING around the description. */
         fun fromExtensionValue(extension: ByteArray): KeyDescription = parse(Der.parse(extension).octetString())
@@ -146,6 +152,8 @@ data class KeyDescription(
                 challenge = fields[4].octetString(),
                 rootOfTrust = find(TAG_ROOT_OF_TRUST)?.let(::rootOfTrust),
                 osPatchLevel = find(TAG_OS_PATCH_LEVEL)?.integer()?.toInt(),
+                vendorPatchLevel = find(TAG_VENDOR_PATCH_LEVEL)?.integer()?.toInt(),
+                bootPatchLevel = find(TAG_BOOT_PATCH_LEVEL)?.integer()?.toInt(),
             )
         }
 

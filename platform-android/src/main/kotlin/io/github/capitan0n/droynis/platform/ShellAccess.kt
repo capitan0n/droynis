@@ -18,6 +18,9 @@ interface ShellAccess {
 
     /** `dumpsys <service>` for an allowlisted service. */
     fun dumpsys(service: String): Reading<String>
+
+    /** [TelephonyReader]'s read, run as this shell's user. */
+    fun telephony(): Reading<String>
 }
 
 /**
@@ -37,4 +40,7 @@ internal class ShellRouter(
 
     override fun selinuxMode(): Reading<String> =
         active()?.selinuxMode() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("getenforce"))
+
+    fun telephony(): Reading<String> =
+        active()?.telephony() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("telephony service"))
 }
