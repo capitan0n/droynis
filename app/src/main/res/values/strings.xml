@@ -78,6 +78,8 @@
 
     <!-- Dashboard -->
     <string name="score_label">Security score</string>
+    <string name="scan_label">Checks done</string>
+    <string name="scan_gauge_checks">of %1$d checks</string>
     <string name="score_out_of">/ 100</string>
     <string name="score_none">–</string>
     <string name="grade_label">Grade %1$s · %2$s</string>
@@ -361,6 +363,7 @@
     <string name="shizuku_not_reachable">Shizuku isn\'t running. Open Shizuku and start it first.</string>
     <string name="grant_dump">Lets Android\'s dumpsys answer Droynis.</string>
     <string name="tiers_adb_covered">Shizuku is active and runs these checks, so the adb grants below are optional.</string>
+    <string name="tiers_adb_covered_root">Root is active and runs these checks, so the adb grants below are optional.</string>
     <string name="grant_usage_stats">Lets dumpsys show per-app usage records. The Usage access switch in Settings is not enough.</string>
     <string name="help_privacy">Privacy</string>
     <string name="help_privacy_1">No internet permission: nothing leaves the phone unless you share a report yourself.</string>

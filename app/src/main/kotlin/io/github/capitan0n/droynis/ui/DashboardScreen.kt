@@ -178,8 +178,9 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                // While scanning, the ring counts finished checks: say so, so it never reads as a score.
                 Text(
-                    stringResource(R.string.score_label),
+                    stringResource(if (scanning) R.string.scan_label else R.string.score_label),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -190,7 +191,7 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                 }
                 RingGauge(fraction = fraction, color = color) {
                     if (scanning) {
-                        GaugeCenter(big = "${state.done}", small = "/ ${state.total}")
+                        GaugeCenter(big = "${state.done}", small = stringResource(R.string.scan_gauge_checks, state.total))
                     } else {
                         val score = index?.score
                         val shown by animateIntAsState(score ?: 0, animationSpec = tween(1100), label = "score")

@@ -28,14 +28,21 @@ dependencyResolutionManagement {
 
 rootProject.name = "droynis"
 
+// Directories group the modules by layer; project paths stay flat (":checks-adb"), so Gradle
+// commands, dependencies and Kotlin module names don't depend on where a module lives.
+fun module(path: String, directory: String) {
+    include(path)
+    project(path).projectDir = file(directory)
+}
+
 // Pure Kotlin/JVM: no Android SDK needed, unit-testable on any JVM.
-include(":core-model")
-include(":checks-base")
-include(":checks-adb")
-include(":checks-shizuku")
-include(":checks-root")
-include(":report")
+module(":core-model", "core/model")
+module(":report", "core/report")
+module(":checks-base", "checks/base")
+module(":checks-adb", "checks/adb")
+module(":checks-shizuku", "checks/shizuku")
+module(":checks-root", "checks/root")
 
 // Android: the only modules that touch framework APIs.
-include(":platform-android")
+module(":platform-android", "platform/android")
 include(":app")

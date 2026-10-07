@@ -36,6 +36,10 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   StrongBox attestations. The chain is not yet checked against Google's roots, so this is posture,
   not proof (row 1). Without hardware attestation it falls back to `ro.boot.*` properties, which
   root can fake towards "locked" but which do not lie about "unlocked" on their own.
+- **WebView** (INTG-1070): the provider package's `lastUpdateTime`. A system WebView that was never
+  updated on its own (ROMs that ship it with the OS) reports the file time from the system image,
+  which reproducible builds fix at 2009-01-01; there `Build.TIME`, the system image's build time,
+  is its date instead, and the result says it came with a system update.
 - **System properties** come from running `/system/bin/getprop` once per scan (cached 10 s).
   SELinux filters what an app may read; a missing property is "not visible", never "false".
   `sys.oem_unlock_allowed` is not readable on every device, so OEM unlocking can be UNKNOWN.
@@ -74,20 +78,25 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 ## 2. Modules
 
 ```
-core-model        Kotlin/JVM  Check contract, results, evidence, tiers, Scanner
-checks-base       Kotlin/JVM  base-tier checks + the probe interfaces they read
-checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys` probe they read
-checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
-checks-root       Kotlin/JVM  root-tier checks, their parsers and the `RootShellProbe` they read
-report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category summaries,
-                              Markdown and JSON reports, hiding personal details
-platform-android  Android     probe implementations; the only framework calls for checks;
-                              grant detection; the permission overview on the Tools screen;
-                              the Shizuku client and its read-only UserService (AIDL);
-                              the opt-in root shell
-app               Android     Compose UI (dashboard, checks, tools, help), registry wiring,
-                              settings deep links, report save/share
+Directory         Gradle project     Kind        Contents
+core/model        :core-model        Kotlin/JVM  Check contract, results, evidence, tiers, Scanner
+core/report       :report            Kotlin/JVM  hardening index, verdicts (✓ – ✗ ?), grades, category
+                                                 summaries, Markdown and JSON reports, hiding personal details
+checks/base       :checks-base       Kotlin/JVM  base-tier checks + the probe interfaces they read
+checks/adb        :checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parsers and the `Dumpsys` probe they
+                                                 read; CatalogDocTest, which keeps docs/CHECKS.md in sync
+checks/shizuku    :checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
+checks/root       :checks-root       Kotlin/JVM  root-tier checks, their parsers and the `RootShellProbe` they read
+platform/android  :platform-android  Android     probe implementations; the only framework calls for checks;
+                                                 grant detection; the permission overview on the Tools screen;
+                                                 the Shizuku client and its read-only UserService (AIDL);
+                                                 the opt-in root shell
+app               :app               Android     Compose UI (dashboard, checks, tools, help), registry
+                                                 wiring, settings deep links, report save/share
 ```
+
+Directories group modules by layer; Gradle project paths stay flat (settings.gradle.kts maps each one),
+so commands such as `./gradlew :checks-adb:test` don't depend on where a module lives.
 
 ### Shizuku
 

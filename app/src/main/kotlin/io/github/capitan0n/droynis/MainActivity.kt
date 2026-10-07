@@ -8,6 +8,7 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PersistableBundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -153,7 +154,7 @@ class MainActivity : ComponentActivity(), AppActions {
             viewModel.message(R.string.report_not_ready)
             return
         }
-        copyText(getString(R.string.report_subject), report, R.string.report_copied)
+        copyText(getString(R.string.report_subject), report, R.string.report_copied, sensitive = true)
     }
 
     override fun copy(label: String, text: String) = copyText(label, text, R.string.copied)
@@ -177,10 +178,20 @@ class MainActivity : ComponentActivity(), AppActions {
         }
     }
 
-    /** [explain] shows [message] even where Android 13+ confirms the copy itself. */
-    private fun copyText(label: String, text: String, message: Int, explain: Boolean = false) {
+    /**
+     * [explain] shows [message] even where Android 13+ confirms the copy itself. A [sensitive] copy
+     * stays out of the clipboard preview and keyboard suggestions.
+     */
+    private fun copyText(label: String, text: String, message: Int, explain: Boolean = false, sensitive: Boolean = false) {
         val clipboard = getSystemService(ClipboardManager::class.java) ?: return
-        clipboard.setPrimaryClip(ClipData.newPlainText(label, text))
+        val clip = ClipData.newPlainText(label, text)
+        if (sensitive) clip.description.extras = PersistableBundle().apply { putBoolean(EXTRA_IS_SENSITIVE, true) }
+        clipboard.setPrimaryClip(clip)
         if (explain || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) viewModel.message(message)
+    }
+
+    private companion object {
+        /** `ClipDescription.EXTRA_IS_SENSITIVE` (API 33); the literal also works on older releases. */
+        const val EXTRA_IS_SENSITIVE = "android.content.extra.IS_SENSITIVE"
     }
 }

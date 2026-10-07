@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis
 
 import android.app.Application
+import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
@@ -299,17 +300,28 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         val resolver = getApplication<Application>().contentResolver
         viewModelScope.launch {
             val saved = withContext(Dispatchers.IO) {
-                try {
-                    resolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray()) } != null
-                } catch (e: IOException) {
-                    false
-                } catch (e: SecurityException) {
-                    false
-                }
+                val bytes = text.toByteArray()
+                // "wt" truncates a file the user picked over; a few document providers only take "w",
+                // which is safe for the new, empty file the picker creates.
+                write(resolver, uri, "wt", bytes) || write(resolver, uri, "w", bytes)
             }
             message(if (saved) R.string.report_saved else R.string.report_save_failed)
         }
     }
+
+    /** False on any failure: a document provider's own exception must not crash the app. */
+    private fun write(resolver: ContentResolver, uri: Uri, mode: String, bytes: ByteArray): Boolean =
+        try {
+            resolver.openOutputStream(uri, mode)?.use { it.write(bytes) } != null
+        } catch (e: IOException) {
+            false
+        } catch (e: SecurityException) {
+            false
+        } catch (e: IllegalArgumentException) {
+            false // e.g. a provider that rejects the mode
+        } catch (e: UnsupportedOperationException) {
+            false
+        }
 
     fun message(resId: Int) {
         _messages.tryEmit(getApplication<Application>().getString(resId))

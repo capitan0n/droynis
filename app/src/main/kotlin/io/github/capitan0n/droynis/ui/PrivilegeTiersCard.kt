@@ -121,10 +121,16 @@ private fun ColumnScope.AdbSetup(grants: Set<Grant>, needed: List<Grant>, scanni
     val packageName = BuildConfig.APPLICATION_ID
     Text(stringResource(R.string.tier_adb_body), style = MaterialTheme.typography.bodyMedium)
     if (needed.isEmpty()) return
-    if (Grant.SHIZUKU in grants) {
+    // Shizuku and root both run every ADB-tier check without the grants.
+    val coveredBy = when {
+        Grant.SHIZUKU in grants -> R.string.tiers_adb_covered
+        Grant.ROOT in grants -> R.string.tiers_adb_covered_root
+        else -> null
+    }
+    if (coveredBy != null) {
         Spacer(Modifier.height(10.dp))
         Pill(
-            text = stringResource(R.string.tiers_adb_covered),
+            text = stringResource(coveredBy),
             container = StatusColors.Good.copy(alpha = 0.16f),
             content = MaterialTheme.colorScheme.onSurface,
             maxLines = Int.MAX_VALUE,

@@ -9,12 +9,12 @@ JSON report (⋮ › Save report (JSON), with Hide personal details on).
 - Never a false PASS: a value that can't be read is Unknown, a feature that doesn't exist is N/A.
 - No identifiers: no IMEI, serial, phone number, account or user names in evidence. Values that
   identify a network or a computer (DNS, proxies, hosts) get `personal = true`.
-- Check logic lives in the pure-Kotlin modules and is tested with fakes; only `platform-android`
-  calls the framework.
+- Check logic lives in the pure-Kotlin modules (`core/`, `checks/`) and is tested with fakes; only
+  `platform/android` calls the framework.
 
 ## Adding a check
 
-1. A class in the tier's module (`checks-base`, `checks-adb`, …) with a `CheckSpec`: a stable id
+1. A class in the tier's module (`checks/base`, `checks/adb`, …) with a `CheckSpec`: a stable id
    (`AREA-NNNN`, never reused), the explanation, the fix and `failsWhen`.
 2. One line in that tier's registry (`baseChecks()`, `adbChecks()`, …).
 3. Tests with fake probes, then `UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test` to regenerate

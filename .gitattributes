@@ -1,0 +1,10 @@
+# LF line endings for every text file on every OS, so a build from a Windows checkout is the
+# same as one from Linux (reproducible builds, F-Droid).
+* text=auto eol=lf
+
+# Windows start script: kept exactly as Gradle generates it, with CRLF.
+*.bat -text
+
+# Binary files are never touched.
+*.jar binary
+*.png binary

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.Accessibility
@@ -65,6 +66,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -80,6 +82,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -111,7 +114,7 @@ fun ToolsScreen(state: UiState, actions: AppActions) {
         item { PermissionsCard(state.permissions) { actions.openSettings(listOf(SettingsActions.PRIVACY)) } }
         item { ShortcutsCard(actions::openSettings) }
         item { DeviceInfoCard(state, actions::copy) }
-        item { ReportCard(reportReady = state.result != null, actions = actions) }
+        item { ReportCard(reportReady = state.result != null, hidePersonal = state.hidePersonal, actions = actions) }
     }
 }
 
@@ -491,7 +494,7 @@ private fun DeviceInfoCard(state: UiState, onCopy: (String, String) -> Unit) {
 }
 
 @Composable
-private fun ReportCard(reportReady: Boolean, actions: AppActions) {
+private fun ReportCard(reportReady: Boolean, hidePersonal: Boolean, actions: AppActions) {
     SectionCard(
         title = stringResource(R.string.tools_report),
         icon = Icons.Rounded.Description,
@@ -504,6 +507,25 @@ private fun ReportCard(reportReady: Boolean, actions: AppActions) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(Modifier.height(10.dp))
+        // The same switch as in the ⋮ menu: shown here, so it is clear what the buttons below export.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .toggleable(value = hidePersonal, role = Role.Switch, onValueChange = actions::setHidePersonal),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.menu_hide_personal), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(if (hidePersonal) R.string.personal_hidden else R.string.personal_included),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = hidePersonal, onCheckedChange = null)
+        }
         Spacer(Modifier.height(14.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(onClick = { actions.saveReport(ReportFormat.MARKDOWN) }, enabled = reportReady) {
