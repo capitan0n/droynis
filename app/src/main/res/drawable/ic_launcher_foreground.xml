@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The owl-shield: a shield that watches over the phone. Master: art/droynis-icon.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="28"
+                android:endX="54"
+                android:endY="84"
+                android:startColor="#FF3FC8BC"
+                android:endColor="#FF0B6669" />
+        </aapt:attr>
+    </path>
+    <!-- The shield's rim: a stroke clipped to the inside of the shape. -->
+    <group>
+        <clip-path android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z" />
+        <path
+            android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z"
+            android:strokeColor="#FF9BEFE6"
+            android:strokeWidth="3.4" />
+    </group>
+    <path android:fillColor="#FFCFF5F0" android:pathData="M34,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z M54,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z" />
+    <path android:fillColor="#FFF6B940" android:pathData="M37.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M57.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z" />
+    <path android:fillColor="#FF132029" android:pathData="M40.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z M60.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M41.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z M61.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z" />
+    <path android:fillColor="#FFD98E2B" android:pathData="M54,58.5 L57,62.5 L54,67 L51,62.5 Z" />
+    <!-- Chest feathers, which double as small check marks. -->
+    <path
+        android:pathData="M48.5,71 L51.5,73.5 L54.5,71 M53.5,71 L56.5,73.5 L59.5,71 M51,76 L54,78.5 L57,76"
+        android:strokeAlpha="0.8"
+        android:strokeColor="#FF6FD9CE"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.3" />
+</vector>

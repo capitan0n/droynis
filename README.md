@@ -1,3 +1,5 @@
+<img src="fastlane/metadata/android/en-US/images/icon.png" width="96" align="right" alt="">
+
 # Droynis
 
 [![CI](https://github.com/capitan0n/droynis/actions/workflows/ci.yml/badge.svg)](https://github.com/capitan0n/droynis/actions/workflows/ci.yml)
@@ -78,8 +80,5 @@ design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEA
 - [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 
 Author: Alexandros (capitan0n) · <https://github.com/capitan0n> · [capitan0n@protonmail.com](mailto:capitan0n@protonmail.com)
-
-The Android robot in the icon is reproduced or modified from work created and shared by Google and
-used according to terms described in the Creative Commons 3.0 Attribution License.
 
 License: GNU General Public License v3, see [LICENSE](LICENSE).

@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Themed-icon silhouette (Android 13+): the shield with the robot cut out. One even-odd path, so
-    the head, antennas and body are holes and the eyes, inside the head, are solid again.
--->
+<!-- Themed-icon silhouette (Android 13+): the owl-shield with its eyes and beak cut out. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -11,11 +8,6 @@
     <path
         android:fillColor="#FFFFFFFF"
         android:fillType="evenOdd"
-        android:pathData="M54,24 C61,28 68,31 76,32 L76,50 C76,65 67,77 54,84 C41,77 32,65 32,50 L32,32 C40,31 47,28 54,24 Z
-            M43,50 A11,11 0 0,1 65,50 Z
-            M47.81,40.87 L49.19,40.07 L46.94,36.17 L45.56,36.97 Z
-            M60.19,40.87 L58.81,40.07 L61.06,36.17 L62.44,36.97 Z
-            M48,45.5 A1.5,1.5 0 1,0 51,45.5 A1.5,1.5 0 1,0 48,45.5 Z
-            M57,45.5 A1.5,1.5 0 1,0 60,45.5 A1.5,1.5 0 1,0 57,45.5 Z
-            M43,53 L65,53 L65,66 Q65,70 61,70 L47,70 Q43,70 43,66 Z" />
+        android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z M37.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M57.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M54,58.5 L57,62.5 L54,67 L51,62.5 Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M40.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z M60.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z" />
 </vector>
