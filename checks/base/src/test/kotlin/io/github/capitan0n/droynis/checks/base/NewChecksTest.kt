@@ -5,6 +5,7 @@ import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
 class NewChecksTest {
@@ -65,6 +66,12 @@ class NewChecksTest {
         val smsReadingCalls = check("com.google.android.apps.messaging" to SmsAccessCheck.CALL_LOG).outcome()
         assertEquals(Status.PASS, smsReadingCalls.status) // preinstalled: listed, not counted
         assertEquals("1", smsReadingCalls.evidence.last().value)
+
+        // Preinstalled holders are only counted, so their labels are never loaded.
+        apps.labelled.clear()
+        check("com.android.carrierservices" to SmsAccessCheck.SMS, "org.kde.kdeconnect_tp" to SmsAccessCheck.SMS).outcome()
+        assertTrue("com.android.carrierservices" !in apps.labelled)
+        assertTrue("org.kde.kdeconnect_tp" in apps.labelled)
 
         assertEquals(
             Status.UNKNOWN,

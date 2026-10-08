@@ -52,15 +52,16 @@ class SmsSendingCheck(
         val smsApp = (sms as? Reading.Value)?.value
         val inventory = packages.byPackage()
 
-        val all = holders(
-            granted.value.keys.filter { it != smsApp }.sorted().map { AppRef(it, packages.label(it)) },
-            inventory,
-        )
-        val counted = all.filter { it.origin != AppOrigin.PREINSTALLED }
+        val others = granted.value.keys.filter { it != smsApp }.sorted()
+        // Preinstalled apps are only counted, so only the others need a label: loading one opens
+        // that app's resources, and a phone can have dozens of preinstalled holders.
+        val counted = others.map { it to originOf(it, inventory) }
+            .filter { (_, origin) -> origin != AppOrigin.PREINSTALLED }
+            .map { (pkg, origin) -> Holder(AppRef(pkg, packages.label(pkg)), origin) }
         val evidence = buildList {
             add(smsEvidence)
             counted.forEach { add(it.evidence("Can send SMS", granted.source)) }
-            val preinstalled = all.size - counted.size
+            val preinstalled = others.size - counted.size
             if (preinstalled > 0) {
                 add(Evidence("Apps that came with the phone and can send SMS", preinstalled.toString(), granted.source))
             }

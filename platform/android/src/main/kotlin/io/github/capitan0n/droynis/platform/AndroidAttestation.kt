@@ -22,15 +22,16 @@ internal object AndroidAttestation : AttestationProbe {
 
     private const val KEYSTORE = "AndroidKeyStore"
 
-    /** The bootloader and vendor patch checks read the same attestation; one key per scan is enough. */
-    private const val CACHE_NANOS = 60_000_000_000L
+    /**
+     * Generating an attested key takes up to a few seconds in secure hardware. What it attests (the
+     * bootloader lock, verified boot, the patch levels) changes only with a reboot, which also ends
+     * this process: one successful attestation serves every scan of this app run.
+     */
     private val lock = Any()
-    private var cached: Pair<Long, Reading<KeyAttestation>>? = null
+    private var cached: Reading.Value<KeyAttestation>? = null
 
     override fun attest(): Reading<KeyAttestation> = synchronized(lock) {
-        val now = System.nanoTime()
-        cached?.let { (at, reading) -> if (now - at < CACHE_NANOS) return reading }
-        generate().also { if (it is Reading.Value) cached = now to it }
+        cached ?: generate().also { if (it is Reading.Value) cached = it }
     }
 
     private fun generate(): Reading<KeyAttestation> {

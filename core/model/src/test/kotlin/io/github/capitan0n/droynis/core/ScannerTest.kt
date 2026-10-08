@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.core
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.Test
@@ -14,15 +15,18 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
 
 class ScannerTest {
 
@@ -109,6 +113,27 @@ class ScannerTest {
             assertEquals(Status.PASS, findings.getValue("TEST-0002").status)
         } finally {
             release.countDown()
+        }
+    }
+
+    @Test
+    fun `a busy collecting thread neither delays the checks nor counts as their time`(): Unit = runBlocking {
+        // Like Android's main thread drawing a frame: the collector is slow to take each finding.
+        val collector = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        try {
+            // Check n takes n × 60 ms, so most of them finish while the collector is busy.
+            val checks = (1..5).map { n -> FakeCheck(spec("TEST-000$n")) { Thread.sleep(n * 60L); Outcome.pass("fine") } }
+            val findings = withContext(collector) {
+                Scanner().scan(checks, context).onEach { Thread.sleep(200) }.toList()
+            }
+
+            assertEquals(5, findings.size)
+            for (finding in findings) {
+                val work = finding.spec.id.takeLast(1).toLong() * 60
+                assertTrue(finding.elapsedMillis < work + 100, "${finding.spec.id} took $work ms but reports ${finding.elapsedMillis} ms")
+            }
+        } finally {
+            collector.close()
         }
     }
 

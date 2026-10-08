@@ -41,7 +41,15 @@ internal class AndroidDevicePolicy(
         }
     }
 
-    override fun activeAdmins(): Reading<List<AdminApp>> {
+    // Two checks read the admins; each parse opens the admin's own resources.
+    private val admins = ScanCache<List<AdminApp>>()
+
+    override fun activeAdmins(): Reading<List<AdminApp>> = admins.get(::readAdmins)
+
+    /** Drops the admins kept for one scan. */
+    fun clearCache() = admins.clear()
+
+    private fun readAdmins(): Reading<List<AdminApp>> {
         val source = Source("DevicePolicyManager.getActiveAdmins()")
         val policy = context.getSystemService(DevicePolicyManager::class.java)
             ?: return Reading.Unsupported("no DevicePolicyManager service", source)

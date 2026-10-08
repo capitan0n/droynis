@@ -12,6 +12,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -34,17 +35,21 @@ data class ScanContext(
  * check keeps its worker thread until the call returns (the scan does not wait for it). Native
  * crashes and out-of-memory kills still take the process down.
  */
-class Scanner(workDispatcher: CoroutineDispatcher = Dispatchers.IO) {
+class Scanner(private val workDispatcher: CoroutineDispatcher = Dispatchers.IO) {
 
     // Checks run outside the caller's scope so a hung check cannot hold the scan open.
     private val isolation = CoroutineScope(SupervisorJob() + workDispatcher)
 
-    /** Emits one [Finding] per check, in completion order. */
+    /**
+     * Emits one [Finding] per check, in completion order. Starting, gating and timing the checks
+     * runs on the work dispatcher whatever thread collects: on Android's main thread, a busy frame
+     * would otherwise hold back every result and count its wait as the check's time.
+     */
     fun scan(checks: List<Check>, context: ScanContext): Flow<Finding> = channelFlow {
         for (check in checks) {
             launch { send(execute(check, context)) }
         }
-    }
+    }.flowOn(workDispatcher)
 
     private suspend fun execute(check: Check, context: ScanContext): Finding {
         val spec = check.spec

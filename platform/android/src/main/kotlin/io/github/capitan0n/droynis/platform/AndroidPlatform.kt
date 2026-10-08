@@ -53,7 +53,8 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val build: BuildInfo = AndroidBuildInfo
     private val androidPackages = AndroidPackages(app)
     override val packages: PackageInventory = androidPackages
-    override val policy: DevicePolicy = AndroidDevicePolicy(app, packages::label)
+    private val devicePolicy = AndroidDevicePolicy(app, packages::label)
+    override val policy: DevicePolicy = devicePolicy
     override val accessibility: AccessibilityProbe = AndroidAccessibility(app, packages::label)
     override val network: NetworkProbe = AndroidNetwork(app)
     override val certificates: CertificateStore = AndroidCertificates
@@ -105,6 +106,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
         routedDumpsys.clear()
         androidPackages.clearCache()
         androidPermissions.clearCache()
+        devicePolicy.clearCache()
         root.close()
     }
 

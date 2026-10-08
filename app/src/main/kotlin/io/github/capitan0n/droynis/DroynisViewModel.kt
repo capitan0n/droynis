@@ -100,7 +100,13 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     val catalog: List<CheckSpec> = checks.map { it.spec }
 
     private val _state = MutableStateFlow(
-        UiState(total = checks.size, muted = readMuted(), hidePersonal = prefs.getBoolean(KEY_HIDE_PERSONAL, true)),
+        UiState(
+            total = checks.size,
+            muted = readMuted(),
+            hidePersonal = prefs.getBoolean(KEY_HIDE_PERSONAL, true),
+            // Build constants only, so the dashboard's device card is filled from the start.
+            device = platform.build.device(),
+        ),
     )
     val state: StateFlow<UiState> = _state.asStateFlow()
 
@@ -137,7 +143,15 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         platform.root.enabled = prefs.getBoolean(KEY_ROOT, false)
         platform.shizuku.addListener(onShizukuChanged)
         scan()
-        refreshTools()
+        // The Tools screen's permission overview loads the label of every app, which needs the same
+        // package manager and resource locks as the scan's checks: started together, it slows the
+        // first scan. Read it once the first scan is done; the Tools screen also refreshes itself
+        // whenever it opens.
+        val firstScan = scanJob
+        viewModelScope.launch {
+            firstScan?.join()
+            refreshTools()
+        }
     }
 
     override fun onCleared() {
@@ -148,23 +162,27 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     fun scan() {
         val previous = scanJob
         previous?.cancel()
-        scanJob = viewModelScope.launch {
+        // Off the main thread from start to end: when the app opens, the main thread is busy drawing
+        // the first frame, and every step of the scan would otherwise wait for it. The state is a
+        // StateFlow, safe to update from any thread.
+        scanJob = viewModelScope.launch(Dispatchers.IO) {
             // Let a cancelled scan close its root shell first, so it can't close this scan's.
             previous?.join()
             val started = TimeSource.Monotonic.markNow()
             // Starting the Shizuku shell can take a few seconds, so show the scan as running first.
             _state.update { it.copy(scanning = true, findings = emptyMap()) }
-            val context = withContext(Dispatchers.IO) { platform.newScanContext() }
-            _state.update { it.copy(grants = context.capabilities.grants) }
-            refreshShizuku()
-            refreshRoot()
+            val context = platform.newScanContext()
+            // Read after newScanContext, which connects Shizuku and opens root, and shown in one update.
+            val shizuku = platform.shizuku.status()
+            val root = platform.root.status()
+            _state.update { it.copy(grants = context.capabilities.grants, shizuku = shizuku, root = root) }
             try {
                 scanner.scan(checks, context).collect { finding ->
                     _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
                 }
             } finally {
                 // The root shell lives only as long as a scan, even a cancelled one.
-                withContext(NonCancellable + Dispatchers.IO) { platform.scanFinished() }
+                withContext(NonCancellable) { platform.scanFinished() }
             }
             // Cosmetic only: a scan takes a fraction of a second, too short to see that it ran.
             delay(MIN_VISIBLE_SCAN - started.elapsedNow())

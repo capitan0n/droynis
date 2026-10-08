@@ -42,6 +42,9 @@ class MainActivity : ComponentActivity(), AppActions {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // Created here rather than in the first composition, so the first scan runs while the first
+        // frame is being drawn.
+        val viewModel = viewModel
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {

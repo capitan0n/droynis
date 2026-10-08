@@ -80,7 +80,7 @@ data class InstalledApp(
     val packageName: String,
     val isSystem: Boolean,
     val isDebuggable: Boolean,
-    /** Package that installed the app, or null when unknown (for example adb). */
+    /** Package that installed the app; null when unknown (for example adb), and for system apps, which aren't asked. */
     val installer: String?,
     /** The Android API level the app was built for (`targetSdkVersion`). */
     val targetSdk: Int,

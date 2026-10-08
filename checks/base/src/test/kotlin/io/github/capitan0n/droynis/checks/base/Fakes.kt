@@ -72,8 +72,11 @@ class FakePackages(
     private val apps: Reading<List<InstalledApp>> = value(emptyList()),
     private val labels: Map<String, String> = emptyMap(),
 ) : PackageInventory {
+    /** Packages whose label a check asked for: loading a label is slow on a phone. */
+    val labelled = mutableListOf<String>()
+
     override fun installedApps() = apps
-    override fun label(packageName: String) = labels[packageName] ?: packageName
+    override fun label(packageName: String) = (labels[packageName] ?: packageName).also { labelled += packageName }
 }
 
 /** By default [allNetworks] is just the active network, as on a phone with mobile data off. */

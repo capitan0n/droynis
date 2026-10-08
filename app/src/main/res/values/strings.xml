@@ -78,8 +78,6 @@
 
     <!-- Dashboard -->
     <string name="score_label">Security score</string>
-    <string name="scan_label">Checks done</string>
-    <string name="scan_gauge_checks">of %1$d checks</string>
     <string name="score_out_of">/ 100</string>
     <string name="score_none">–</string>
     <string name="grade_label">Grade %1$s · %2$s</string>

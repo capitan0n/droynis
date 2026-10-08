@@ -2,7 +2,11 @@ package io.github.capitan0n.droynis.ui
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -89,11 +93,12 @@ fun VerdictIcon(verdict: Verdict?, modifier: Modifier = Modifier, size: Dp = 28.
 
 /**
  * A 270° ring gauge. The fill animates to [fraction]; the track is the same hue, faded, so the
- * gauge reads as one colored object.
+ * gauge reads as one colored object. A null [fraction] means the value isn't known yet: a short arc
+ * then sweeps along the track, with no amount that could be mistaken for one.
  */
 @Composable
 fun RingGauge(
-    fraction: Float,
+    fraction: Float?,
     color: Color,
     modifier: Modifier = Modifier,
     size: Dp = 188.dp,
@@ -101,10 +106,21 @@ fun RingGauge(
     center: @Composable () -> Unit,
 ) {
     val animated by animateFloatAsState(
-        targetValue = fraction.coerceIn(0f, 1f),
+        targetValue = (fraction ?: 0f).coerceIn(0f, 1f),
         animationSpec = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
         label = "gauge",
     )
+    // Runs only while the value is unknown, and is read while drawing, so it redraws, not recomposes.
+    val sweep = if (fraction == null) {
+        rememberInfiniteTransition(label = "gaugeSweep").animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(tween(durationMillis = 900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+            label = "sweep",
+        )
+    } else {
+        null
+    }
     val track = color.copy(alpha = 0.18f)
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -113,13 +129,20 @@ fun RingGauge(
             val arcSize = Size(this.size.width - stroke, this.size.height - stroke)
             val style = Stroke(width = stroke, cap = StrokeCap.Round)
             drawArc(track, startAngle = 135f, sweepAngle = 270f, useCenter = false, topLeft = topLeft, size = arcSize, style = style)
-            if (animated > 0f) {
+            val position = sweep?.value
+            if (position != null) {
+                val start = 135f + (270f - SWEEP_ARC) * position
+                drawArc(color, startAngle = start, sweepAngle = SWEEP_ARC, useCenter = false, topLeft = topLeft, size = arcSize, style = style)
+            } else if (animated > 0f) {
                 drawArc(color, startAngle = 135f, sweepAngle = 270f * animated, useCenter = false, topLeft = topLeft, size = arcSize, style = style)
             }
         }
         center()
     }
 }
+
+/** Length of the arc that sweeps an unknown [RingGauge], in degrees. */
+private const val SWEEP_ARC = 60f
 
 /** A stacked bar of verdict counts: green, yellow, red, then grey; checks still running stay empty. */
 @Composable

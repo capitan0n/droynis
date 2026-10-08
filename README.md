@@ -1,10 +1,8 @@
-<img src="fastlane/metadata/android/en-US/images/icon.png" width="96" align="right" alt="">
 
 # Droynis
+<img src="fastlane/metadata/android/en-US/images/icon.png" width="96" align="right" alt="">
 
-[![CI](https://github.com/capitan0n/droynis/actions/workflows/ci.yml/badge.svg)](https://github.com/capitan0n/droynis/actions/workflows/ci.yml)
-
-A read-only security and privacy audit for Android, inspired by Lynis. Droynis checks the phone it
+A read-only security and privacy audit for Android, inspired by Lynis (Android+Lynis). Droynis checks the phone it
 runs on, explains every finding, shows the evidence and opens the Settings screen that fixes it. It
 never changes anything itself.
 

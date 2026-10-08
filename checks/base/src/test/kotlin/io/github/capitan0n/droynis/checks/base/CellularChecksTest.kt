@@ -225,6 +225,7 @@ class CellularChecksTest {
         ).outcome()
 
         assertEquals(Status.PASS, check(setOf("com.samsung.android.messaging", "com.android.phone")).status)
+        assertTrue("com.android.phone" !in apps.labelled) // preinstalled: counted, never labelled
 
         val kde = check(setOf("com.samsung.android.messaging", "org.kde.kdeconnect_tp"))
         assertEquals(Status.FAIL, kde.status)

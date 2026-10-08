@@ -186,8 +186,8 @@ failure quotes the first such line (up to 100 characters), so a shared report is
 
 INTG-1011 compares the vendor and boot (kernel) patch levels with Android's. Both come from the
 same hardware attestation as the bootloader check (tags 718 and 719, Keymaster 4 and later; one key
-per scan, cached), with `ro.vendor.build.security_patch` as the vendor fallback; a software
-attestation is ignored. Only the gap counts (over 90 days, critical beyond a year): an old stock
+per app run, since what it attests changes only with a reboot), with `ro.vendor.build.security_patch`
+as the vendor fallback; a software attestation is ignored. Only the gap counts (over 90 days, critical beyond a year): an old stock
 phone is INTG-1010's finding, not this one's. The modem firmware version (`gsm.version.baseband`) is
 evidence only: nothing public maps it to fixes.
 
@@ -232,7 +232,8 @@ data class Finding(spec, status, severity, summary, evidence, elapsedMillis)  //
 - Grants are detected for every scan (`checkSelfPermission`, plus the usage-stats app-op not
   being denied), because `pm grant` and `pm revoke` take effect without a restart.
 - `Scanner`: gates on `minSdk` and grants (UNSUPPORTED, not run), runs the rest concurrently with
-  a per-check timeout; exceptions and timeouts become UNKNOWN.
+  a per-check timeout; exceptions and timeouts become UNKNOWN. All of it runs off the collecting
+  thread, so a busy main thread neither delays results nor counts in a check's `elapsedMillis`.
 
 ## 4. Scoring
 

@@ -14,13 +14,15 @@ internal object AndroidSystemProperties : SystemProperties {
     private val LINE = Regex("""^\[([^\]]+)]: \[(.*)]$""")
     private val source = Source("/system/bin/getprop")
 
-    // Several checks read properties in the same scan; one process per scan is enough.
-    @Volatile private var cached: Pair<Long, Reading<Map<String, String>>>? = null
+    // Several checks read properties in the same scan, most of them at its start: one process serves
+    // them all, and the others wait for it instead of starting their own.
+    private val lock = Any()
+    private var cached: Pair<Long, Reading<Map<String, String>>>? = null
 
-    override fun all(): Reading<Map<String, String>> {
+    override fun all(): Reading<Map<String, String>> = synchronized(lock) {
         val now = System.nanoTime()
         cached?.let { (at, reading) -> if (now - at < CACHE_NANOS) return reading }
-        return read().also { cached = now to it }
+        read().also { cached = now to it }
     }
 
     private fun read(): Reading<Map<String, String>> = probe(source) {

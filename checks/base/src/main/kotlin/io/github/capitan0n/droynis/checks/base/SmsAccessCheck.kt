@@ -58,9 +58,12 @@ class SmsAccessCheck(
         val unexplained = granted.value.mapValues { (pkg, held) ->
             held.filterNot { (pkg == smsApp && it in SMS) || (pkg == phoneApp && it in CALL_LOG) }.toSet()
         }.filterValues { it.isNotEmpty() }
-        val all = unexplained.map { (pkg, held) -> Holder(AppRef(pkg, packages.label(pkg)), originOf(pkg, inventory)) to held }
-        val counted = all.filter { (holder, _) -> holder.origin != AppOrigin.PREINSTALLED }
-        val preinstalled = all.size - counted.size
+        // Preinstalled holders are only counted, so only the others need a label: loading one opens
+        // that app's resources, and a phone can have dozens of preinstalled holders.
+        val origins = unexplained.mapValues { (pkg, _) -> originOf(pkg, inventory) }
+        val counted = unexplained.filterKeys { origins.getValue(it) != AppOrigin.PREINSTALLED }
+            .map { (pkg, held) -> Holder(AppRef(pkg, packages.label(pkg)), origins.getValue(pkg)) to held }
+        val preinstalled = unexplained.size - counted.size
 
         val evidence = buildList {
             addAll(defaultsEvidence)

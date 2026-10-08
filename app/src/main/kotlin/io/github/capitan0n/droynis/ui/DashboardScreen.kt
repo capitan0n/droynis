@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.ui
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,10 +73,12 @@ fun DashboardScreen(
     onShowChecks: (CheckFilter, Category?) -> Unit,
     onShowTools: () -> Unit,
 ) {
-    // Live while scanning, so tiles and bars fill in as checks finish; derived once per change.
-    // Muted checks are left out everywhere here, like in the score.
-    val findings = remember(catalog, state.findings, state.muted) {
-        catalog.mapNotNull { state.findings[it.id] }.withoutMuted(state.muted)
+    // The first scan fills tiles and bars in live as checks finish. A rescan keeps the last result
+    // on screen until it is complete, instead of emptying everything for a few seconds.
+    // Muted checks are left out everywhere here, like in the score; derived once per change.
+    val previous = state.result?.findings?.takeIf { state.scanning }
+    val findings = remember(catalog, state.findings, previous, state.muted) {
+        (previous ?: catalog.mapNotNull { state.findings[it.id] }).withoutMuted(state.muted)
     }
     val counts = remember(findings) { findings.countByVerdict() }
     val issues = remember(findings) { findings.issues() }
@@ -136,7 +139,7 @@ fun DashboardScreen(
                 onAction = { onShowChecks(CheckFilter.ISSUES, null) },
             )
         }
-        if (issues.isEmpty() && !state.scanning && state.result != null) {
+        if (issues.isEmpty() && state.result != null) {
             item { AllClearCard() }
         } else {
             items(issues.take(TOP_ISSUES), key = { it.spec.id }, contentType = { "issue" }) { finding ->
@@ -161,8 +164,10 @@ private const val TOP_ISSUES = 4
 private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShowMuted: () -> Unit) {
     val result = state.result
     val index = result?.index
-    val scanning = state.scanning || result == null
-    val target = if (scanning) MaterialTheme.colorScheme.primary else index?.color ?: MaterialTheme.colorScheme.outline
+    // Only the first scan shows its progress in the ring. A rescan keeps the last score there, and
+    // its progress in the line below, until the new score is ready.
+    val firstScan = result == null
+    val target = if (firstScan) MaterialTheme.colorScheme.primary else index?.color ?: MaterialTheme.colorScheme.outline
     val color by animateColorAsState(target, animationSpec = tween(600), label = "heroColor")
 
     Card(
@@ -178,20 +183,18 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // While scanning, the ring counts finished checks: say so, so it never reads as a score.
                 Text(
-                    stringResource(if (scanning) R.string.scan_label else R.string.score_label),
+                    stringResource(R.string.score_label),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(12.dp))
-                val fraction = when {
-                    scanning -> state.done / state.total.coerceAtLeast(1).toFloat()
-                    else -> (index?.score ?: 0) / 100f
-                }
-                RingGauge(fraction = fraction, color = color) {
-                    if (scanning) {
-                        GaugeCenter(big = "${state.done}", small = stringResource(R.string.scan_gauge_checks, state.total))
+                // The first scan has no score yet: the ring sweeps, with the logo where the score will
+                // be, and the count of finished checks stays in the line below. A count in the ring read
+                // like a score, and sat near the end while the slowest checks finished.
+                RingGauge(fraction = if (firstScan) null else (index?.score ?: 0) / 100f, color = color) {
+                    if (firstScan) {
+                        Image(DroynisLogo, contentDescription = null, modifier = Modifier.size(72.dp))
                     } else {
                         val score = index?.score
                         val shown by animateIntAsState(score ?: 0, animationSpec = tween(1100), label = "score")
@@ -202,7 +205,7 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                     }
                 }
                 val grade = index?.grade
-                if (!scanning && grade != null) {
+                if (!firstScan && grade != null) {
                     Pill(
                         text = stringResource(R.string.grade_label, grade.name, stringResource(grade.labelRes)),
                         container = color.copy(alpha = 0.18f),
@@ -212,7 +215,7 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = when {
-                        scanning -> stringResource(R.string.headline_scanning)
+                        state.scanning || firstScan -> stringResource(R.string.headline_scanning)
                         index?.score == null -> stringResource(R.string.headline_no_score)
                         index.cappedBy.isNotEmpty() -> stringResource(R.string.headline_critical)
                         issueCount == 1 -> stringResource(R.string.headline_one_issue)
@@ -239,7 +242,7 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                 )
-                if (!scanning && index?.cappedBy?.isNotEmpty() == true) {
+                if (!firstScan && index?.cappedBy?.isNotEmpty() == true) {
                     Spacer(Modifier.height(10.dp))
                     val uncapped = index.uncappedScore
                     Pill(
@@ -255,7 +258,7 @@ private fun HeroCard(state: UiState, issueCount: Int, onScan: () -> Unit, onShow
                     )
                 }
                 val muted = index?.muted.orEmpty()
-                if (!scanning && muted.isNotEmpty()) {
+                if (!firstScan && muted.isNotEmpty()) {
                     Spacer(Modifier.height(10.dp))
                     Pill(
                         text = stringResource(R.string.muted_note, muted.size),

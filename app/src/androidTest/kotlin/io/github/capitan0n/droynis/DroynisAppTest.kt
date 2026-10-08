@@ -38,7 +38,7 @@ class DroynisAppTest {
     private fun text(id: Int) = compose.activity.getString(id)
 
     private fun waitForScan() {
-        // The gauge reads "/ 100" once the first scan has finished, "/ <checks>" before.
+        // The gauge reads "/ 100" once the first scan has finished; before, it shows the logo.
         compose.waitUntil(SCAN_TIMEOUT_MS) {
             compose.onAllNodesWithText(text(R.string.score_out_of)).fetchSemanticsNodes().isNotEmpty()
         }
