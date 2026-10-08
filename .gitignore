@@ -10,3 +10,7 @@ captures/
 *.jks
 *.keystore
 keystore.properties
+
+# Built APKs and bundles belong in releases, never in git.
+*.apk
+*.aab

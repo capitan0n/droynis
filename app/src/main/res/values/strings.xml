@@ -43,7 +43,6 @@
     <string name="feedback_subject">Droynis feedback (v%1$s)</string>
     <string name="no_app_for_link">No app can open links, so the address was copied.</string>
     <string name="no_email_app">No email app found, so the address was copied.</string>
-    <string name="about_privacy">No internet permission, no trackers, no ads.</string>
 
     <!-- Verdicts -->
     <string name="verdict_passed">Passed</string>
@@ -116,7 +115,6 @@
     <string name="muted">Muted</string>
     <string name="filter_all_tiers">All tiers</string>
     <string name="filter_all_categories">All categories</string>
-    <string name="checks_count">%1$d checks</string>
     <string name="checks_empty">No checks match these filters.</string>
     <string name="clear_filters">Clear filters</string>
     <string name="checks_search_hint">Search checks, e.g. SMS</string>
@@ -391,5 +389,4 @@
     <!-- Accessibility -->
     <string name="cd_expand">Expand</string>
     <string name="cd_collapse">Collapse</string>
-    <string name="cd_copy">Copy</string>
 </resources>
