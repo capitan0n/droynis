@@ -287,8 +287,7 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
 6. A missing setting is UNKNOWN even where AOSP treats "unset" as off (e.g. `adb_enabled`).
    Exception: `show_password` unset is a FAIL, because the framework reads it with a default of
    1 (checked in `TextKeyListener`), i.e. passwords are shown.
-7. GPL-3.0-only or GPL-3.0-or-later? The LICENSE file is the same; the source headers and F-Droid
-   metadata are not.
+7. License: settled as GPL-3.0-or-later (About screen, README, CONTRIBUTING and F-Droid metadata).
 8. Reports hide addresses, DNS and proxy hosts and trusted computers by default, but keep app
    labels and package names, which the findings are about. Hide user-installed apps too?
 9. Muting is allowed for every check, critical ones included, and lifts the cap. Should a muted

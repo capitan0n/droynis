@@ -6,6 +6,11 @@ A read-only security and privacy audit for Android, inspired by Lynis (Android+L
 runs on, explains every finding, shows the evidence and opens the Settings screen that fixes it. It
 never changes anything itself.
 
+> **Not an antivirus or malware scanner.** Droynis doesn't scan apps or files for malicious code and
+> doesn't remove anything. It audits how the phone is set up: what is locked, patched, exposed and
+> granted. It can point out risky access, such as an app with accessibility or device-admin rights,
+> but it can't tell you whether that app is malware.
+
 - 54 checks: device integrity, access control, apps and permissions, network and radios. Every
   check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
@@ -79,4 +84,4 @@ design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEA
 
 Author: Alexandros (capitan0n) · <https://github.com/capitan0n> · [capitan0n@protonmail.com](mailto:capitan0n@protonmail.com)
 
-License: GNU General Public License v3, see [LICENSE](LICENSE).
+License: GNU General Public License v3.0 or later (GPL-3.0-or-later), see [LICENSE](LICENSE).

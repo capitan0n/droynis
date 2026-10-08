@@ -1,5 +1,7 @@
 Droynis checks the security and privacy settings of the phone it runs on, explains every finding in plain words, shows the raw evidence and opens the Settings screen that fixes it. It never changes anything itself.
 
+Droynis is not an antivirus or malware scanner: it audits how the phone is set up, not whether an app is malicious.
+
 <b>What it checks</b>
 <ul>
 <li>Device integrity: security patch age, vendor and kernel patches, encryption, bootloader lock, root, SELinux, WebView updates</li>

@@ -24,4 +24,4 @@ JSON report (⋮ › Save report (JSON), with Hide personal details on).
 ## Pull requests
 
 Keep them small and say how you tested: phone, Android version, tier. Contributions are licensed
-under the project's license, the GPL v3 ([LICENSE](LICENSE)).
+under the project's license, GPL-3.0-or-later ([LICENSE](LICENSE)).
