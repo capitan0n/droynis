@@ -42,13 +42,27 @@ Each release lists the signing certificate's SHA-256. F-Droid: on its way.
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, always-on VPN lockdown, SIM PIN; reads what Android hides from apps, and runs the ADB checks |
 | Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network; runs the ADB and Shizuku checks |
 
-```sh
-adb shell pm grant io.github.capitan0n.droynis android.permission.DUMP
-adb shell pm grant io.github.capitan0n.droynis android.permission.PACKAGE_USAGE_STATS
-```
+In the app, **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku
+and root run only a fixed set of read-only commands; root stays off until you turn it on.
 
-⋮ › Check catalog shows each tier's status and setup. Shizuku and root run only a fixed set of
-read-only commands and reads; root is off until you turn it on.
+### Setting up the ADB tier
+
+Android hides `dumpsys` output from apps unless they hold `DUMP` and `PACKAGE_USAGE_STATS`, and only
+a computer with `adb` can grant those two. You don't need this if you use Shizuku or root.
+
+1. On the phone, turn on Developer options › USB debugging and connect it to a computer with
+   `adb` (Arch/Manjaro: `android-tools`, Debian/Ubuntu: `adb`).
+2. Grant the two permissions:
+
+   ```sh
+   adb shell pm grant io.github.capitan0n.droynis android.permission.DUMP
+   adb shell pm grant io.github.capitan0n.droynis android.permission.PACKAGE_USAGE_STATS
+   ```
+
+3. Tap Scan again, then turn USB debugging off; Droynis reports it as a risk when it's on.
+
+The grants survive reboots and stay until you uninstall the app or run the same commands with
+`pm revoke`. They let Droynis read, never change, system state.
 
 ## Score and reports
 
@@ -58,11 +72,7 @@ such as a patch level only the maker can update; the Muted filter has Unmute all
 
 ⋮ › Save the report as Markdown or JSON, share or copy it. **Hide personal details** (on by default)
 replaces IP addresses, DNS and proxy servers, the Private DNS host and trusted computers with
-`[hidden]`. JSON keeps a fixed order, so two scans diff cleanly:
-
-```sh
-jq -r '.findings[] | "\(.id)\t\(.verdict)\t\(.summary)"' scan.json
-```
+`[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
 
 ## Build
 
