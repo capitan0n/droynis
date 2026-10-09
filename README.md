@@ -76,7 +76,7 @@ replaces IP addresses, DNS and proxy servers, the Private DNS host and trusted c
 
 ## Build
 
-JDK 17+ and the Android SDK (compileSdk 37).
+JDK 21 and the Android SDK (compileSdk 37).
 
 ```sh
 ./gradlew check          # unit tests, lint, and docs/CHECKS.md matching the code

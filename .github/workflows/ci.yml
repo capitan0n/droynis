@@ -26,7 +26,7 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       # Also validates gradle-wrapper.jar against the official checksums.
       - uses: gradle/actions/setup-gradle@v6

@@ -1,0 +1,1 @@
+Built with JDK 21 so F-Droid can reproduce it with its default toolchain. README: explains how to set up the ADB tier and states that Droynis is not an antivirus. No changes to the checks.

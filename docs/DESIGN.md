@@ -324,7 +324,7 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
 ## 7. Toolchain
 
 AGP 9.3.3, Gradle 9.7.1, Kotlin 2.4.20 (the newest combination Kotlin officially supports),
-compileSdk and targetSdk 37, minSdk 26, JDK 17. Release builds drop AGP's dependency-info block
+compileSdk and targetSdk 37, minSdk 26, JDK 21 (bytecode target 17). Release builds drop AGP's dependency-info block
 and VCS info for reproducibility; the reproducible-build workflow builds each tag twice, from two
 directories, and compares the APKs (baseline profiles are the usual suspect if they ever differ).
 
