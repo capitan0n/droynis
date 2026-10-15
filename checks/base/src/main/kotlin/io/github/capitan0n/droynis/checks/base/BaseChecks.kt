@@ -13,7 +13,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     RootAccessCheck(probes.files, probes.packages),
     AndroidBuildCheck(probes.build, probes.properties),
     WebViewCheck(probes.webView),
-    AdvancedProtectionCheck(probes.policy),
+    AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
     // Access control
     LockScreenCheck(probes.keyguard),
     LockStrengthCheck(probes.keyguard),

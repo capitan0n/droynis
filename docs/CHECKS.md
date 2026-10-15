@@ -96,7 +96,7 @@ Info · Android 16 and later · fails when Advanced Protection is off
 
 Advanced Protection (Android 16+) switches on Android's strictest defenses at once, for example blocking app installs from unknown sources and 2G connections. It is meant for people at higher risk, such as journalists and activists.
 
-**What to do:** If you are at higher risk, turn it on under Settings › Security & privacy › Advanced Protection. It also blocks installing apps from unknown sources, including the F-Droid client.
+**What to do:** If you are at higher risk, turn it on under Settings › Security & privacy › Advanced Protection. It also blocks installing apps from unknown sources, including the F-Droid client. GrapheneOS has no such switch, so this check doesn't apply there: it offers similar protections one by one under Settings › Security & privacy › Exploit protection.
 
 #### INTG-1040 Bootloader lock
 
