@@ -23,15 +23,27 @@ never changes anything itself.
 
 ## Install
 
-Android 8.0 or later. Download the APK from [Releases](https://github.com/capitan0n/droynis/releases)
-and verify it before installing:
+Android 8.0 or later. Pick one:
+
+### 1. F-Droid
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/en/packages/io.github.capitan0n.droynis/)
+
+Install from the [F-Droid page](https://f-droid.org/en/packages/io.github.capitan0n.droynis/) or
+search for Droynis in the F-Droid client, which also keeps it updated. F-Droid builds each version
+from the tagged source, so it may appear a few days after the GitHub release.
+
+### 2. GitHub Releases
+
+Download the APK from [Releases](https://github.com/capitan0n/droynis/releases) and verify it
+before installing:
 
 ```sh
 sha256sum -c droynis-<version>.apk.sha256
 gh attestation verify droynis-<version>.apk --repo capitan0n/droynis   # built by GitHub from the tag
 ```
 
-Each release lists the signing certificate's SHA-256. F-Droid: on its way.
+Each release lists the signing certificate's SHA-256.
 
 ## Tiers
 
