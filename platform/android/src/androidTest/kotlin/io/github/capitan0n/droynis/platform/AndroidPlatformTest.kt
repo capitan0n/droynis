@@ -44,6 +44,9 @@ class AndroidPlatformTest {
         assertValue(platform.certificates.userCertificates())
         assertValue(platform.inputMethods.enabledKeyboards())
         assertValue(platform.permissionAudit.overview())
+        // Hidden but @Readable: the assistant check reads them as Droynis, without Shizuku.
+        assertValue(platform.settings.secure("assistant"))
+        assertValue(platform.settings.secure("voice_interaction_service"))
 
         assertValue(platform.radios.locationEnabled())
 
@@ -66,6 +69,14 @@ class AndroidPlatformTest {
         val advancedProtection = platform.policy.advancedProtection()
         if (Build.VERSION.SDK_INT >= 29) assertValue(complexity) else assertUnsupported(complexity)
         if (Build.VERSION.SDK_INT >= 36) assertValue(advancedProtection) else assertUnsupported(advancedProtection)
+
+        // Some low-RAM images ship without the autofill feature.
+        val autofill = platform.autofill.state()
+        if (Build.VERSION.SDK_INT >= 28) {
+            assertTrue("$autofill", autofill is Reading.Value || autofill is Reading.Unsupported)
+        } else {
+            assertUnsupported(autofill)
+        }
     }
 
     @Test

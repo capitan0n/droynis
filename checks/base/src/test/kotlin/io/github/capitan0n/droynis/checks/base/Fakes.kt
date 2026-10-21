@@ -134,6 +134,10 @@ class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(em
     override fun enabledKeyboards() = keyboards
 }
 
+class FakeAutofill(private val state: Reading<AutofillState> = value(AutofillState(null))) : AutofillProbe {
+    override fun state() = state
+}
+
 class FakeProperties(private val props: Reading<Map<String, String>> = value(emptyMap())) : SystemProperties {
     constructor(vararg pairs: Pair<String, String>) : this(value(mapOf(*pairs)))
 
@@ -172,6 +176,7 @@ class FakeProbes(
     override val certificates: CertificateStore = FakeCertificates(),
     override val radios: RadioProbe = FakeRadios(),
     override val inputMethods: InputMethodProbe = FakeInputMethods(),
+    override val autofill: AutofillProbe = FakeAutofill(),
     override val properties: SystemProperties = FakeProperties(),
     override val files: FileProbe = FakeFiles(),
     override val attestation: AttestationProbe = FakeAttestation(),

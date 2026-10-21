@@ -168,6 +168,19 @@ interface InputMethodProbe {
     fun enabledKeyboards(): Reading<List<Keyboard>>
 }
 
+/** Who fills in forms for the current user. */
+data class AutofillState(
+    /** The selected autofill service as a flattened component name; null when none is selected. */
+    val component: String?,
+    /** False when a device policy turns autofill off for this user (`DISALLOW_AUTOFILL`). */
+    val allowed: Boolean = true,
+)
+
+interface AutofillProbe {
+    /** Unsupported on phones without the autofill feature, such as some low-RAM devices. */
+    fun state(): Reading<AutofillState>
+}
+
 /**
  * Android system properties as `getprop` lists them. Properties this app may not read are simply
  * missing from the map, so a missing key means "not visible", never "false".
@@ -254,6 +267,7 @@ interface BaseProbes {
     val certificates: CertificateStore
     val radios: RadioProbe
     val inputMethods: InputMethodProbe
+    val autofill: AutofillProbe
     val properties: SystemProperties
     val files: FileProbe
     val attestation: AttestationProbe

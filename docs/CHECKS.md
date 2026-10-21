@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 54 checks.
+Every check Droynis runs, by privilege tier and category: 58 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,8 +13,8 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 39 |
-| [ADB](#adb-tier) | 8 |
+| [Base](#base-tier) | 42 |
+| [ADB](#adb-tier) | 9 |
 | [Shizuku](#shizuku-tier) | 3 |
 | [Root](#root-tier) | 4 |
 
@@ -53,6 +53,9 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4007](#apps-4007-apps-built-for-old-android) | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
 | [APPS-4008](#apps-4008-apps-that-can-read-your-sms-or-call-log) | Apps that can read your SMS or call log | Notice | an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store) |
 | [APPS-4009](#apps-4009-apps-that-can-send-sms) | Apps that can send SMS | Notice | an app other than your SMS app can send SMS (a warning when it came from outside an app store) |
+| [APPS-4010](#apps-4010-autofill-service) | Autofill service (Android 9+) | Notice | an autofill service from an app you installed is selected (a warning when it came from outside an app store) |
+| [APPS-4011](#apps-4011-digital-assistant-app) | Digital assistant app | Notice | the digital assistant is an app you installed (a warning when it came from outside an app store) |
+| [APPS-4012](#apps-4012-apps-with-location-all-the-time) | Apps with location all the time (Android 10+) | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -96,7 +99,7 @@ Info · Android 16 and later · fails when Advanced Protection is off
 
 Advanced Protection (Android 16+) switches on Android's strictest defenses at once, for example blocking app installs from unknown sources and 2G connections. It is meant for people at higher risk, such as journalists and activists.
 
-**What to do:** If you are at higher risk, turn it on under Settings › Security & privacy › Advanced Protection. It also blocks installing apps from unknown sources, including the F-Droid client.
+**What to do:** If you are at higher risk, turn it on under Settings › Security & privacy › Advanced Protection. It also blocks installing apps from unknown sources, including the F-Droid client. GrapheneOS has no such switch, so this check doesn't apply there: it offers similar protections one by one under Settings › Security & privacy › Exploit protection.
 
 #### INTG-1040 Bootloader lock
 
@@ -302,6 +305,30 @@ An app that can send SMS can text premium-rate numbers that are charged to your 
 
 **What to do:** Open Settings › Apps › the app › Permissions and set SMS to "Don't allow" for apps that don't need it. Under Settings › Apps › Special app access › Premium SMS access, keep every app on Ask or Never allow. Uninstall apps you don't recognize.
 
+#### APPS-4010 Autofill service
+
+Notice · Android 9 and later · fails when an autofill service from an app you installed is selected (a warning when it came from outside an app store)
+
+The autofill service fills in passwords, addresses and card numbers for you, so it sees the forms you fill in, in every app. Password managers use it; a malicious one reads what you type into login forms. Autofill that came with the phone is part of the system; any other one should come from a developer you trust, and one installed from outside an app store is a warning.
+
+**What to do:** Open Settings › Passwords, passkeys & accounts (on older phones Settings › System › Languages & input › Autofill service) and pick a password manager you trust, or None.
+
+#### APPS-4011 Digital assistant app
+
+Notice · Android 8.0 and later · fails when the digital assistant is an app you installed (a warning when it came from outside an app store)
+
+The digital assistant opens when you long-press the power or home button or say its wake word. When you call it, it can read what is on the screen and take a screenshot ("Use text from screen", on unless you turn it off), and a voice assistant can listen for its wake word. One that came with the phone is part of the system; any other one should come from a developer you trust, and one installed from outside an app store is a warning.
+
+**What to do:** Open Settings › Apps › Default apps › Digital assistant app. Choose None if you don't use an assistant, or turn off "Use text from screen" and "Use screenshot".
+
+#### APPS-4012 Apps with location all the time
+
+Notice · Android 10 and later · fails when an app you installed may use location all the time (a warning when it came from outside an app store)
+
+An app allowed location "All the time" can see where you are while you aren't using it, and build a history of the places you go. Navigation, fitness and find-my-phone apps may need it; most apps work with "Only while using the app". Apps that came with the phone are listed but don't count; one installed from outside an app store is a warning, as stalkerware asks for exactly this.
+
+**What to do:** Open Settings › Location › App location permissions (on some phones Settings › Privacy › Permission manager › Location) and set the apps listed to "Allow only while using the app" or "Don't allow".
+
 ### Network and radios
 
 #### NETW-3001 Private DNS
@@ -407,6 +434,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4105](#apps-4105-apps-with-usage-access) | Apps with usage access (Android 10+) | Notice | a user app has usage access |
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
+| [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 
 ### Access control
 
@@ -475,6 +503,16 @@ Info · Android 12 and later · fails when a user app may change or delete media
 "Media management" (on Samsung: "Manage media") lets an app that can see your photos, videos and audio also change, move or delete them without asking you each time. Gallery apps use it. This check is for your information and doesn't count in the score. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Media management apps and turn it off for apps that don't organize your media.
+
+### Network and radios
+
+#### NETW-3101 Wi-Fi MAC randomization
+
+Notice · Android 10 and later · fails when the current Wi-Fi connection or a saved network uses the phone's own MAC address
+
+Every Wi-Fi network the phone joins sees its MAC address. The phone's own address is the same everywhere, so the networks, and whoever runs several of them, can recognize the phone and link its visits. Android uses a random address for each network unless that network is set to use the device MAC. Android keeps this in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
+
+**What to do:** Open Settings › Network & internet › Internet (or Wi-Fi), tap the gear next to each network listed, then Privacy, and choose "Use randomized MAC". Some company and carrier networks need the device MAC; mute this check if only those are left.
 
 ## Shizuku tier
 

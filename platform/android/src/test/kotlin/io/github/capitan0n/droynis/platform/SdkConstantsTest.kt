@@ -1,8 +1,10 @@
 package io.github.capitan0n.droynis.platform
 
+import android.Manifest
 import android.app.admin.DevicePolicyManager
 import android.provider.Settings
 import android.telephony.TelephonyManager
+import io.github.capitan0n.droynis.checks.base.BackgroundLocationCheck
 import io.github.capitan0n.droynis.checks.base.NetworkTypes
 import io.github.capitan0n.droynis.checks.base.BluetoothCheck
 import io.github.capitan0n.droynis.checks.base.DeveloperOptionsCheck
@@ -42,6 +44,9 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_REQUEST_MANAGE_MEDIA, SettingsActions.MANAGE_MEDIA)
         assertEquals(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS, SettingsActions.NOTIFICATION_ACCESS)
         assertEquals(Settings.ACTION_INPUT_METHOD_SETTINGS, SettingsActions.INPUT_METHODS)
+        assertEquals(Settings.ACTION_SYNC_SETTINGS, SettingsActions.ACCOUNTS)
+        assertEquals(Settings.ACTION_VOICE_INPUT_SETTINGS, SettingsActions.VOICE_INPUT)
+        assertEquals(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, SettingsActions.DEFAULT_APPS)
         assertEquals(Settings.ACTION_DEVICE_INFO_SETTINGS, SettingsActions.DEVICE_INFO)
         assertEquals(Settings.ACTION_SETTINGS, SettingsActions.SETTINGS)
     }
@@ -64,5 +69,14 @@ class SdkConstantsTest {
         assertEquals(Settings.Global.STAY_ON_WHILE_PLUGGED_IN, StayAwakeCheck.STAY_ON_WHILE_PLUGGED_IN)
         assertEquals(Settings.System.SCREEN_OFF_TIMEOUT, ScreenTimeoutCheck.SCREEN_OFF_TIMEOUT)
         assertEquals(Settings.System.TEXT_SHOW_PASSWORD, PasswordVisibilityCheck.TEXT_SHOW_PASSWORD)
+    }
+
+    @Test
+    fun permissionNamesMatchTheSdk() {
+        assertEquals(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BackgroundLocationCheck.BACKGROUND)
+        assertEquals(
+            setOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+            BackgroundLocationCheck.FOREGROUND,
+        )
     }
 }

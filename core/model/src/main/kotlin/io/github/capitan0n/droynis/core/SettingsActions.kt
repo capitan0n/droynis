@@ -75,6 +75,21 @@ object SettingsActions {
     const val INPUT_METHODS = "android.settings.INPUT_METHOD_SETTINGS"
 
     /**
+     * `Settings.ACTION_SYNC_SETTINGS`: Passwords, passkeys & accounts, which also holds the autofill
+     * service picker (Android 17 Settings). `ACTION_CREDENTIAL_PROVIDER` needs a `package:` URI.
+     */
+    const val ACCOUNTS = "android.settings.SYNC_SETTINGS"
+
+    /**
+     * `Settings.ACTION_VOICE_INPUT_SETTINGS`: Assist & voice input. Android 17 Settings drops it behind
+     * a flag, so [DEFAULT_APPS] follows as the fallback.
+     */
+    const val VOICE_INPUT = "android.settings.VOICE_INPUT_SETTINGS"
+
+    /** `Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS`: Default apps, including the digital assistant. */
+    const val DEFAULT_APPS = "android.settings.MANAGE_DEFAULT_APPS_SETTINGS"
+
+    /**
      * Hidden from the public SDK (`Settings.ACTION_LOCKSCREEN_NOTIFICATIONS_SETTINGS`, recent releases
      * only); listed first and skipped where the Settings app does not export it.
      */

@@ -7,6 +7,7 @@ import io.github.capitan0n.droynis.checks.adb.AdbProbes
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
+import io.github.capitan0n.droynis.checks.base.AutofillProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BuildInfo
 import io.github.capitan0n.droynis.checks.base.CellularProbe
@@ -60,6 +61,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val certificates: CertificateStore = AndroidCertificates
     override val radios: RadioProbe = AndroidRadios(app)
     override val inputMethods: InputMethodProbe = AndroidInputMethods(app, packages::label)
+    override val autofill: AutofillProbe = AndroidAutofill(app)
     override val properties: SystemProperties = AndroidSystemProperties
     override val files: FileProbe = AndroidFiles
     override val attestation: AttestationProbe = AndroidAttestation

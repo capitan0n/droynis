@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 54 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 58 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -21,7 +21,7 @@ Android (API 37, October 2026) and the decisions taken so far.
 | 11 | Distribute via F-Droid | Google's developer verification blocks apps from unregistered developers on certified devices (enforced since 2026-09-30 in Brazil, Indonesia, Singapore and Thailand; worldwide in 2027), F-Droid installs included. | A distribution decision, not a code one. Reproducible builds let F-Droid ship *your* signature, so the same key works if you choose to register. |
 | 12 | Security patch age | Since mid-2025 most fixes ship in quarterly bulletins (March, June, September, December); monthly ones can be empty. `SECURITY_PATCH` is self-reported and vendors have over-claimed it before. | PASS up to 90 days, WARNING up to a year, CRITICAL beyond. Cross-check with the attested `osPatchLevel` once attestation lands. |
 | 13 | Reports exclude IMEI, serial, phone number, account names | The base tier cannot read those anyway: IMEI and serial are privileged since API 29, and phone number and accounts need permissions Droynis does not request. The real leaks are the installed-app list (health, religion, politics…), CA certificate subjects (employer), Private DNS hostname and raw dumpsys text. | Export redacted by default (package names omitted or hashed); raw only on explicit choice. |
-| 14 | Advanced Protection (API 36+) | Readable with the normal permission `QUERY_ADVANCED_PROTECTION_MODE`. It also blocks installs from unknown sources, which conflicts with F-Droid users. | INFO (no score impact), with that trade-off in the remediation text. |
+| 14 | Advanced Protection (API 36+) | Readable with the normal permission `QUERY_ADVANCED_PROTECTION_MODE`. It also blocks installs from unknown sources, which conflicts with F-Droid users. GrapheneOS reports it off but has no such switch; it offers similar protections one by one under Exploit protection. | INFO (no score impact), with that trade-off in the remediation text. On GrapheneOS, recognized by its Vanadium WebView or preinstalled `app.grapheneos.*` apps, "off" is N/A instead of a FAIL. |
 | 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. |
 
 Smaller points: StrongBox absence is not user-fixable (INFO, no score impact). Emulators have
@@ -69,6 +69,23 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **SMS and call log** (APPS-4008): apps granted READ_SMS or RECEIVE_SMS, or READ_CALL_LOG, from
   `PackageManager` (granted flags, not just requested). The default SMS app is expected to hold the
   SMS ones and the default phone app the call log; preinstalled apps are listed, not counted.
+- **Autofill** (APPS-4010, Android 9+): `AutofillManager.getAutofillServiceComponentName()` is
+  public and AutofillManagerService answers any caller for its own user (Android 17). Without
+  `FEATURE_AUTOFILL` the check is N/A; `isAutofillSupported()` false means a `DISALLOW_AUTOFILL`
+  policy, a PASS. Credential Manager providers only see what apps request through it, so they are
+  not counted. The Settings link is `ACTION_SYNC_SETTINGS` (Passwords, passkeys & accounts, with the
+  autofill picker): `ACTION_CREDENTIAL_PROVIDER` only matches with a `package:` URI.
+- **Digital assistant** (APPS-4011): `assistant`, `voice_interaction_service`,
+  `assist_structure_enabled` and `assist_screenshot_enabled` are hidden but `@Readable`, and not
+  redacted, in Android 17, so the base tier reads them. From Android 10 VoiceInteractionManagerService
+  writes both component keys whenever the assistant role changes, empty when no app holds it, so empty
+  is a PASS and unset is UNKNOWN. The two screen switches default to on when unset
+  (`VoiceInteractionSessionConnection`) and are evidence only. `ACTION_VOICE_INPUT_SETTINGS` is
+  disabled behind a flag in Android 17 Settings, so Default apps follows it.
+- **Location all the time** (APPS-4012, Android 10+): apps granted ACCESS_BACKGROUND_LOCATION and a
+  foreground location permission, from the same `GET_PERMISSIONS` read as the SMS checks. Apps that
+  target Android 9 or older get the background permission with the foreground one and are seen the
+  same way. Preinstalled holders are counted, not named.
 - **Who installed an app**: system apps came with the phone; an installer on the known store list
   is an app store; anything else, including the package installer, is sideloaded. For
   accessibility services, notification access, device admins and SMS or call log access, a
@@ -104,7 +121,7 @@ Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from
 in a separate process as the shell user (root if Shizuku was started with root), and hands its
 binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
 (table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, `dumpsys` for an
-allowlist of services (`appops`, `trust`), and `telephony()`, which runs `TelephonyReader`: a fixed
+allowlist of services (`appops`, `trust`, `wifi`), and `telephony()`, which runs `TelephonyReader`: a fixed
 set of telephony getters (below). Commands run without a shell, with absolute paths, a
 timeout and an output cap; `dumpsys` streams through a pipe because its output can exceed one
 binder call.
@@ -195,6 +212,25 @@ NETW-3007 reads every connected network with the internet capability (`getAllNet
 proxy set in the mobile data APN counts while Wi-Fi is the default network. A proxy the default
 network reports but no network carries itself is a global proxy. MMS and IMS networks are skipped.
 
+### Wi-Fi MAC randomization
+
+NETW-3101 (ADB tier, DUMP only: WifiServiceImpl checks nothing else) reads `dumpsys wifi`, checked
+against the Wi-Fi module in Android 17, and keeps two things. Each `mWifiInfo` line (one per Wi-Fi
+interface in client mode, from ClientModeImpl) gives the MAC in use, which the dump never redacts,
+and the supplicant state. A connected interface whose MAC lacks the locally administered bit uses
+the phone's own address; Android's random addresses always set it. The saved-network section gives
+each network's `macRandomizationSetting`, where 0 is "Use device MAC" (GrapheneOS adds 100,
+per-connection). Either one is a FAIL. Without a connection nothing proves the phone randomizes
+(some phones can't), so the result is N/A; right after Wi-Fi turns on the interface can still carry
+the factory MAC for up to 30 seconds, so a disconnected interface's MAC is never judged.
+Only the kind of address is stored, never the address, a BSSID or a scan result; the names of
+networks set to the device MAC are `personal` evidence. An SSID is at most 32 bytes, too short to fake
+the `, BSSID: …, MAC: …,` sequence, quoted or not (Android 10 and 11 print it unquoted); a saved
+network's crafted name can only change the name shown or fail the parse.
+Limits: a phone that can't randomize but has a locally administered factory MAC passes. Like a bug
+report, `dumpsys wifi` also asks the Wi-Fi driver for its ring buffers (`captureBugReportData`); it
+changes no setting.
+
 ### Smart Lock
 
 ACCS-2101 (ADB tier, DUMP only) reads `dumpsys trust`: for the current user, whether a trust agent
@@ -271,7 +307,8 @@ out. Both contain only scan results and the device facts passed in.
 
 Reports are made to be shared, so by default they leave out personal details (`PersonalDetails`):
 evidence a check marks `personal` (DNS servers, proxies, the Private DNS host, which can carry a
-NextDNS-style profile ID, and computers trusted for USB debugging), those values wherever a summary
+NextDNS-style profile ID, computers trusted for USB debugging, and the names of saved Wi-Fi
+networks), those values wherever a summary
 repeats them, and every IPv4, IPv6 and MAC address in the text, except "any address" and loopback.
 App names, the model and the Android version stay: findings are about them and they don't single
 out one phone. One menu switch, saved on the device, covers saving, sharing and copying; JSON says

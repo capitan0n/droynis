@@ -11,7 +11,7 @@ never changes anything itself.
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
 > but it can't tell you whether that app is malware.
 
-- 54 checks: device integrity, access control, apps and permissions, network and radios. Every
+- 58 checks: device integrity, access control, apps and permissions, network and radios. Every
   check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
@@ -23,22 +23,34 @@ never changes anything itself.
 
 ## Install
 
-Android 8.0 or later. Download the APK from [Releases](https://github.com/capitan0n/droynis/releases)
-and verify it before installing:
+Android 8.0 or later. Pick one:
+
+### 1. F-Droid
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/en/packages/io.github.capitan0n.droynis/)
+
+Install from the [F-Droid page](https://f-droid.org/en/packages/io.github.capitan0n.droynis/) or
+search for Droynis in the F-Droid client, which also keeps it updated. F-Droid builds each version
+from the tagged source, so it may appear a few days after the GitHub release.
+
+### 2. GitHub Releases
+
+Download the APK from [Releases](https://github.com/capitan0n/droynis/releases) and verify it
+before installing:
 
 ```sh
 sha256sum -c droynis-<version>.apk.sha256
 gh attestation verify droynis-<version>.apk --repo capitan0n/droynis   # built by GitHub from the tag
 ```
 
-Each release lists the signing certificate's SHA-256. F-Droid: on its way.
+Each release lists the signing certificate's SHA-256.
 
 ## Tiers
 
 | Tier | Setup | Adds |
 |---|---|---|
-| Base | none | 39 checks through public Android APIs |
-| ADB | two grants from a computer, once | 8 checks from `dumpsys`: special app access, Smart Lock, background camera, microphone and location use |
+| Base | none | 42 checks through public Android APIs |
+| ADB | two grants from a computer, once | 9 checks from `dumpsys`: special app access, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization |
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, always-on VPN lockdown, SIM PIN; reads what Android hides from apps, and runs the ADB checks |
 | Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network; runs the ADB and Shizuku checks |
 
@@ -71,8 +83,8 @@ critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute 
 such as a patch level only the maker can update; the Muted filter has Unmute all.
 
 ⋮ › Save the report as Markdown or JSON, share or copy it. **Hide personal details** (on by default)
-replaces IP addresses, DNS and proxy servers, the Private DNS host and trusted computers with
-`[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
+replaces IP addresses, DNS and proxy servers, the Private DNS host, trusted computers and saved
+Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
 
 ## Build
 

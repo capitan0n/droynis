@@ -6,7 +6,7 @@ import io.github.capitan0n.droynis.core.Finding
 /**
  * Leaves out of a report what identifies the user, their network or their computers, so it can be
  * shared: evidence the check marked [Evidence.personal] (DNS servers, proxies, the Private DNS host,
- * computers trusted for USB debugging), those values wherever a summary repeats them, and every IP
+ * computers trusted for USB debugging, saved Wi-Fi network names), those values wherever a summary repeats them, and every IP
  * or MAC address in the text. App names, the device model and Android version stay: findings are
  * about them, and they don't identify one phone.
  */
@@ -15,7 +15,8 @@ object PersonalDetails {
     const val HIDDEN = "[hidden]"
 
     /** What [hide] leaves out, in the words reports use. */
-    const val DESCRIPTION = "IP addresses, DNS and proxy servers, the Private DNS host and computers trusted for USB debugging"
+    const val DESCRIPTION =
+        "IP addresses, DNS and proxy servers, the Private DNS host, computers trusted for USB debugging and saved Wi-Fi network names"
 
     fun hide(findings: List<Finding>): List<Finding> = findings.map { it.hidden() }
 
