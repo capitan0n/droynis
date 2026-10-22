@@ -22,6 +22,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     StayAwakeCheck(probes.settings),
     PasswordVisibilityCheck(probes.settings),
     LockScreenNotificationsCheck(probes.settings),
+    NotificationHistoryCheck(probes.settings),
     RemoteLockCheck(probes.policy, probes.packages),
     DeveloperOptionsCheck(probes.settings),
     UsbDebuggingCheck(probes.settings),

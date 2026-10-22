@@ -119,6 +119,23 @@ class AccessControlChecksTest {
     }
 
     @Test
+    fun `notification history`() = runTest {
+        fun check(raw: Reading<String?>) =
+            NotificationHistoryCheck(FakeSettings(secure = mapOf("notification_history_enabled" to raw)))
+
+        assertEquals(Status.FAIL, check(value("1")).status())
+        assertEquals(Status.PASS, check(value("0")).status())
+        assertEquals(Status.PASS, check(value(null)).status()) // the platform's default is off
+        assertEquals(Status.UNKNOWN, check(value("on")).status())
+        assertEquals(Status.UNKNOWN, check(unavailable("access denied")).status())
+
+        val failed = check(value("1")).outcome()
+        assertEquals("Notification history is on", failed.summary)
+        assertEquals(listOf("1"), failed.evidence.map { it.value })
+        assertEquals(30, check(value(null)).spec.minSdk)
+    }
+
+    @Test
     fun `wireless debugging`() = runTest {
         fun check(raw: String?) = WirelessDebuggingCheck(FakeSettings(global = mapOf("adb_wifi_enabled" to value(raw))))
 

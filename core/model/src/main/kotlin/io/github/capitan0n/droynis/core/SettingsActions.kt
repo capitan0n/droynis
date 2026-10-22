@@ -98,6 +98,12 @@ object SettingsActions {
     /** Hidden from the public SDK (`Settings.ACTION_NOTIFICATION_SETTINGS`); exported by the Settings app. */
     const val NOTIFICATIONS = "android.settings.NOTIFICATION_SETTINGS"
 
+    /**
+     * Hidden from the public SDK (`Settings.ACTION_NOTIFICATION_HISTORY`, Android 11+): the
+     * Notification history screen, with its on/off switch. Exported by the AOSP Settings app.
+     */
+    const val NOTIFICATION_HISTORY = "android.settings.NOTIFICATION_HISTORY"
+
     /** `Settings.ACTION_DEVICE_INFO_SETTINGS`: About phone. */
     const val DEVICE_INFO = "android.settings.DEVICE_INFO_SETTINGS"
 

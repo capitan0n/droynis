@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 58 checks.
+Every check Droynis runs, by privilege tier and category: 59 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,7 +13,7 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 42 |
+| [Base](#base-tier) | 43 |
 | [ADB](#adb-tier) | 9 |
 | [Shizuku](#shizuku-tier) | 3 |
 | [Root](#root-tier) | 4 |
@@ -40,6 +40,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [ACCS-2005](#accs-2005-stay-awake-while-charging) | Stay awake while charging | Notice | the screen never turns off, so never locks, while charging |
 | [ACCS-2006](#accs-2006-lock-after-screen-timeout) | Lock after screen timeout | Notice | the phone stays unlocked for more than 30 seconds after the screen turns off |
 | [ACCS-2007](#accs-2007-screen-lock-strength) | Screen lock strength (Android 10+) | Notice | the screen lock is a pattern or a PIN with repeated or ordered digits |
+| [ACCS-2008](#accs-2008-notification-history) | Notification history (Android 11+) | Notice | notification history is on, keeping 24 hours of notification text |
 | [ACCS-2010](#accs-2010-developer-options) | Developer options | Notice | developer options are on |
 | [ACCS-2011](#accs-2011-usb-debugging) | USB debugging | Warning | adb over USB is on |
 | [ACCS-2012](#accs-2012-wireless-debugging) | Wireless debugging (Android 11+) | Warning | adb over Wi-Fi is on |
@@ -198,6 +199,14 @@ Notice · Android 10 and later · fails when the screen lock is a pattern or a P
 A pattern can be read from smudges on the screen or by watching over your shoulder, and a PIN such as 1234 or 1111 is among the first anyone tries. Android rates the screen lock low, medium or high without revealing it: low means a pattern, or a PIN with repeated or ordered digits.
 
 **What to do:** Change the screen lock to a PIN of 6 or more digits without repeated or ordered digits, or to a password (Settings › Security › Screen lock).
+
+#### ACCS-2008 Notification history
+
+Notice · Android 11 and later · fails when notification history is on, keeping 24 hours of notification text
+
+With notification history on, Android saves the text of every notification from the last 24 hours, message previews and one-time login codes included. The copy stays after you dismiss the notification and after the app deletes the message or makes it disappear. Anyone who gets into the unlocked phone can scroll through it, and forensic tools can extract it.
+
+**What to do:** Turn off notification history (Settings › Notifications › Notification history); Android then deletes what it saved. In messaging apps, also hide message content in notifications, for example in Signal under Settings › Notifications › Show.
 
 #### ACCS-2010 Developer options
 
