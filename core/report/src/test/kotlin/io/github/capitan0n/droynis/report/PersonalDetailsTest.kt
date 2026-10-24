@@ -123,6 +123,6 @@ class PersonalDetailsTest {
         assertFalse("GMT+" in hiddenMd)
 
         val includedMd = MarkdownReport.render(context, findings, index, emptyList(), "0.13.0")
-        assertTrue("GMT+03:00" in includedMd)
+        assertTrue("- Scanned: 2026-10-24 19:52 " in includedMd)
     }
 }
