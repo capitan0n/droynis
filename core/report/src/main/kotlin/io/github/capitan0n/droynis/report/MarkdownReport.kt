@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.report
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.ScanContext
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -23,9 +24,10 @@ object MarkdownReport {
         hidePersonal: Boolean = false,
     ): String = buildString {
         val shown = if (hidePersonal) PersonalDetails.hide(findings) else findings
+        val startedAt = if (hidePersonal) context.startedAt.withZoneSameInstant(ZoneOffset.UTC) else context.startedAt
         appendLine("# Droynis security report")
         appendLine()
-        appendLine("- Scanned: ${context.startedAt.format(TIME)}")
+        appendLine("- Scanned: ${startedAt.format(TIME)}")
         appendLine("- Hardening index: ${scoreLine(index)}")
         val counts = findings.withoutMuted(index.muted).countByVerdict()
         appendLine(

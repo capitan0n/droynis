@@ -100,4 +100,29 @@ class PersonalDetailsTest {
         assertFalse("alexandros" in markdown)
         assertFalse("Personal details hidden" in MarkdownReport.render(context, findings, index, emptyList(), "0.12.0"))
     }
+
+    @Test
+    fun `hiding personal details normalises the scan timestamp to UTC`() {
+        val findings = listOf(finding("summary", Evidence("Transports", "WIFI", source)))
+        val context = ScanContext(
+            ZonedDateTime.of(2026, 10, 24, 19, 52, 38, 578_152_000, ZoneOffset.ofHours(3)),
+            sdkInt = 33,
+        )
+        val index = HardeningIndex.of(findings)
+
+        val hiddenJson = JsonReport.render(context, findings, index, emptyList(), "0.13.0", hidePersonal = true)
+        assertTrue("\"startedAt\": \"2026-10-24T16:52:38.578152Z\"" in hiddenJson)
+        assertFalse("+03:00" in hiddenJson)
+
+        val includedJson = JsonReport.render(context, findings, index, emptyList(), "0.13.0")
+        assertTrue("\"startedAt\": \"2026-10-24T19:52:38.578152+03:00\"" in includedJson)
+
+        val hiddenMd = MarkdownReport.render(context, findings, index, emptyList(), "0.13.0", hidePersonal = true)
+        assertTrue("- Scanned: 2026-10-24 16:52 Z" in hiddenMd)
+        assertFalse("+03:00" in hiddenMd)
+        assertFalse("GMT+" in hiddenMd)
+
+        val includedMd = MarkdownReport.render(context, findings, index, emptyList(), "0.13.0")
+        assertTrue("GMT+03:00" in includedMd)
+    }
 }

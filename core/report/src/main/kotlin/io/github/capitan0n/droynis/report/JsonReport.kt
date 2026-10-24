@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.report
 
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.ScanContext
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 /**
@@ -25,13 +26,14 @@ object JsonReport {
     ): String {
         val counts = findings.withoutMuted(index.muted).countByVerdict()
         val shown = if (hidePersonal) PersonalDetails.hide(findings) else findings
+        val startedAt = if (hidePersonal) context.startedAt.withZoneSameInstant(ZoneOffset.UTC) else context.startedAt
         val root = linkedMapOf(
             "schema" to SCHEMA,
             "schemaVersion" to SCHEMA_VERSION,
             "generator" to linkedMapOf("app" to "Droynis", "version" to appVersion),
             "personalDetails" to if (hidePersonal) "hidden" else "included",
             "scan" to linkedMapOf(
-                "startedAt" to context.startedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "startedAt" to startedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
                 "sdkInt" to context.sdkInt,
                 "tier" to context.capabilities.tier.name,
                 "grants" to context.capabilities.grants.map { it.name }.sorted(),
