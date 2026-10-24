@@ -13,6 +13,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     RootAccessCheck(probes.files, probes.packages),
     AndroidBuildCheck(probes.build, probes.properties),
     WebViewCheck(probes.webView),
+    RestartCheck(probes.uptime),
     AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
     // Access control
     LockScreenCheck(probes.keyguard),
@@ -27,6 +28,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     DeveloperOptionsCheck(probes.settings),
     UsbDebuggingCheck(probes.settings),
     WirelessDebuggingCheck(probes.settings),
+    AdbAuthorizationTimeoutCheck(probes.settings),
     // Apps and permissions
     AccessibilityServicesCheck(probes.accessibility, probes.packages),
     DeviceAdminsCheck(probes.policy, probes.packages),
@@ -49,6 +51,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     UserCertificatesCheck(probes.certificates),
     BluetoothCheck(probes.settings),
     NfcCheck(probes.radios),
+    SecureNfcCheck(probes.radios),
     LocationCheck(probes.radios),
     ScanningCheck(probes.settings),
 )

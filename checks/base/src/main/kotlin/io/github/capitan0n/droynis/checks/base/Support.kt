@@ -4,6 +4,9 @@ import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.toEvidence
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 
 const val NOT_SET = "(not set)"
 
@@ -52,4 +55,11 @@ fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
 fun List<String>.joinNames(limit: Int = 2): String = when {
     size <= limit -> if (size <= 1) joinToString() else dropLast(1).joinToString() + " and " + last()
     else -> take(limit).joinToString() + " and ${size - limit} more"
+}
+
+/** "less than an hour", "5 hours" or "12 days", rounded down. */
+fun roughly(duration: Duration): String = when {
+    duration < 1.hours -> "less than an hour"
+    duration < 1.days -> count(duration.inWholeHours.toInt(), "hour")
+    else -> count(duration.inWholeDays.toInt(), "day")
 }

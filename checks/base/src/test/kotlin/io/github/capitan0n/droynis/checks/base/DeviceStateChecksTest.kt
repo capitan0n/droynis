@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Status
 import java.time.LocalDate
 import kotlin.test.Test
@@ -102,6 +103,16 @@ class DeviceStateChecksTest {
         assertEquals("Insecure Android build: public test keys", outcome("user", "test-keys").summary)
         assertEquals(Status.FAIL, outcome("user", "release-keys", "ro.debuggable" to "1").status)
         assertEquals(Status.UNKNOWN, outcome("", "").status)
+
+        // adb without the authorization prompt is critical; a hidden or "1" value changes nothing.
+        val openAdb = outcome("user", "release-keys", "ro.adb.secure" to "0")
+        assertEquals(Status.FAIL, openAdb.status)
+        assertEquals(Severity.CRITICAL, openAdb.escalation)
+        assertEquals("Insecure Android build: adb without authorization (ro.adb.secure=0)", openAdb.summary)
+        assertEquals("0", openAdb.evidence.single { it.label == "ro.adb.secure" }.value)
+        val secured = outcome("user", "release-keys", "ro.adb.secure" to "1")
+        assertEquals(Status.PASS, secured.status)
+        assertEquals(null, outcome("userdebug", "release-keys", "ro.adb.secure" to "1").escalation)
     }
 
     @Test

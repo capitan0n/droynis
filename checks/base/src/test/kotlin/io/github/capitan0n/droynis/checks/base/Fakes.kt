@@ -8,6 +8,8 @@ import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.hours
 
 private val FAKE = Source("fake")
 
@@ -125,9 +127,15 @@ class FakeCertificates(private val certs: Reading<List<UserCertificate>> = value
 class FakeRadios(
     private val nfc: Reading<Boolean> = value(false),
     private val location: Reading<Boolean> = value(false),
+    private val secureNfc: Reading<Boolean> = unsupported("no Secure NFC option"),
 ) : RadioProbe {
     override fun nfcEnabled() = nfc
     override fun locationEnabled() = location
+    override fun secureNfcEnabled() = secureNfc
+}
+
+class FakeUptime(private val sinceBoot: Reading<Duration> = value(5.hours)) : UptimeProbe {
+    override fun sinceBoot() = sinceBoot
 }
 
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
@@ -184,6 +192,7 @@ class FakeProbes(
     override val permissions: PermissionProbe = FakePermissions(),
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
     override val cellular: CellularProbe = FakeCellular(),
+    override val uptime: UptimeProbe = FakeUptime(),
 ) : BaseProbes
 
 class FakePermissions(private val holders: Reading<Map<String, Set<String>>> = value(emptyMap())) : PermissionProbe {

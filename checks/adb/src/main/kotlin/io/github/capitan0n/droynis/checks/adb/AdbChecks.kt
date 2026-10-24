@@ -11,4 +11,5 @@ fun adbChecks(probes: AdbProbes): List<Check> = listOf(
     SmartLockCheck(probes.dumpsys, probes.packages),
     BackgroundSensorUseCheck(probes.dumpsys, probes.packages),
 ) + SpecialAccessCheck.Access.entries.map { SpecialAccessCheck(it, probes.dumpsys, probes.packages) } +
-    WifiMacCheck(probes.dumpsys)
+    WifiMacCheck(probes.dumpsys) +
+    OpenWifiCheck(probes.dumpsys, probes.policy)

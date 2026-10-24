@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.checks.base
 
 import io.github.capitan0n.droynis.core.Reading
 import java.time.LocalDate
+import kotlin.time.Duration
 
 /**
  * Read-only access to the Settings provider. A key that is readable but unset is `Value(null)`;
@@ -159,6 +160,17 @@ interface RadioProbe {
 
     /** The system-wide Location switch. */
     fun locationEnabled(): Reading<Boolean>
+
+    /**
+     * `NfcAdapter.isSecureNfcEnabled()` (API 29+): NFC payments and transit cards work only while
+     * the phone is unlocked. Unsupported without NFC hardware or where the phone has no such option.
+     */
+    fun secureNfcEnabled(): Reading<Boolean>
+}
+
+interface UptimeProbe {
+    /** `SystemClock.elapsedRealtime()`: how long ago the phone started, deep sleep included. */
+    fun sinceBoot(): Reading<Duration>
 }
 
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */
@@ -275,4 +287,5 @@ interface BaseProbes {
     val permissions: PermissionProbe
     val defaultApps: DefaultAppsProbe
     val cellular: CellularProbe
+    val uptime: UptimeProbe
 }

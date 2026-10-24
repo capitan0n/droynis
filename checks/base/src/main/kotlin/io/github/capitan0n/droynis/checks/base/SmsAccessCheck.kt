@@ -28,15 +28,15 @@ class SmsAccessCheck(
             "protected by them; SMS-stealing apps are among the most common Android malware. The call log " +
             "shows who you talk to. Your SMS and phone apps need these permissions and apps that came " +
             "with the phone are listed but don't count; any other app deserves a look, and one installed " +
-            "from outside an app store is a warning.",
+            "from outside an app store is a warning, your SMS or phone app included.",
         remediation = Remediation(
             text = "Open Settings › Apps › the app › Permissions and set SMS and Call logs to \"Don't allow\" " +
                 "for apps that don't need them. Uninstall apps you don't recognize.",
             settingsActions = listOf(SettingsActions.APPS),
         ),
         timeout = 15.seconds,
-        failsWhen = "an app other than your SMS and phone apps can read SMS or the call log " +
-            "(a warning when it came from outside an app store)",
+        failsWhen = "an app other than your SMS and phone apps, or one of those installed from outside an " +
+            "app store, can read SMS or the call log (a warning when it came from outside an app store)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -54,9 +54,13 @@ class SmsAccessCheck(
         val phoneApp = (phone as? Reading.Value)?.value
         val inventory = packages.byPackage()
 
-        // What each app holds beyond what its role explains.
+        // What each app holds beyond what its role explains. A sideloaded default app is counted
+        // anyway: holding the role is how an SMS stealer gets every login code.
+        fun explained(pkg: String, permission: String) =
+            ((pkg == smsApp && permission in SMS) || (pkg == phoneApp && permission in CALL_LOG)) &&
+                originOf(pkg, inventory) != AppOrigin.SIDELOADED
         val unexplained = granted.value.mapValues { (pkg, held) ->
-            held.filterNot { (pkg == smsApp && it in SMS) || (pkg == phoneApp && it in CALL_LOG) }.toSet()
+            held.filterNot { explained(pkg, it) }.toSet()
         }.filterValues { it.isNotEmpty() }
         // Preinstalled holders are only counted, so only the others need a label: loading one opens
         // that app's resources, and a phone can have dozens of preinstalled holders.
@@ -73,7 +77,7 @@ class SmsAccessCheck(
                         "Can read your ${describe(held)}",
                         "${holder.app.label} (${holder.app.packageName})",
                         granted.source,
-                        note = holder.origin.note,
+                        note = holder.origin.note + roleNote(holder.app.packageName, smsApp, phoneApp),
                     ),
                 )
             }
@@ -89,6 +93,12 @@ class SmsAccessCheck(
             evidence,
             escalation = sideloadedEscalation(holders),
         )
+    }
+
+    /** "; your default SMS app", or nothing. */
+    private fun roleNote(pkg: String, smsApp: String?, phoneApp: String?): String {
+        val roles = listOfNotNull("SMS".takeIf { pkg == smsApp }, "phone".takeIf { pkg == phoneApp })
+        return if (roles.isEmpty()) "" else "; your default ${roles.joinToString(" and ")} app"
     }
 
     private fun describe(held: Set<String>): String = listOfNotNull(

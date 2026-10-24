@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 59 checks.
+Every check Droynis runs, by privilege tier and category: 63 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,8 +13,8 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 43 |
-| [ADB](#adb-tier) | 9 |
+| [Base](#base-tier) | 46 |
+| [ADB](#adb-tier) | 10 |
 | [Shizuku](#shizuku-tier) | 3 |
 | [Root](#root-tier) | 4 |
 
@@ -31,8 +31,9 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [INTG-1040](#intg-1040-bootloader-lock) | Bootloader lock | Critical | the bootloader is unlocked or verified boot isn't passing (hardware key attestation, boot properties as a fallback) |
 | [INTG-1041](#intg-1041-oem-unlocking) | OEM unlocking | Notice | the OEM unlocking switch is on |
 | [INTG-1050](#intg-1050-root-access) | Root access | Critical | an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found |
-| [INTG-1060](#intg-1060-android-build) | Android build | Warning | it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 |
+| [INTG-1060](#intg-1060-android-build) | Android build | Warning | it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 (critical when ro.adb.secure=0 lets adb in without authorization) |
 | [INTG-1070](#intg-1070-webview-updates) | WebView updates | Warning | WebView hasn't been updated for more than 60 days |
+| [INTG-1080](#intg-1080-time-since-restart) | Time since restart | Notice | the phone hasn't restarted for more than 7 days |
 | [ACCS-2001](#accs-2001-secure-lock-screen) | Secure lock screen | Critical | no PIN, pattern or password is set |
 | [ACCS-2002](#accs-2002-screen-timeout) | Screen timeout | Notice | the screen stays on for more than 2 minutes |
 | [ACCS-2003](#accs-2003-password-visibility) | Password visibility | Notice | typed password characters are shown |
@@ -44,6 +45,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [ACCS-2010](#accs-2010-developer-options) | Developer options | Notice | developer options are on |
 | [ACCS-2011](#accs-2011-usb-debugging) | USB debugging | Warning | adb over USB is on |
 | [ACCS-2012](#accs-2012-wireless-debugging) | Wireless debugging (Android 11+) | Warning | adb over Wi-Fi is on |
+| [ACCS-2013](#accs-2013-usb-debugging-authorization-timeout) | USB debugging authorization timeout (Android 11+) | Notice | computers allowed for USB debugging keep their access for more than 7 days without connecting, or for good |
 | [ACCS-2020](#accs-2020-remote-lock-and-erase) | Remote lock and erase | Notice | no app or known service can lock and erase the phone remotely |
 | [APPS-4001](#apps-4001-accessibility-services) | Accessibility services | Notice | any accessibility service is enabled (a warning when its app came from outside an app store) |
 | [APPS-4002](#apps-4002-device-admin-apps) | Device admin apps | Notice | a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store) |
@@ -52,7 +54,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4005](#apps-4005-notification-access) | Notification access | Notice | an app you installed can read all notifications (a warning when it came from outside an app store) |
 | [APPS-4006](#apps-4006-keyboard-apps) | Keyboard apps | Notice | a third-party keyboard is enabled |
 | [APPS-4007](#apps-4007-apps-built-for-old-android) | Apps built for old Android | Notice | a user app targets Android 8.1 (API 27) or older |
-| [APPS-4008](#apps-4008-apps-that-can-read-your-sms-or-call-log) | Apps that can read your SMS or call log | Notice | an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store) |
+| [APPS-4008](#apps-4008-apps-that-can-read-your-sms-or-call-log) | Apps that can read your SMS or call log | Notice | an app other than your SMS and phone apps, or one of those installed from outside an app store, can read SMS or the call log (a warning when it came from outside an app store) |
 | [APPS-4009](#apps-4009-apps-that-can-send-sms) | Apps that can send SMS | Notice | an app other than your SMS app can send SMS (a warning when it came from outside an app store) |
 | [APPS-4010](#apps-4010-autofill-service) | Autofill service (Android 9+) | Notice | an autofill service from an app you installed is selected (a warning when it came from outside an app store) |
 | [APPS-4011](#apps-4011-digital-assistant-app) | Digital assistant app | Notice | the digital assistant is an app you installed (a warning when it came from outside an app store) |
@@ -67,6 +69,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [NETW-3008](#netw-3008-location) | Location | Notice | Location is on |
 | [NETW-3009](#netw-3009-wi-fi-and-bluetooth-scanning) | Wi-Fi and Bluetooth scanning | Notice | Wi-Fi or Bluetooth scanning is on |
 | [NETW-3010](#netw-3010-2g-mobile-networks) | 2G mobile networks | Notice | a SIM in use may connect to 2G networks |
+| [NETW-3011](#netw-3011-secure-nfc) | Secure NFC (Android 10+) | Notice | NFC is on and works while the phone is locked |
 
 ### Device integrity
 
@@ -128,9 +131,9 @@ Root lets any app you approve read every other app's data, log what you type and
 
 #### INTG-1060 Android build
 
-Warning · Android 8.0 and later · fails when it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1
+Warning · Android 8.0 and later · fails when it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 (critical when ro.adb.secure=0 lets adb in without authorization)
 
-Phones ship "user" builds signed with the vendor's private keys. A userdebug or eng build lets adb run as root, and a build signed with the public AOSP test keys lets anyone sign an app or update that the system trusts as its own.
+Phones ship "user" builds signed with the vendor's private keys. A userdebug or eng build lets adb run as root, and a build signed with the public AOSP test keys lets anyone sign an app or update that the system trusts as its own. With ro.adb.secure=0, any computer plugged in while USB debugging is on gets adb without the "Allow USB debugging?" prompt, a critical finding.
 
 **What to do:** Install the official firmware, or a maintained OS that publishes signed user builds.
 
@@ -141,6 +144,14 @@ Warning · Android 8.0 and later · fails when WebView hasn't been updated for m
 Most apps show web pages through the system WebView, a full browser engine that receives security fixes every few weeks. Browser engines are a favourite target for exploits, so an outdated WebView puts every app that uses it at risk.
 
 **What to do:** Update Android System WebView, or the browser that provides it (Chrome, Vanadium…), from your app store, and install pending system updates.
+
+#### INTG-1080 Time since restart
+
+Notice · Android 8.0 and later · fails when the phone hasn't restarted for more than 7 days
+
+After a restart, Android keeps the keys to your files out of memory until you first unlock the phone: the state phone-cracking tools find hardest. From then on the keys stay in memory, even while the screen is locked, until the next restart. A restart also removes spyware that lives only in memory, as many zero-click exploits do, and finishes updates that wait for one. The NSA's mobile device guidance advises restarting once a week.
+
+**What to do:** Restart the phone: hold the power button (with volume up on some phones) and tap Restart. Once a week is enough. GrapheneOS can also restart by itself after the phone stays locked for a while (Auto reboot).
 
 ### Access control
 
@@ -232,6 +243,14 @@ Wireless debugging exposes adb on the Wi-Fi network. Any computer you have paire
 
 **What to do:** Turn off Wireless debugging in Developer options and remove paired devices you no longer use. Android also turns it off when you leave the Wi-Fi network.
 
+#### ACCS-2013 USB debugging authorization timeout
+
+Notice · Android 11 and later · fails when computers allowed for USB debugging keep their access for more than 7 days without connecting, or for good
+
+A computer you allowed for USB or wireless debugging gets full adb access whenever debugging is on: it can install apps and read app data. Since Android 11 the phone forgets a computer that hasn't connected for 7 days. The developer option "Disable adb authorization timeout" stops that, so every computer you ever allowed stays trusted for good.
+
+**What to do:** Open Settings › System › Developer options and turn off "Disable adb authorization timeout". "Revoke USB debugging authorizations" on the same screen forgets every computer at once.
+
 #### ACCS-2020 Remote lock and erase
 
 Notice · Android 8.0 and later · fails when no app or known service can lock and erase the phone remotely
@@ -300,9 +319,9 @@ Android applies many protections only to apps that declare a recent target versi
 
 #### APPS-4008 Apps that can read your SMS or call log
 
-Notice · Android 8.0 and later · fails when an app other than your SMS and phone apps can read SMS or the call log (a warning when it came from outside an app store)
+Notice · Android 8.0 and later · fails when an app other than your SMS and phone apps, or one of those installed from outside an app store, can read SMS or the call log (a warning when it came from outside an app store)
 
-One-time login codes arrive by SMS, so an app that reads SMS can take over accounts protected by them; SMS-stealing apps are among the most common Android malware. The call log shows who you talk to. Your SMS and phone apps need these permissions and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning.
+One-time login codes arrive by SMS, so an app that reads SMS can take over accounts protected by them; SMS-stealing apps are among the most common Android malware. The call log shows who you talk to. Your SMS and phone apps need these permissions and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning, your SMS or phone app included.
 
 **What to do:** Open Settings › Apps › the app › Permissions and set SMS and Call logs to "Don't allow" for apps that don't need them. Uninstall apps you don't recognize.
 
@@ -420,6 +439,14 @@ Notice · Android 8.0 and later · fails when a SIM in use may connect to 2G net
 
 **What to do:** On Android 12 and later turn off Allow 2G (Settings › Network & internet › SIMs, or Mobile network; the place varies by vendor). Where there is no such switch, set Network mode to one without 2G, such as LTE/3G or 5G/LTE. Advanced Protection turns 2G off too.
 
+#### NETW-3011 Secure NFC
+
+Notice · Android 10 and later · fails when NFC is on and works while the phone is locked
+
+With NFC on, a locked phone still answers card readers held close to it: transit cards and some payment apps work without unlocking. Requiring an unlock for NFC (Secure NFC) keeps payments and transit cards for when the phone is unlocked, so someone who holds a reader to your pocket, or takes the phone, can't use them.
+
+**What to do:** Open Settings › Connected devices › Connection preferences › NFC and turn on "Require device unlock for NFC" ("Secure NFC" on older Android). If you don't use NFC, turn it off.
+
 ## ADB tier
 
 Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can't do. Until then these checks show as N/A and don't change the score. The Shizuku tier covers them too, without the grants.
@@ -444,6 +471,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
+| [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 
 ### Access control
 
@@ -522,6 +550,14 @@ Notice · Android 10 and later · fails when the current Wi-Fi connection or a s
 Every Wi-Fi network the phone joins sees its MAC address. The phone's own address is the same everywhere, so the networks, and whoever runs several of them, can recognize the phone and link its visits. Android uses a random address for each network unless that network is set to use the device MAC. Android keeps this in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
 
 **What to do:** Open Settings › Network & internet › Internet (or Wi-Fi), tap the gear next to each network listed, then Privacy, and choose "Use randomized MAC". Some company and carrier networks need the device MAC; mute this check if only those are left.
+
+#### NETW-3102 Open Wi-Fi networks that join automatically
+
+Notice · Android 12 and later · fails when a saved open, Enhanced Open or WEP network joins automatically
+
+A network without a password, open, Enhanced Open or WEP, proves nothing about who runs it: anyone can set up one with the same name, and a phone that joins it by itself hands that person its traffic, DNS and sign-in pages. Enhanced Open encrypts the radio link, but not against whoever runs the access point. Android keeps the saved networks in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
+
+**What to do:** Open Settings › Network & internet › Internet (or Wi-Fi) › Saved networks, tap each network listed and turn off "Automatically connect", or forget it. Join such networks by hand, with a VPN.
 
 ## Shizuku tier
 

@@ -67,6 +67,26 @@ class NewChecksTest {
         assertEquals(Status.PASS, smsReadingCalls.status) // preinstalled: listed, not counted
         assertEquals("1", smsReadingCalls.evidence.last().value)
 
+        // A default app from outside an app store is counted: the role is how SMS stealers get the codes.
+        val sideloadedSms = FakeDefaultApps(value("com.example.flashlight"), value("com.samsung.android.dialer"))
+        val stealer = SmsAccessCheck(
+            FakePermissions(value(mapOf("com.example.flashlight" to SmsAccessCheck.SMS))),
+            sideloadedSms,
+            apps,
+        ).outcome()
+        assertEquals(Status.FAIL, stealer.status)
+        assertEquals(Severity.WARNING, stealer.escalation)
+        assertEquals(
+            "installed from outside an app store; your default SMS app",
+            stealer.evidence.single { it.label == "Can read your SMS" }.note,
+        )
+        // A default SMS app from an app store keeps its role.
+        val storeSms = FakeDefaultApps(value("org.kde.kdeconnect_tp"), value(null))
+        assertEquals(
+            Status.PASS,
+            SmsAccessCheck(FakePermissions(value(mapOf("org.kde.kdeconnect_tp" to SmsAccessCheck.SMS))), storeSms, apps).status(),
+        )
+
         // Preinstalled holders are only counted, so their labels are never loaded.
         apps.labelled.clear()
         check("com.android.carrierservices" to SmsAccessCheck.SMS, "org.kde.kdeconnect_tp" to SmsAccessCheck.SMS).outcome()

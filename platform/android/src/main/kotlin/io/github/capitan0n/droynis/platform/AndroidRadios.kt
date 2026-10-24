@@ -9,7 +9,7 @@ import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 
-/** NfcAdapter.isEnabled() and LocationManager.isLocationEnabled() need no permission. */
+/** NfcAdapter.isEnabled(), isSecureNfcEnabled() and LocationManager.isLocationEnabled() need no permission. */
 internal class AndroidRadios(private val context: Context) : RadioProbe {
 
     override fun nfcEnabled(): Reading<Boolean> {
@@ -18,6 +18,19 @@ internal class AndroidRadios(private val context: Context) : RadioProbe {
             val adapter = NfcAdapter.getDefaultAdapter(context)
                 ?: return@probe Reading.Unsupported("this device has no NFC hardware", source)
             Reading.Value(adapter.isEnabled, source)
+        }
+    }
+
+    override fun secureNfcEnabled(): Reading<Boolean> {
+        val source = Source("NfcAdapter.isSecureNfcEnabled()")
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return Reading.Unsupported("needs Android 10", source)
+        return probe(source) {
+            val adapter = NfcAdapter.getDefaultAdapter(context)
+                ?: return@probe Reading.Unsupported("this device has no NFC hardware", source)
+            if (!adapter.isSecureNfcSupported) {
+                return@probe Reading.Unsupported("this phone has no option to require an unlock for NFC", source)
+            }
+            Reading.Value(adapter.isSecureNfcEnabled, source)
         }
     }
 

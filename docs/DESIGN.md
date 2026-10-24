@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 59 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 63 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -63,6 +63,17 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL.
   The theft protection switches (Theft Detection Lock, Offline Device Lock, Identity Check) are not
   in the Android 17 Settings provider (only Identity Check promo flags are), so no check reads them.
+- **Restart** (INTG-1080): `SystemClock.elapsedRealtime()`, the time since boot with deep sleep,
+  needs no permission. More than 7 days is a FAIL (NSA mobile device guidance: restart weekly). It
+  says nothing about whether a staged update waits for a restart; no public API tells.
+- **Secure NFC** (NETW-3011, Android 10+): `NfcAdapter.isSecureNfcSupported()` and
+  `isSecureNfcEnabled()` are public and NfcService checks no permission (Android 16). NFC off is a
+  PASS whatever the switch; a phone without the option is N/A. Both calls return false when the NFC
+  service fails, which reads as "off": a rare false FAIL, never a false PASS.
+- **adb authorization timeout** (ACCS-2013, Android 11+): `adb_allowed_connection_time` in
+  `Settings.Global` is hidden but `@Readable` and not redacted (Android 12L, 16 and 17), so the base
+  tier reads it. 0 means computers stay trusted for good; more than the 7-day default is a FAIL too.
+  Unset is a PASS: the adb key store reads it with `DEFAULT_ADB_ALLOWED_CONNECTION_TIME`, 7 days.
 - **Lock strength** (ACCS-2007): `KeyguardManager.getPasswordComplexity()` (API 29+). LOW, a
   pattern or a PIN with repeating or ordered digits, is a FAIL; MEDIUM and HIGH pass; no lock is
   N/A here because ACCS-2001 already fails it.
@@ -90,7 +101,11 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   is an app store; anything else, including the package installer, is sideloaded. For
   accessibility services, notification access, device admins and SMS or call log access, a
   sideloaded holder raises the FAIL to WARNING, since that is how banking trojans and stalkerware
-  arrive. Preinstalled notification listeners and device admins are listed but not counted.
+  arrive. Preinstalled notification listeners and device admins are listed but not counted. The
+  default SMS and phone apps' role explains their SMS and call log access only when they did not
+  come from outside an app store: an SMS stealer asks to become the default SMS app.
+- **Build** (INTG-1060): `ro.adb.secure=0`, where SELinux lets the app see it, means adbd accepts
+  any computer without the RSA prompt and raises the FAIL to CRITICAL.
 
 ## 2. Modules
 
@@ -231,6 +246,20 @@ Limits: a phone that can't randomize but has a locally administered factory MAC 
 report, `dumpsys wifi` also asks the Wi-Fi driver for its ring buffers (`captureBugReportData`); it
 changes no setting.
 
+### Open Wi-Fi networks that join automatically
+
+NETW-3102 (ADB tier, DUMP only, Android 12+) reads the same saved-network section of `dumpsys wifi`,
+checked against `WifiConfiguration.toString()` in Android 12L, 13, 14, 15, 16 and 17. Per network it
+takes the enabled types in `SecurityParams List:` (open 0, WEP 1, Enhanced Open 6 count as no
+password, the same set Android 17 stops auto-joining under Advanced Protection), `allowAutojoin`
+and the `ephemeral` flag: suggestions and app requests are not saved networks, and
+SavedNetworkNominator never auto-joins them as such. An open network auto-upgraded to Enhanced Open
+keeps its open parameters until a transition-disable indication turns them off, so it still counts.
+Android 17 prints `mAllowedAutoJoinInAdvancedProtection`; when it is false and Advanced Protection
+reads as on, the network is listed but not counted. Network names, identities and proxies sit on
+lines the parser skips, or in fields that must appear exactly once, and a name with a line break
+breaks its own header; any of these makes the result UNKNOWN, never a PASS. Names are `personal`.
+
 ### Smart Lock
 
 ACCS-2101 (ADB tier, DUMP only) reads `dumpsys trust`: for the current user, whether a trust agent
@@ -323,7 +352,8 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
 5. Tier-gated checks appear as UNSUPPORTED with "Needs DUMP (ADB tier)", not as a fifth status.
 6. A missing setting is UNKNOWN even where AOSP treats "unset" as off (e.g. `adb_enabled`).
    Exception: `show_password` unset is a FAIL, because the framework reads it with a default of
-   1 (checked in `TextKeyListener`), i.e. passwords are shown.
+   1 (checked in `TextKeyListener`), i.e. passwords are shown. Likewise `adb_allowed_connection_time`
+   unset is a PASS: the adb key store applies its 7-day default.
 7. License: settled as GPL-3.0-or-later (About screen, README, CONTRIBUTING and F-Droid metadata).
 8. Reports hide addresses, DNS and proxy hosts and trusted computers by default, but keep app
    labels and package names, which the findings are about. Hide user-installed apps too?

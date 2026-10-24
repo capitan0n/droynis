@@ -23,6 +23,7 @@ import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
+import io.github.capitan0n.droynis.checks.base.UptimeProbe
 import io.github.capitan0n.droynis.checks.base.WebViewProbe
 import io.github.capitan0n.droynis.checks.root.RootProbes
 import io.github.capitan0n.droynis.checks.shizuku.PrivilegedShell
@@ -70,6 +71,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val permissions: PermissionProbe = androidPermissions
     override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
     override val cellular: CellularProbe = AndroidCellular(app, shells)
+    override val uptime: UptimeProbe = AndroidUptime
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells
