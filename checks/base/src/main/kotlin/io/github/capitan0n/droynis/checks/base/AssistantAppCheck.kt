@@ -66,7 +66,13 @@ class AssistantAppCheck(
             val holder = Holder(AppRef(pkg, packages.label(pkg)), originOf(pkg, packages.byPackage()))
             val source = if (assist?.trim().isNullOrEmpty()) voice.source else assistant.source
             val evidence = listOf(
-                Evidence("Digital assistant", "${holder.app.label} ($component)", source, note = holder.origin.note),
+                Evidence(
+                    "Digital assistant",
+                    "${holder.app.label} ($component)",
+                    source,
+                    note = holder.origin.note,
+                    packageName = holder.app.packageName,
+                ),
             ) + switches
             if (holder.origin == AppOrigin.PREINSTALLED) {
                 return@evaluate Outcome.pass("${holder.app.label}, which came with the phone, is the digital assistant", evidence)

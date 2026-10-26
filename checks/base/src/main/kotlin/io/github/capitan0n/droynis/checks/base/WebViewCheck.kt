@@ -4,6 +4,7 @@ import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Outcome
+import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
@@ -38,7 +39,7 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
                     val updated = if (it.fromSystemImage) "came with the system image of" else "updated"
                     "${it.packageName} ${it.versionName}, $updated ${it.lastUpdated}"
                 } ?: "none"
-            },
+            }.copy(packageName = (provider as? Reading.Value)?.value?.packageName),
         )
         return provider.evaluate("WebView", evidence) { info ->
             if (info == null) return@evaluate Outcome.unsupported("This phone has no WebView", evidence)

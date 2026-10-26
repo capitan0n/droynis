@@ -111,7 +111,7 @@ fun ToolsScreen(state: UiState, actions: AppActions) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { NetworkCard(state.network, state.refreshingTools, actions::refreshTools) }
-        item { PermissionsCard(state.permissions) { actions.openSettings(listOf(SettingsActions.PRIVACY)) } }
+        item { PermissionsCard(state.permissions) { actions.openSettings(listOf(SettingsActions.PRIVACY, SettingsActions.APPS)) } }
         item { ShortcutsCard(actions::openSettings) }
         item { DeviceInfoCard(state, actions::copy) }
         item { ReportCard(reportReady = state.result != null, hidePersonal = state.hidePersonal, actions = actions) }

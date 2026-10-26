@@ -48,7 +48,7 @@ class DeviceAdminsCheck(
             val counted = list.filter { it.isDeviceOwner || it.isProfileOwner || origins.getValue(it) != AppOrigin.PREINSTALLED }
             val evidence = list.map { admin ->
                 val note = origins.getValue(admin).note + if (admin in counted) "" else "; not counted"
-                Evidence("Active admin", describe(admin), admins.source, note = note)
+                Evidence("Active admin", describe(admin), admins.source, note = note, packageName = admin.app.packageName)
             }
             if (counted.isEmpty()) return@evaluate Outcome.pass("Only device admins that came with the phone are active", evidence)
             val holders = counted.map { Holder(it.app, origins.getValue(it)) }

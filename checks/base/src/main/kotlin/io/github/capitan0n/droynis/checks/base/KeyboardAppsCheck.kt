@@ -54,7 +54,7 @@ class KeyboardAppsCheck(private val inputMethods: InputMethodProbe) : Check {
     private fun keyboardEvidence(keyboards: Reading<List<Keyboard>>): List<Evidence> = when (keyboards) {
         is Reading.Value -> keyboards.value.map {
             val origin = if (it.isSystem) "built-in" else "third-party"
-            Evidence("Keyboard", "${it.app.label} (${it.app.packageName}), $origin", keyboards.source)
+            Evidence("Keyboard", "${it.app.label} (${it.app.packageName}), $origin", keyboards.source, packageName = it.app.packageName)
         }.ifEmpty { listOf(Evidence("Keyboard", "none", keyboards.source)) }
         else -> listOf(keyboards.toEvidence("Keyboards"))
     }

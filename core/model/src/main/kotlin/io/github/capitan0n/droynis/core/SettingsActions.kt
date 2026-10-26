@@ -11,7 +11,10 @@ object SettingsActions {
     /** `Settings.ACTION_SECURITY_SETTINGS` */
     const val SECURITY = "android.settings.SECURITY_SETTINGS"
 
-    /** `Settings.ACTION_PRIVACY_SETTINGS` */
+    /**
+     * `Settings.ACTION_PRIVACY_SETTINGS`: Privacy, with Permission manager, from Android 10. Android 8
+     * and 9 open Backup with it, so [minSdk] skips it there.
+     */
     const val PRIVACY = "android.settings.PRIVACY_SETTINGS"
 
     /** `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS` */
@@ -50,6 +53,12 @@ object SettingsActions {
     /** `Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS`: the installed apps list. */
     const val APPS = "android.settings.MANAGE_APPLICATIONS_SETTINGS"
 
+    /**
+     * `Settings.ACTION_APPLICATION_DETAILS_SETTINGS`: one app's App info, with its permissions,
+     * battery use and Uninstall. Needs a `package:` URI; the UI's last resort for a named app.
+     */
+    const val APP_DETAILS = "android.settings.APPLICATION_DETAILS_SETTINGS"
+
     /** `Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES` */
     const val UNKNOWN_APP_SOURCES = "android.settings.MANAGE_UNKNOWN_APP_SOURCES"
 
@@ -61,6 +70,15 @@ object SettingsActions {
 
     /** `Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION`: All files access, Android 11+. */
     const val ALL_FILES_ACCESS = "android.settings.MANAGE_ALL_FILES_ACCESS_PERMISSION"
+
+    /**
+     * `Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION`: one app's All files access switch,
+     * Android 11+. Needs a `package:` URI.
+     */
+    const val APP_ALL_FILES_ACCESS = "android.settings.MANAGE_APP_ALL_FILES_ACCESS_PERMISSION"
+
+    /** `Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`: the list of apps by battery optimization. */
+    const val BATTERY_OPTIMIZATION = "android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS"
 
     /** `Settings.ACTION_MANAGE_WRITE_SETTINGS`: Modify system settings. */
     const val WRITE_SETTINGS = "android.settings.action.MANAGE_WRITE_SETTINGS"
@@ -104,9 +122,21 @@ object SettingsActions {
      */
     const val NOTIFICATION_HISTORY = "android.settings.NOTIFICATION_HISTORY"
 
+    /**
+     * Not in the SDK: the User tab of Trusted credentials. The AOSP Settings app exports it, and
+     * Android's own "Network may be monitored" notification opens it.
+     */
+    const val TRUSTED_CREDENTIALS_USER = "com.android.settings.TRUSTED_CREDENTIALS_USER"
+
     /** `Settings.ACTION_DEVICE_INFO_SETTINGS`: About phone. */
     const val DEVICE_INFO = "android.settings.DEVICE_INFO_SETTINGS"
 
     /** `Settings.ACTION_SETTINGS`: the fallback when nothing more specific opens. */
     const val SETTINGS = "android.settings.SETTINGS"
+
+    /** Actions that exist on older releases but open the wrong screen there, with the first good API level. */
+    private val MIN_SDK = mapOf(PRIVACY to 29)
+
+    /** The API level from which [action] opens the screen its constant describes. */
+    fun minSdk(action: String): Int = MIN_SDK[action] ?: 0
 }

@@ -129,6 +129,8 @@
     <string name="detail_what_to_do">What you can do</string>
     <string name="detail_open_settings">Open settings</string>
     <string name="detail_copy_command">Copy command</string>
+    <string name="detail_open_app_settings">Open for this app</string>
+    <string name="detail_open_app_settings_for">Open settings for %1$s</string>
     <string name="detail_evidence">Evidence</string>
     <string name="detail_evidence_empty">No values were recorded.</string>
     <string name="detail_evidence_source">via %1$s</string>

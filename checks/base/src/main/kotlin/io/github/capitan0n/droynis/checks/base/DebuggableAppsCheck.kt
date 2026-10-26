@@ -38,7 +38,9 @@ class DebuggableAppsCheck(private val packages: PackageInventory) : Check {
         val debuggable = (apps as? Reading.Value)?.value?.filter { it.isDebuggable }.orEmpty()
         val evidence = buildList {
             add(apps.toEvidence("Apps inspected") { it.size.toString() })
-            debuggable.forEach { add(Evidence("Debuggable", "${packages.label(it.packageName)} (${it.packageName})", apps.source)) }
+            debuggable.forEach {
+                add(Evidence("Debuggable", "${packages.label(it.packageName)} (${it.packageName})", apps.source, packageName = it.packageName))
+            }
         }
         return apps.evaluate("Installed apps", evidence) {
             if (debuggable.isEmpty()) {

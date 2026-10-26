@@ -19,6 +19,8 @@ data class Source(val method: String, val grant: Grant? = null) {
  *
  * @property personal the value identifies the user, their network or their computers (a DNS server,
  *   a proxy, a computer's name): reports leave it out unless the user asks for personal details.
+ * @property packageName the installed app this evidence is about, if any: the UI offers a button that
+ *   opens that app's own Settings screen ([Remediation.appSettingsActions], then App info).
  */
 data class Evidence(
     val label: String,
@@ -26,6 +28,7 @@ data class Evidence(
     val source: Source,
     val note: String? = null,
     val personal: Boolean = false,
+    val packageName: String? = null,
 )
 
 /** What a check concluded. Build with the factory functions. */

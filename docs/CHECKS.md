@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 63 checks.
+Every check Droynis runs, by privilege tier and category: 65 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,8 +13,8 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 46 |
-| [ADB](#adb-tier) | 10 |
+| [Base](#base-tier) | 47 |
+| [ADB](#adb-tier) | 11 |
 | [Shizuku](#shizuku-tier) | 3 |
 | [Root](#root-tier) | 4 |
 
@@ -59,6 +59,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4010](#apps-4010-autofill-service) | Autofill service (Android 9+) | Notice | an autofill service from an app you installed is selected (a warning when it came from outside an app store) |
 | [APPS-4011](#apps-4011-digital-assistant-app) | Digital assistant app | Notice | the digital assistant is an app you installed (a warning when it came from outside an app store) |
 | [APPS-4012](#apps-4012-apps-with-location-all-the-time) | Apps with location all the time (Android 10+) | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
+| [APPS-4013](#apps-4013-apps-that-skip-battery-optimization) | Apps that skip battery optimization | Info | an app you installed may skip battery optimization (information only) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -323,7 +324,7 @@ Notice · Android 8.0 and later · fails when an app other than your SMS and pho
 
 One-time login codes arrive by SMS, so an app that reads SMS can take over accounts protected by them; SMS-stealing apps are among the most common Android malware. The call log shows who you talk to. Your SMS and phone apps need these permissions and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning, your SMS or phone app included.
 
-**What to do:** Open Settings › Apps › the app › Permissions and set SMS and Call logs to "Don't allow" for apps that don't need them. Uninstall apps you don't recognize.
+**What to do:** Open Settings › Privacy › Permission manager › SMS and Call logs (or Settings › Apps › the app › Permissions) and set them to "Don't allow" for apps that don't need them. Uninstall apps you don't recognize.
 
 #### APPS-4009 Apps that can send SMS
 
@@ -331,7 +332,7 @@ Notice · Android 8.0 and later · fails when an app other than your SMS app can
 
 An app that can send SMS can text premium-rate numbers that are charged to your phone bill, or send messages in your name, without opening your messaging app; billing-fraud malware such as Joker does exactly that. Android asks before an app texts a premium number, unless its Premium SMS access is set to Always allow. Your SMS app needs this permission and apps that came with the phone are listed but don't count; any other app deserves a look, and one installed from outside an app store is a warning.
 
-**What to do:** Open Settings › Apps › the app › Permissions and set SMS to "Don't allow" for apps that don't need it. Under Settings › Apps › Special app access › Premium SMS access, keep every app on Ask or Never allow. Uninstall apps you don't recognize.
+**What to do:** Open Settings › Privacy › Permission manager › SMS (or Settings › Apps › the app › Permissions) and set it to "Don't allow" for apps that don't need it. Under Settings › Apps › Special app access › Premium SMS access, keep every app on Ask or Never allow. Uninstall apps you don't recognize.
 
 #### APPS-4010 Autofill service
 
@@ -356,6 +357,14 @@ Notice · Android 10 and later · fails when an app you installed may use locati
 An app allowed location "All the time" can see where you are while you aren't using it, and build a history of the places you go. Navigation, fitness and find-my-phone apps may need it; most apps work with "Only while using the app". Apps that came with the phone are listed but don't count; one installed from outside an app store is a warning, as stalkerware asks for exactly this.
 
 **What to do:** Open Settings › Location › App location permissions (on some phones Settings › Privacy › Permission manager › Location) and set the apps listed to "Allow only while using the app" or "Don't allow".
+
+#### APPS-4013 Apps that skip battery optimization
+
+Info · Android 8.0 and later · fails when an app you installed may skip battery optimization (information only)
+
+An app set to "Unrestricted" battery use ("Not optimized" on older Android) is exempt from Doze and App Standby, so it can wake the phone and keep running in the background at any time. Messengers, sync and automation apps use this to work on time; stalkerware and remote-access tools ask for it to keep running unnoticed. Apps that came with the phone aren't listed. This check is for your information and doesn't count in the score.
+
+**What to do:** Open Settings › Apps › the app › App battery usage (Battery on some phones) and choose "Optimized" for apps that don't need to run in the background. Uninstall apps you don't recognize.
 
 ### Network and radios
 
@@ -470,6 +479,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4105](#apps-4105-apps-with-usage-access) | Apps with usage access (Android 10+) | Notice | a user app has usage access |
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
+| [APPS-4108](#apps-4108-apps-that-can-record-the-screen-without-asking) | Apps that can record the screen without asking (Android 10+) | Warning | a user app may record or cast the screen without asking |
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 
@@ -497,7 +507,7 @@ Lists user-installed apps that used the camera, the microphone or your location 
 
 Notice · Android 10 and later · fails when a user app may display over other apps
 
-Apps allowed to "Display over other apps" (on Samsung: "Appear on top") can put windows on top of anything on the screen. Chat bubbles and screen filters use this; malware uses it to cover real apps with fake login forms or to trick you into tapping something else. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+Apps allowed to "Display over other apps" (on Samsung: "Appear on top") can put windows on top of anything on the screen. Chat bubbles and screen filters use this; malware uses it to cover real apps with fake login forms or to trick you into tapping something else. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Display over other apps and turn it off for every app listed that doesn't need it. Uninstall apps you don't recognize.
 
@@ -505,7 +515,7 @@ Apps allowed to "Display over other apps" (on Samsung: "Appear on top") can put 
 
 Notice · Android 11 and later · fails when a user app has all files access
 
-"All files access" lets an app read, change and delete every file in shared storage: photos, downloads and documents, whatever app made them. File managers and backup apps need it; most other apps don't. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+"All files access" lets an app read, change and delete every file in shared storage: photos, downloads and documents, whatever app made them. File managers and backup apps need it; most other apps don't. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › All files access and turn it off for every app listed that doesn't manage or back up your files.
 
@@ -513,7 +523,7 @@ Notice · Android 11 and later · fails when a user app has all files access
 
 Notice · Android 10 and later · fails when a user app other than a known app store may install apps
 
-Apps allowed to "Install unknown apps" can offer you APK files to install. You still confirm each one, but a malicious or hacked app with this right can push malware at you. App stores need it and don't count. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+Apps allowed to "Install unknown apps" can offer you APK files to install. You still confirm each one, but a malicious or hacked app with this right can push malware at you. App stores need it and don't count. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Install unknown apps and turn it off for the apps listed. Turn it on again only while you install something you trust.
 
@@ -521,7 +531,7 @@ Apps allowed to "Install unknown apps" can offer you APK files to install. You s
 
 Notice · Android 10 and later · fails when a user app has usage access
 
-"Usage access" (on Samsung: "Usage data access") shows an app which other apps you use, when and for how long. Launchers and digital wellbeing apps use it; so does stalkerware, to follow what you do on the phone. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+"Usage access" (on Samsung: "Usage data access") shows an app which other apps you use, when and for how long. Launchers and digital wellbeing apps use it; so does stalkerware, to follow what you do on the phone. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Usage access and turn it off for every app listed that doesn't need it.
 
@@ -529,7 +539,7 @@ Notice · Android 10 and later · fails when a user app has usage access
 
 Info · Android 10 and later · fails when a user app may change system settings (information only)
 
-"Modify system settings" (on Samsung: "Change system settings") lets an app change everyday settings such as brightness, ringtone and screen timeout. It can't reach security settings, so this check is for your information and doesn't count in the score. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+"Modify system settings" (on Samsung: "Change system settings") lets an app change everyday settings such as brightness, ringtone and screen timeout. It can't reach security settings, so this check is for your information and doesn't count in the score. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Modify system settings and turn it off for apps you don't expect there.
 
@@ -537,9 +547,17 @@ Info · Android 10 and later · fails when a user app may change system settings
 
 Info · Android 12 and later · fails when a user app may change or delete media without asking (information only)
 
-"Media management" (on Samsung: "Manage media") lets an app that can see your photos, videos and audio also change, move or delete them without asking you each time. Gallery apps use it. This check is for your information and doesn't count in the score. Android keeps this switch in its app-ops service, which only the ADB or Shizuku tier can read.
+"Media management" (on Samsung: "Manage media") lets an app that can see your photos, videos and audio also change, move or delete them without asking you each time. Gallery apps use it. This check is for your information and doesn't count in the score. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Open Settings › Apps › Special app access › Media management apps and turn it off for apps that don't organize your media.
+
+#### APPS-4108 Apps that can record the screen without asking
+
+Warning · Android 10 and later · fails when a user app may record or cast the screen without asking
+
+Android asks each time an app wants to record or cast the screen. An app whose PROJECT_MEDIA app-op is set to allow skips that question, and can capture everything on the screen, passwords and messages included, whenever it likes. Settings has no switch for this: it is set from a computer with adb, the way stalkerware and remote-access tools are often set up on someone else's phone. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Uninstall apps listed that you don't recognize. For an app you keep, take the access back from a computer with adb: put the app's package name, shown in the evidence, in the command below. The app then asks again before each recording.
 
 ### Network and radios
 

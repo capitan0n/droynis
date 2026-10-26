@@ -41,7 +41,14 @@ class OutdatedAppsCheck(private val packages: PackageInventory) : Check {
         val evidence = buildList {
             add(apps.toEvidence("User apps inspected") { list -> list.count { !it.isSystem }.toString() })
             old.forEach {
-                add(Evidence("Targets API ${it.targetSdk}", "${packages.label(it.packageName)} (${it.packageName})", apps.source))
+                add(
+                    Evidence(
+                        "Targets API ${it.targetSdk}",
+                        "${packages.label(it.packageName)} (${it.packageName})",
+                        apps.source,
+                        packageName = it.packageName,
+                    ),
+                )
             }
         }
         return apps.evaluate("Installed apps", evidence) {

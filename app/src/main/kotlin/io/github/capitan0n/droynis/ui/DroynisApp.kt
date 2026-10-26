@@ -121,6 +121,12 @@ interface AppActions {
 
     /** Opens the first Settings screen in [actions] that this phone has. */
     fun openSettings(actions: List<String>)
+
+    /**
+     * Opens one app's own Settings screen: the first of [actions] this phone has for [packageName]'s
+     * `package:` URI, else the app's App info.
+     */
+    fun openAppSettings(actions: List<String>, packageName: String)
     fun saveReport(format: ReportFormat)
     fun shareReport()
     fun copyReport()
@@ -315,6 +321,7 @@ fun DroynisApp(
                         spec = target,
                         finding = state.findings[target.id],
                         onOpenSettings = actions::openSettings,
+                        onOpenAppSettings = actions::openAppSettings,
                         onCopy = actions::copy,
                         muted = target.id in state.muted,
                         onMute = { actions.setMuted(target.id, it) },

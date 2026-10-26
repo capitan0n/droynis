@@ -57,7 +57,13 @@ class AutofillServiceCheck(
             val holder = Holder(AppRef(pkg, packages.label(pkg)), originOf(pkg, packages.byPackage()))
             val counted = holder.origin != AppOrigin.PREINSTALLED
             val evidence = listOf(
-                Evidence("Autofill service", "${holder.app.label} ($component)", state.source, note = holder.origin.note),
+                Evidence(
+                    "Autofill service",
+                    "${holder.app.label} ($component)",
+                    state.source,
+                    note = holder.origin.note,
+                    packageName = holder.app.packageName,
+                ),
             )
             if (!counted) {
                 Outcome.pass("${holder.app.label}, which came with the phone, fills in forms", evidence)

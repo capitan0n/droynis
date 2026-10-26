@@ -26,7 +26,7 @@ class UserCertificatesCheck(private val certificates: CertificateStore) : Check 
         remediation = Remediation(
             text = "Under Settings › Security › Encryption & credentials › Trusted credentials › User, " +
                 "remove certificates you do not need (the location varies by vendor).",
-            settingsActions = listOf(SettingsActions.SECURITY),
+            settingsActions = listOf(SettingsActions.TRUSTED_CREDENTIALS_USER, SettingsActions.SECURITY),
         ),
         failsWhen = "a user-installed CA certificate can intercept TLS",
     )

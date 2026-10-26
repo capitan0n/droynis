@@ -40,6 +40,7 @@ internal data class Holder(val app: AppRef, val origin: AppOrigin) {
         "${app.label} (${app.packageName})",
         source,
         note = origin.note + if (counted) "" else "; not counted",
+        packageName = app.packageName,
     )
 }
 

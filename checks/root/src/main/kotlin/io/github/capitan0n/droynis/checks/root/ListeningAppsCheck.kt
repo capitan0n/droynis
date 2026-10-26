@@ -147,7 +147,11 @@ class ListeningAppsCheck(
 
         val evidence = buildList {
             add(Evidence("Open ports", ports.size.toString(), src))
-            user.forEach { (uid, open) -> add(Evidence("Listening app", name(uid, apps), src, note = describe(open))) }
+            user.forEach { (uid, open) ->
+                // A shared uid names several apps; only a single app gets its own Settings link.
+                val pkg = apps[uid]?.singleOrNull()?.packageName
+                add(Evidence("Listening app", name(uid, apps), src, note = describe(open), packageName = pkg))
+            }
             if (system.isNotEmpty()) add(Evidence("System services listening", system.values.sumOf { it.size }.toString(), src, note = describe(system.values.flatten())))
         }
         if (user.isEmpty()) return Outcome.pass("No user app accepts connections from the network", evidence)

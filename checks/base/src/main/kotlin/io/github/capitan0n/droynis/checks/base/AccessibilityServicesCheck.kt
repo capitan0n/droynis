@@ -59,7 +59,7 @@ internal fun appEvidence(label: String, apps: Reading<List<AppRef>>): List<Evide
         if (apps.value.isEmpty()) {
             listOf(Evidence(label, "none", apps.source))
         } else {
-            apps.value.map { Evidence(label, "${it.label} (${it.packageName})", apps.source) }
+            apps.value.map { Evidence(label, "${it.label} (${it.packageName})", apps.source, packageName = it.packageName) }
         }
     else -> listOf(apps.toEvidence(label))
 }

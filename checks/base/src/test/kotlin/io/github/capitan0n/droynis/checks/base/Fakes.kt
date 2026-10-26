@@ -193,7 +193,21 @@ class FakeProbes(
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
     override val cellular: CellularProbe = FakeCellular(),
     override val uptime: UptimeProbe = FakeUptime(),
+    override val battery: BatteryProbe = FakeBattery(),
 ) : BaseProbes
+
+/** [exempt] lists the allowlisted packages; [asked] records which packages a check asked about. */
+class FakeBattery(private val exempt: Reading<Set<String>> = value(emptySet())) : BatteryProbe {
+    val asked = mutableListOf<String>()
+
+    override fun unrestricted(packages: List<String>): Reading<Set<String>> {
+        asked += packages
+        return when (exempt) {
+            is Reading.Value -> Reading.Value(exempt.value.filterTo(linkedSetOf()) { it in packages }, exempt.source)
+            else -> exempt
+        }
+    }
+}
 
 class FakePermissions(private val holders: Reading<Map<String, Set<String>>> = value(emptyMap())) : PermissionProbe {
     override fun holders(permissions: Set<String>) = holders

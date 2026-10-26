@@ -32,10 +32,11 @@ class SmsSendingCheck(
             "with the phone are listed but don't count; any other app deserves a look, and one installed from " +
             "outside an app store is a warning.",
         remediation = Remediation(
-            text = "Open Settings › Apps › the app › Permissions and set SMS to \"Don't allow\" for apps that don't " +
-                "need it. Under Settings › Apps › Special app access › Premium SMS access, keep every app on Ask " +
-                "or Never allow. Uninstall apps you don't recognize.",
-            settingsActions = listOf(SettingsActions.APPS),
+            text = "Open Settings › Privacy › Permission manager › SMS (or Settings › Apps › the app › " +
+                "Permissions) and set it to \"Don't allow\" for apps that don't need it. Under Settings › Apps › " +
+                "Special app access › Premium SMS access, keep every app on Ask or Never allow. Uninstall apps " +
+                "you don't recognize.",
+            settingsActions = listOf(SettingsActions.PRIVACY, SettingsActions.APPS),
         ),
         timeout = 15.seconds,
         failsWhen = "an app other than your SMS app can send SMS (a warning when it came from outside an app store)",
@@ -45,6 +46,7 @@ class SmsSendingCheck(
         val granted = permissions.holders(SEND)
         val sms = defaults.smsApp()
         val smsEvidence = sms.toEvidence("Default SMS app") { pkg -> pkg?.let { "${packages.label(it)} ($it)" } ?: "none" }
+            .copy(packageName = (sms as? Reading.Value)?.value)
         if (granted !is Reading.Value) {
             val evidence = listOf(smsEvidence, granted.toEvidence("Permissions"))
             return Outcome.unknown("Could not read which apps can send SMS", evidence)

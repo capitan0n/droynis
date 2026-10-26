@@ -20,8 +20,9 @@ import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * One "special app access" switch from Settings › Apps › Special app access. Android stores these
- * as app-ops, outside the runtime permissions the base tier can see.
+ * One "special app access" switch from Settings › Apps › Special app access, or an app-op that only
+ * adb can set (screen capture). Android stores these as app-ops, outside the runtime permissions the
+ * base tier can see.
  */
 class SpecialAccessCheck(
     private val access: Access,
@@ -33,7 +34,7 @@ class SpecialAccessCheck(
         val id: String,
         /** App-op name as dumpsys prints it. */
         val op: String,
-        /** The switch's name in Settings. */
+        /** The switch's name in Settings, or what the access allows when Settings has no switch. */
         val label: String,
         val title: String,
         /** Completes "3 apps …" and "No app …". */
@@ -77,6 +78,7 @@ class SpecialAccessCheck(
                 text = "Open Settings › Apps › Special app access › All files access and turn it off for " +
                     "every app listed that doesn't manage or back up your files.",
                 settingsActions = listOf(SettingsActions.ALL_FILES_ACCESS),
+                appSettingsActions = listOf(SettingsActions.APP_ALL_FILES_ACCESS),
             ),
             minSdk = 30,
             failsWhen = "a user app has all files access",
@@ -94,6 +96,7 @@ class SpecialAccessCheck(
                 text = "Open Settings › Apps › Special app access › Install unknown apps and turn it off " +
                     "for the apps listed. Turn it on again only while you install something you trust.",
                 settingsActions = listOf(SettingsActions.UNKNOWN_APP_SOURCES),
+                appSettingsActions = listOf(SettingsActions.UNKNOWN_APP_SOURCES),
             ),
             minSdk = 29,
             failsWhen = "a user app other than a known app store may install apps",
@@ -113,6 +116,7 @@ class SpecialAccessCheck(
                 text = "Open Settings › Apps › Special app access › Usage access and turn it off for every " +
                     "app listed that doesn't need it.",
                 settingsActions = listOf(SettingsActions.USAGE_ACCESS),
+                appSettingsActions = listOf(SettingsActions.USAGE_ACCESS),
             ),
             minSdk = 29,
             failsWhen = "a user app has usage access",
@@ -130,6 +134,7 @@ class SpecialAccessCheck(
                 text = "Open Settings › Apps › Special app access › Modify system settings and turn it off " +
                     "for apps you don't expect there.",
                 settingsActions = listOf(SettingsActions.WRITE_SETTINGS),
+                appSettingsActions = listOf(SettingsActions.WRITE_SETTINGS),
             ),
             minSdk = 29,
             failsWhen = "a user app may change system settings (information only)",
@@ -148,10 +153,32 @@ class SpecialAccessCheck(
                 text = "Open Settings › Apps › Special app access › Media management apps and turn it off " +
                     "for apps that don't organize your media.",
                 settingsActions = listOf(SettingsActions.MANAGE_MEDIA),
+                appSettingsActions = listOf(SettingsActions.MANAGE_MEDIA),
             ),
             minSdk = 31,
             failsWhen = "a user app may change or delete media without asking (information only)",
             severity = Severity.INFO,
+        ),
+        SCREEN_CAPTURE(
+            id = "APPS-4108",
+            op = "PROJECT_MEDIA",
+            label = "Screen capture without asking",
+            title = "Apps that can record the screen without asking",
+            phrase = "can record the screen without asking",
+            explanation = "Android asks each time an app wants to record or cast the screen. An app whose " +
+                "PROJECT_MEDIA app-op is set to allow skips that question, and can capture everything on the " +
+                "screen, passwords and messages included, whenever it likes. Settings has no switch for this: " +
+                "it is set from a computer with adb, the way stalkerware and remote-access tools are often " +
+                "set up on someone else's phone.",
+            remediation = Remediation(
+                text = "Uninstall apps listed that you don't recognize. For an app you keep, take the access " +
+                    "back from a computer with adb: put the app's package name, shown in the evidence, in the " +
+                    "command below. The app then asks again before each recording.",
+                command = "adb shell appops set <package> PROJECT_MEDIA ignore",
+            ),
+            minSdk = 29,
+            failsWhen = "a user app may record or cast the screen without asking",
+            severity = Severity.WARNING,
         ),
     }
 
@@ -160,7 +187,7 @@ class SpecialAccessCheck(
         category = Category.APPS,
         title = access.title,
         severity = access.severity,
-        explanation = access.explanation + " Android keeps this switch in its app-ops service, which only " +
+        explanation = access.explanation + " Android keeps this in its app-ops service, which only " +
             "the ADB or Shizuku tier can read.",
         remediation = access.remediation,
         // The dump's op lines have this shape from Android 10; older output is not parsed.
@@ -236,6 +263,7 @@ class SpecialAccessCheck(
             pkg?.let { "${packages.label(it)} ($it)" } ?: "unknown app (uid ${grant.uid})",
             source,
             note = note,
+            packageName = pkg,
         )
 
     private fun modeNote(grant: OpGrant): String? =

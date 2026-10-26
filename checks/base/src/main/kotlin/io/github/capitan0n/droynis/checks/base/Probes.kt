@@ -259,6 +259,14 @@ interface PermissionProbe {
     fun holders(permissions: Set<String>): Reading<Map<String, Set<String>>>
 }
 
+interface BatteryProbe {
+    /**
+     * Of [packages], those on Android's power allowlist ("Unrestricted" battery use, "Not optimized"
+     * before Android 12): exempt from Doze and App Standby (`PowerManager.isIgnoringBatteryOptimizations`).
+     */
+    fun unrestricted(packages: List<String>): Reading<Set<String>>
+}
+
 interface DefaultAppsProbe {
     /** `Telephony.Sms.getDefaultSmsPackage`: null on a phone without SMS or a default SMS app. */
     fun smsApp(): Reading<String?>
@@ -288,4 +296,5 @@ interface BaseProbes {
     val defaultApps: DefaultAppsProbe
     val cellular: CellularProbe
     val uptime: UptimeProbe
+    val battery: BatteryProbe
 }

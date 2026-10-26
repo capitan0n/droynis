@@ -97,7 +97,11 @@ class RootAppsCheck(
         val evidence = buildList {
             add(managerEvidence)
             add(Evidence("Root grants", count(granted.size, "uid"), table.source))
-            others.forEach { (policy, apps) -> add(Evidence("Root access", describe(policy.uid, apps), table.source, note = note(policy))) }
+            others.forEach { (policy, apps) ->
+                // A shared uid names several apps, and adb's shell is no app: only a single app gets a Settings link.
+                val pkg = apps.singleOrNull()?.takeIf { policy.uid % PER_USER_RANGE != SHELL_UID }
+                add(Evidence("Root access", describe(policy.uid, apps), table.source, note = note(policy), packageName = pkg))
+            }
             own.forEach { (policy, _) -> add(Evidence("Root access", "Droynis", table.source, note = "this app; not counted" + (note(policy)?.let { ", $it" } ?: ""))) }
         }
         if (others.isEmpty()) {

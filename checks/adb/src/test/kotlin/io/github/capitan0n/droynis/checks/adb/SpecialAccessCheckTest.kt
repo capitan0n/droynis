@@ -6,6 +6,7 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
+import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
@@ -48,13 +49,63 @@ class SpecialAccessCheckTest {
 
     @Test
     fun `every access is an adb-tier app check with its own settings screen`() {
-        val specs = Access.entries.map { check(it, dump()).spec }
+        val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4107).map { "APPS-$it" }, specs.map { it.id })
-        assertTrue(specs.all { it.requiredTier == Tier.ADB })
-        assertEquals(specs.size, specs.map { it.remediation.settingsActions.single() }.toSet().size)
+        assertEquals((4102..4108).map { "APPS-$it" }, specs.values.map { it.id })
+        assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
+        // Each Settings switch has its own screen; screen capture has no switch, only an adb command.
+        val switches = specs.filterKeys { it != Access.SCREEN_CAPTURE }.values
+        assertEquals(switches.size, switches.map { it.remediation.settingsActions.single() }.toSet().size)
+        val capture = specs.getValue(Access.SCREEN_CAPTURE).remediation
+        assertTrue(capture.settingsActions.isEmpty())
+        assertEquals("adb shell appops set <package> PROJECT_MEDIA ignore", capture.command)
         // Low-risk switches are listed but don't count in the score.
-        assertEquals(listOf(Severity.INFO, Severity.INFO), specs.takeLast(2).map { it.severity })
+        assertEquals(
+            listOf(Severity.INFO, Severity.INFO),
+            listOf(Access.WRITE_SETTINGS, Access.MANAGE_MEDIA).map { specs.getValue(it).severity },
+        )
+    }
+
+    @Test
+    fun `per-app links open the app's own switch where Android has one, else App info`() {
+        fun appActions(access: Access) = check(access, dump()).spec.remediation.appSettingsActions
+
+        assertEquals(listOf(SettingsActions.APP_ALL_FILES_ACCESS), appActions(Access.ALL_FILES))
+        assertEquals(listOf(SettingsActions.UNKNOWN_APP_SOURCES), appActions(Access.INSTALL_APPS))
+        // Android 11+ ignores the package of the overlay screen; App info has the switch.
+        assertTrue(appActions(Access.OVERLAY).isEmpty())
+        assertTrue(appActions(Access.SCREEN_CAPTURE).isEmpty())
+    }
+
+    @Test
+    fun `an app that may capture the screen without asking is a warning, linked to its settings`() = runTest {
+        val outcome = check(
+            Access.SCREEN_CAPTURE,
+            dump(
+                app("u0a10", "com.android.settings", "PROJECT_MEDIA", "allow"),
+                app("u0a130", "org.example.bubbles", "PROJECT_MEDIA", "allow"),
+                app("u0a132", "org.example.files", "PROJECT_MEDIA", "ignore"),
+            ),
+        ).run(context)
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(Severity.WARNING, check(Access.SCREEN_CAPTURE, dump()).spec.severity)
+        assertEquals("1 app can record the screen without asking: Bubbles", outcome.summary)
+        val row = outcome.evidence.single { it.label == "Screen capture without asking" }
+        assertEquals("Bubbles (org.example.bubbles)", row.value)
+        assertEquals("org.example.bubbles", row.packageName)
+    }
+
+    @Test
+    fun `screen capture that still asks passes`() = runTest {
+        // The default mode, as an app that once asked to record the screen leaves it.
+        val outcome = check(
+            Access.SCREEN_CAPTURE,
+            dump(app("u0a130", "org.example.bubbles", "PROJECT_MEDIA", "ignore")),
+        ).run(context)
+
+        assertEquals(Status.PASS, outcome.status)
+        assertEquals("No app can record the screen without asking", outcome.summary)
     }
 
     @Test

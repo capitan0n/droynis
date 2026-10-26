@@ -110,17 +110,31 @@ class MainActivity : ComponentActivity(), AppActions {
     /** Droynis never changes a setting itself; it opens the screen where the user can. */
     override fun openSettings(actions: List<String>) {
         for (action in actions + SettingsActions.SETTINGS) {
-            try {
-                startActivity(Intent(action))
-                return
-            } catch (e: ActivityNotFoundException) {
-                continue
-            } catch (e: SecurityException) {
-                continue // some vendors do not export every Settings screen
-            }
+            if (opensHere(action) && tryStart(Intent(action))) return
         }
         viewModel.message(R.string.settings_not_opened)
     }
+
+    override fun openAppSettings(actions: List<String>, packageName: String) {
+        val app = Uri.fromParts("package", packageName, null)
+        for (action in actions + SettingsActions.APP_DETAILS) {
+            if (opensHere(action) && tryStart(Intent(action, app))) return
+        }
+        viewModel.message(R.string.settings_not_opened)
+    }
+
+    /** Some actions open a different screen on older releases, such as Backup for Privacy on Android 9. */
+    private fun opensHere(action: String) = Build.VERSION.SDK_INT >= SettingsActions.minSdk(action)
+
+    private fun tryStart(intent: Intent): Boolean =
+        try {
+            startActivity(intent)
+            true
+        } catch (e: ActivityNotFoundException) {
+            false
+        } catch (e: SecurityException) {
+            false // some vendors do not export every Settings screen
+        }
 
     override fun saveReport(format: ReportFormat) {
         if (viewModel.report(format) == null) {

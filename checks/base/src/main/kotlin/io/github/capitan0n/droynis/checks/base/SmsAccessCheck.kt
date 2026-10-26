@@ -30,9 +30,10 @@ class SmsAccessCheck(
             "with the phone are listed but don't count; any other app deserves a look, and one installed " +
             "from outside an app store is a warning, your SMS or phone app included.",
         remediation = Remediation(
-            text = "Open Settings › Apps › the app › Permissions and set SMS and Call logs to \"Don't allow\" " +
-                "for apps that don't need them. Uninstall apps you don't recognize.",
-            settingsActions = listOf(SettingsActions.APPS),
+            text = "Open Settings › Privacy › Permission manager › SMS and Call logs (or Settings › Apps › the " +
+                "app › Permissions) and set them to \"Don't allow\" for apps that don't need them. Uninstall " +
+                "apps you don't recognize.",
+            settingsActions = listOf(SettingsActions.PRIVACY, SettingsActions.APPS),
         ),
         timeout = 15.seconds,
         failsWhen = "an app other than your SMS and phone apps, or one of those installed from outside an " +
@@ -44,8 +45,10 @@ class SmsAccessCheck(
         val sms = defaults.smsApp()
         val phone = defaults.phoneApp()
         val defaultsEvidence = listOf(
-            sms.toEvidence("Default SMS app") { pkg -> pkg?.let { "${packages.label(it)} ($it)" } ?: "none" },
-            phone.toEvidence("Default phone app") { pkg -> pkg?.let { "${packages.label(it)} ($it)" } ?: "none" },
+            sms.toEvidence("Default SMS app") { pkg -> pkg?.let { "${packages.label(it)} ($it)" } ?: "none" }
+                .copy(packageName = (sms as? Reading.Value)?.value),
+            phone.toEvidence("Default phone app") { pkg -> pkg?.let { "${packages.label(it)} ($it)" } ?: "none" }
+                .copy(packageName = (phone as? Reading.Value)?.value),
         )
         if (granted !is Reading.Value) {
             return Outcome.unknown("Could not read which apps hold these permissions", defaultsEvidence + granted.toEvidence("Permissions"))
@@ -78,6 +81,7 @@ class SmsAccessCheck(
                         "${holder.app.label} (${holder.app.packageName})",
                         granted.source,
                         note = holder.origin.note + roleNote(holder.app.packageName, smsApp, phoneApp),
+                        packageName = holder.app.packageName,
                     ),
                 )
             }

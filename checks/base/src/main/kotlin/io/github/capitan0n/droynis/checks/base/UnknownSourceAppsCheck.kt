@@ -41,7 +41,14 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
         val evidence = buildList {
             add(apps.toEvidence("User apps inspected") { list -> list.count { !it.isSystem }.toString() })
             sideloaded.forEach {
-                add(Evidence("Installed by", "${packages.label(it.packageName)}: ${it.installer ?: "unknown (adb or file)"}", apps.source))
+                add(
+                    Evidence(
+                        "Installed by",
+                        "${packages.label(it.packageName)}: ${it.installer ?: "unknown (adb or file)"}",
+                        apps.source,
+                        packageName = it.packageName,
+                    ),
+                )
             }
         }
         return apps.evaluate("Installed apps", evidence) {

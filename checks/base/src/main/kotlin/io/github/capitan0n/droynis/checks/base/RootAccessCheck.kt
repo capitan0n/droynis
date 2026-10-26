@@ -46,7 +46,14 @@ class RootAccessCheck(
             add(suFiles.toEvidence("su binaries") { if (it.isEmpty()) "none of ${SU_PATHS.size} known paths" else it.joinToString() })
             if (apps !is Reading.Value) add(apps.toEvidence("Installed apps"))
             rootApps.forEach {
-                add(Evidence("Root or hooking app", "${packages.label(it.packageName)} (${it.packageName})", apps.source))
+                add(
+                    Evidence(
+                        "Root or hooking app",
+                        "${packages.label(it.packageName)} (${it.packageName})",
+                        apps.source,
+                        packageName = it.packageName,
+                    ),
+                )
             }
         }
         val signs = found.map { "su at $it" } + rootApps.map { "${packages.label(it.packageName)} installed" }

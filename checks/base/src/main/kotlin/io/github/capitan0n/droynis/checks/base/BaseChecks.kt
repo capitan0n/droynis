@@ -36,6 +36,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     SmsAccessCheck(probes.permissions, probes.defaultApps, probes.packages),
     SmsSendingCheck(probes.permissions, probes.defaultApps, probes.packages),
     BackgroundLocationCheck(probes.permissions, probes.packages),
+    BatteryOptimizationCheck(probes.battery, probes.packages),
     KeyboardAppsCheck(probes.inputMethods),
     AutofillServiceCheck(probes.autofill, probes.packages),
     AssistantAppCheck(probes.settings, probes.packages),

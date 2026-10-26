@@ -6,7 +6,7 @@ Droynis is not an antivirus or malware scanner: it audits how the phone is set u
 <ul>
 <li>Device integrity: security patch age, vendor and kernel patches, encryption, bootloader lock, root, SELinux, WebView updates, time since restart</li>
 <li>Access control: screen lock and its strength, lock delay, remote lock and erase, USB and wireless debugging and their authorization timeout, Smart Lock, SIM PIN</li>
-<li>Apps and permissions: accessibility services, device admins, notification access, SMS and call log access, location all the time, autofill and assistant apps, sideloaded and debuggable apps, special app access</li>
+<li>Apps and permissions: accessibility services, device admins, notification access, SMS and call log access, location all the time, autofill and assistant apps, sideloaded and debuggable apps, special app access, apps that skip battery optimization or record the screen without asking</li>
 <li>Network and radios: Private DNS, VPN, Wi-Fi security and MAC randomization, open Wi-Fi networks that join automatically, HTTP proxies, user certificates, 2G, Bluetooth, NFC and Secure NFC, location</li>
 </ul>
 

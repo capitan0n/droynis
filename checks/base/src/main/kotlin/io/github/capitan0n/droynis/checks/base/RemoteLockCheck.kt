@@ -63,7 +63,13 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
         } else {
             admins.value.map { admin ->
                 val owner = if (admin in unclear) "; came with the phone, so it may answer to the maker, a carrier or a lender" else ""
-                Evidence("Device admin", "${admin.app.label} (${admin.app.packageName})", admins.source, note = admin.abilities() + owner)
+                Evidence(
+                    "Device admin",
+                    "${admin.app.label} (${admin.app.packageName})",
+                    admins.source,
+                    note = admin.abilities() + owner,
+                    packageName = admin.app.packageName,
+                )
             }
         }
         if (yours.isNotEmpty()) {
@@ -75,7 +81,7 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
             return Outcome.unknown("The app list could not be read to look for find-my-device services", evidence)
         }
         val services = KNOWN_SERVICES.filterKeys { pkg -> apps.value.any { it.packageName == pkg && it.isEnabled } }
-        services.forEach { (pkg, name) -> evidence += Evidence("Find-my-device service", "$name ($pkg)", apps.source) }
+        services.forEach { (pkg, name) -> evidence += Evidence("Find-my-device service", "$name ($pkg)", apps.source, packageName = pkg) }
         if (services.isNotEmpty()) {
             return Outcome.unknown(
                 "${services.values.toList().joinNames()} can lock and erase a lost phone, but Android doesn't " +

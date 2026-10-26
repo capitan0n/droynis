@@ -9,6 +9,7 @@ import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.AutofillProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
+import io.github.capitan0n.droynis.checks.base.BatteryProbe
 import io.github.capitan0n.droynis.checks.base.BuildInfo
 import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.CertificateStore
@@ -72,6 +73,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
     override val cellular: CellularProbe = AndroidCellular(app, shells)
     override val uptime: UptimeProbe = AndroidUptime
+    override val battery: BatteryProbe = AndroidBattery(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells

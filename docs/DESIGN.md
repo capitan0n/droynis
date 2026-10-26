@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 63 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 65 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -97,6 +97,28 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   foreground location permission, from the same `GET_PERMISSIONS` read as the SMS checks. Apps that
   target Android 9 or older get the background permission with the foreground one and are seen the
   same way. Preinstalled holders are counted, not named.
+- **Battery optimization** (APPS-4013): `PowerManager.isIgnoringBatteryOptimizations(pkg)` needs no
+  permission and answers for any package; DeviceIdleController answers false for packages hidden from
+  the caller (`filterAppAccess`), which `QUERY_ALL_PACKAGES` rules out. It covers the vendor's
+  allowlist and the user's "Unrestricted" choice alike, so only user apps are asked about, one binder
+  call each. INFO: messengers, sync and automation apps need it, so it never escalates.
+- **Screen capture without asking** (APPS-4108, ADB tier): `MediaProjectionManagerService.hasProjectionPermission`
+  is true when the PROJECT_MEDIA app-op (default `ignore`) is `allow`, and SystemUI's
+  `MediaProjectionPermissionActivity` then hands the app a projection without the consent dialog.
+  SystemUI always creates projections with `permanentGrant = false` (the "Don't show again" box is
+  gone since Android 10), so `allow` on a user app comes from `appops set` over adb. Read from the
+  same `dumpsys appops` modes as the special access checks. WARNING; the fix is a copy-paste
+  `appops set <package> PROJECT_MEDIA ignore`, since Settings has no switch.
+- **Settings links**: each check opens its screen with plain intent actions, tried in order, then
+  the main Settings screen; an action that opens the wrong screen on older releases is skipped there
+  (`SettingsActions.minSdk`: Privacy opens Backup before Android 10). Evidence that names an app
+  carries its package, and the UI offers a button that opens the check's per-app screen with a
+  `package:` URI (All files access, Install unknown apps, Usage access, Modify system settings, Media
+  management), else the app's App info. Android's Permission manager (`MANAGE_PERMISSION_APPS`)
+  needs `GRANT_RUNTIME_PERMISSIONS`, so the SMS checks open Privacy, which links to it. The
+  overlay screen ignores the `package:` URI from Android 11, so it links to App info. User CA
+  certificates open `com.android.settings.TRUSTED_CREDENTIALS_USER`, the screen Android's own
+  "Network may be monitored" notification opens.
 - **Who installed an app**: system apps came with the phone; an installer on the known store list
   is an app store; anything else, including the package installer, is sideloaded. For
   accessibility services, notification access, device admins and SMS or call log access, a

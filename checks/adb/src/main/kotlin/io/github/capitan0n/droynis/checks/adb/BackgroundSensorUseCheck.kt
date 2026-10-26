@@ -112,6 +112,7 @@ class BackgroundSensorUseCheck(
                 "${packages.label(pkg)} ($pkg)",
                 source,
                 note = "last used ${describe(access.ago)}, ${STATE_NAMES[access.uidState] ?: "in app state \"${access.uidState}\""}",
+                packageName = pkg,
             )
         }
         val names = latest.map { packages.label(it.first.first) }.distinct()

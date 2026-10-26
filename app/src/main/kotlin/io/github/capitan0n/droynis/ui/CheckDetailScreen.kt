@@ -39,11 +39,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
@@ -60,6 +63,8 @@ fun CheckDetailScreen(
     spec: CheckSpec,
     finding: Finding?,
     onOpenSettings: (List<String>) -> Unit,
+    /** Opens one app's own screen: the check's per-app actions, then App info. */
+    onOpenAppSettings: (actions: List<String>, packageName: String) -> Unit,
     onCopy: (label: String, text: String) -> Unit,
     muted: Boolean,
     onMute: (Boolean) -> Unit,
@@ -149,7 +154,12 @@ fun CheckDetailScreen(
             }
             evidence.forEachIndexed { i, item ->
                 if (i > 0) HorizontalDivider(Modifier.padding(vertical = 10.dp))
-                EvidenceItem(item)
+                EvidenceItem(
+                    item,
+                    onOpenApp = item.packageName?.let { pkg ->
+                        { onOpenAppSettings(spec.remediation.appSettingsActions, pkg) }
+                    },
+                )
             }
         }
 
@@ -232,8 +242,9 @@ private fun ResultHeader(spec: CheckSpec, finding: Finding?, muted: Boolean) {
     }
 }
 
+/** [onOpenApp] is set when the evidence names an installed app: a button opens that app's settings. */
 @Composable
-private fun EvidenceItem(item: Evidence) {
+private fun EvidenceItem(item: Evidence, onOpenApp: (() -> Unit)? = null) {
     Column {
         Text(item.label, style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(6.dp))
@@ -253,6 +264,23 @@ private fun EvidenceItem(item: Evidence) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (onOpenApp != null) {
+            // Several rows can carry this button, so screen readers hear which app each one opens.
+            val description = stringResource(R.string.detail_open_app_settings_for, item.value ?: item.label)
+            TextButton(
+                onClick = onOpenApp,
+                contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
+                modifier = Modifier.semantics { contentDescription = description },
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize),
+                )
+                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                Text(stringResource(R.string.detail_open_app_settings))
+            }
+        }
     }
 }
 

@@ -69,9 +69,13 @@ enum class Severity { INFO, NOTICE, WARNING, CRITICAL }
  * @property settingsActions intent actions to try in order; the UI opens the first one the device
  *   can handle and falls back to the main Settings screen.
  * @property command an optional copy-paste command (for example adb), explained by [text].
+ * @property appSettingsActions intent actions that open one app's switch when given a `package:` URI,
+ *   for evidence that names an app ([Evidence.packageName]). The UI tries them in order, then the
+ *   app's App info screen ([SettingsActions.APP_DETAILS]), which every app gets.
  */
 data class Remediation(
     val text: String,
     val settingsActions: List<String> = emptyList(),
     val command: String? = null,
+    val appSettingsActions: List<String> = emptyList(),
 )
