@@ -29,6 +29,38 @@ data class SimTelephony(
     val label: String get() = SimCard(slot, subId).label
 }
 
+/**
+ * One device-wide switch the privileged reader asked the telephony service about: its value, or the
+ * exception that stopped the read.
+ */
+data class PrivilegedSwitch(val on: Boolean?, val error: String? = null) {
+    /**
+     * The modem, its HAL or this Android has no such switch: the service throws
+     * UnsupportedOperationException, and a release without the method has no such call at all.
+     */
+    val unsupported: Boolean get() = on == null && error in UNSUPPORTED
+
+    private companion object {
+        val UNSUPPORTED = setOf("UnsupportedOperationException", "NoSuchMethodException")
+    }
+}
+
+/** Mobile network security switches, device-wide, as only the shell user (Shizuku) or root may read them. */
+data class CellularSecurity(
+    /**
+     * `isNullCipherAndIntegrityPreferenceEnabled` (Android 14+): true while the phone accepts
+     * connections without encryption, that is while Settings' "Require encryption" is off.
+     */
+    val nullCipherAllowed: PrivilegedSwitch,
+    /** `isNullCipherNotificationsEnabled` (Android 15+): a warning when the network turns encryption off. */
+    val nullCipherAlerts: PrivilegedSwitch,
+    /**
+     * `isCellularIdentifierDisclosureNotificationsEnabled` (Android 15+): a warning when the network
+     * asks for the SIM's or phone's identity in the clear, as fake cell towers do.
+     */
+    val identifierAlerts: PrivilegedSwitch,
+)
+
 interface CellularProbe {
     /** The SIMs in use right now; empty without a SIM. Unsupported on devices without mobile network. */
     fun sims(): Reading<List<SimCard>>
@@ -38,18 +70,32 @@ interface CellularProbe {
 
     /** Every active SIM as the shell user or root reads it; Unavailable without Shizuku or root. */
     fun privileged(): Reading<List<SimTelephony>>
+
+    /** The device-wide mobile network security switches, from the same privileged read as [privileged]. */
+    fun security(): Reading<CellularSecurity>
 }
 
 /**
  * The text Droynis' privileged telephony reader prints: a header line, then one line per active
- * SIM, e.g. `sub=1 slot=0 pin=true reason0=1048575 reason3=1015732`. A value it could not read is
- * left out or written as `?`, and a line `error=…` replaces the SIM lines when nothing could be read.
+ * SIM, e.g. `sub=1 slot=0 pin=true reason0=1048575 reason3=1015732`, and one line of device-wide
+ * switches, e.g. `security null_cipher=true null_cipher_alerts=? null_cipher_alerts_error=UnsupportedOperationException`.
+ * A value it could not read is left out or written as `?`, and a line `error=…` replaces the other
+ * lines when nothing could be read.
  */
 object TelephonyDump {
     const val HEADER = "droynis-telephony 1"
 
+    /** Starts the line of device-wide switches. */
+    const val SECURITY = "security"
+
+    /** The keys of the device-wide switches on the [SECURITY] line. */
+    const val NULL_CIPHER = "null_cipher"
+    const val NULL_CIPHER_ALERTS = "null_cipher_alerts"
+    const val IDENTIFIER_ALERTS = "id_alerts"
+
     sealed interface Result {
-        data class Parsed(val sims: List<SimTelephony>) : Result
+        /** [security] is null when the reader printed no [SECURITY] line. */
+        data class Parsed(val sims: List<SimTelephony>, val security: CellularSecurity? = null) : Result
 
         data class Failed(val reason: String) : Result
     }
@@ -64,10 +110,7 @@ object TelephonyDump {
         val body = lines.drop(start + 1).filter { it.isNotEmpty() }
         body.firstOrNull { it.startsWith("error=") }?.let { return Result.Failed(it.removePrefix("error=").take(MAX_QUOTE)) }
         val sims = body.filter { it.startsWith("sub=") }.map { line ->
-            val fields = line.split(' ').mapNotNull { token ->
-                val eq = token.indexOf('=')
-                if (eq <= 0) null else token.substring(0, eq) to token.substring(eq + 1)
-            }.toMap()
+            val fields = fieldsOf(line)
             val subId = fields["sub"]?.toIntOrNull()
                 ?: return Result.Failed("a SIM line without a subscription: ${line.take(MAX_QUOTE)}")
             SimTelephony(
@@ -85,8 +128,25 @@ object TelephonyDump {
                 }.toMap(),
             )
         }
-        return Result.Parsed(sims)
+        val security = body.firstOrNull { it.startsWith("$SECURITY ") }?.let { line ->
+            val fields = fieldsOf(line)
+            fun switch(key: String) = PrivilegedSwitch(
+                on = when (fields[key]) {
+                    "true" -> true
+                    "false" -> false
+                    else -> null
+                },
+                error = fields["${key}_error"],
+            )
+            CellularSecurity(switch(NULL_CIPHER), switch(NULL_CIPHER_ALERTS), switch(IDENTIFIER_ALERTS))
+        }
+        return Result.Parsed(sims, security)
     }
+
+    private fun fieldsOf(line: String): Map<String, String> = line.split(' ').mapNotNull { token ->
+        val eq = token.indexOf('=')
+        if (eq <= 0) null else token.substring(0, eq) to token.substring(eq + 1)
+    }.toMap()
 
     private const val MAX_QUOTE = 160
 }

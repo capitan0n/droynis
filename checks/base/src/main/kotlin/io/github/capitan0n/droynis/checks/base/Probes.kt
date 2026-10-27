@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis.checks.base
 
 import io.github.capitan0n.droynis.core.Reading
+import java.time.Instant
 import java.time.LocalDate
 import kotlin.time.Duration
 
@@ -28,6 +29,9 @@ enum class PasswordComplexity { NONE, LOW, MEDIUM, HIGH }
 interface BuildInfo {
     /** `Build.VERSION.SECURITY_PATCH` as reported by the OS, e.g. "2026-09-05". */
     fun securityPatch(): Reading<String>
+
+    /** `Build.TIME`: when this system image was built; every system update changes it. */
+    fun builtAt(): Reading<Instant>
 
     /** Descriptive facts for the device card and reports. Never includes hardware identifiers. */
     fun device(): DeviceSummary
@@ -149,9 +153,28 @@ interface NetworkProbe {
 
 data class UserCertificate(val subject: String, val expires: LocalDate?)
 
+/** A CA certificate in Android's system store. */
+data class SystemCertificate(
+    /** Its file name in the store, e.g. "a1b2c3d4.0": AndroidCAStore's alias without "system:". */
+    val file: String,
+    /** The full subject, e.g. "CN=ISRG Root X1,O=Internet Security Research Group,C=US". */
+    val subject: String,
+    /** When the certificate starts to be valid, about when it was made. */
+    val notBefore: Instant?,
+)
+
 interface CertificateStore {
     /** CA certificates the user (or an app or admin on their behalf) installed. */
     fun userCertificates(): Reading<List<UserCertificate>>
+
+    /** The system CAs every app trusts: AndroidCAStore's "system:" entries, those the user turned off left out. */
+    fun systemCertificates(): Reading<List<SystemCertificate>>
+
+    /** `/proc/self/mountinfo`: the mounts Droynis' own process sees, which every app inherits from zygote. */
+    fun mountInfo(): Reading<String>
+
+    /** The file names in [directory]: the Conscrypt module's own, read-only copy of the store. */
+    fun fileNames(directory: String): Reading<Set<String>>
 }
 
 interface RadioProbe {

@@ -13,4 +13,6 @@ fun shizukuChecks(probes: ShizukuProbes): List<Check> = listOf(
     SimPinCheck(probes.cellular),
     // Network
     AlwaysOnVpnCheck(probes.settings, probes.packages),
+    CellularEncryptionCheck(probes.cellular),
+    CellularAlertsCheck(probes.cellular),
 )

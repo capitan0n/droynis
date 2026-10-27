@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 65 checks.
+Every check Droynis runs, by privilege tier and category: 68 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,9 +13,9 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 47 |
+| [Base](#base-tier) | 48 |
 | [ADB](#adb-tier) | 11 |
-| [Shizuku](#shizuku-tier) | 3 |
+| [Shizuku](#shizuku-tier) | 5 |
 | [Root](#root-tier) | 4 |
 
 ## Base tier
@@ -71,6 +71,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [NETW-3009](#netw-3009-wi-fi-and-bluetooth-scanning) | Wi-Fi and Bluetooth scanning | Notice | Wi-Fi or Bluetooth scanning is on |
 | [NETW-3010](#netw-3010-2g-mobile-networks) | 2G mobile networks | Notice | a SIM in use may connect to 2G networks |
 | [NETW-3011](#netw-3011-secure-nfc) | Secure NFC (Android 10+) | Notice | NFC is on and works while the phone is locked |
+| [NETW-3012](#netw-3012-added-system-ca-certificates) | Added system CA certificates | Warning | a CA certificate was added to the system store, which every app trusts (by a root module or a modified system) |
 
 ### Device integrity
 
@@ -456,6 +457,14 @@ With NFC on, a locked phone still answers card readers held close to it: transit
 
 **What to do:** Open Settings › Connected devices › Connection preferences › NFC and turn on "Require device unlock for NFC" ("Secure NFC" on older Android). If you don't use NFC, turn it off.
 
+#### NETW-3012 Added system CA certificates
+
+Warning · Android 8.0 and later · fails when a CA certificate was added to the system store, which every app trusts (by a root module or a modified system)
+
+Android comes with about 150 trusted certificate authorities (CAs). Every app trusts that system list, while most apps ignore CAs you install yourself. Root modules and app-testing tools (Burp Suite, mitmproxy, HTTP Toolkit) can add a CA to the system list, and then whoever holds its key can read and change the encrypted traffic of every app. A clean result means no sign of an added CA was found: one written into a modified system image with an old date can't be told apart.
+
+**What to do:** If you added it to inspect app traffic, remove the root module or tool once you're done. If you didn't, turn the certificate off under Settings › Security › Encryption & credentials › Trusted credentials › System, uninstall root modules you don't recognize, or reinstall the official firmware.
+
 ## ADB tier
 
 Two read-only permissions, granted once from a computer with adb, unlock checks that public Android APIs can't do. Until then these checks show as N/A and don't change the score. The Shizuku tier covers them too, without the grants.
@@ -592,6 +601,8 @@ A network without a password, open, Enhanced Open or WEP, proves nothing about w
 | [INTG-1201](#intg-1201-selinux-mode) | SELinux mode | Critical | SELinux is permissive or disabled |
 | [ACCS-2201](#accs-2201-sim-card-pin) | SIM card PIN (Android 11+) | Notice | a SIM in use has its PIN turned off |
 | [NETW-3201](#netw-3201-always-on-vpn-lockdown) | Always-on VPN lockdown | Notice | an always-on VPN lets traffic out while it is down |
+| [NETW-3202](#netw-3202-mobile-network-encryption) | Mobile network encryption (Android 14+) | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
+| [NETW-3203](#netw-3203-mobile-network-security-alerts) | Mobile network security alerts (Android 15+) | Notice | the phone doesn't warn about signs of a fake cell tower (Network notifications are off) |
 
 ### Device integrity
 
@@ -622,6 +633,22 @@ Notice · Android 8.0 and later · fails when an always-on VPN lets traffic out 
 An always-on VPN starts with the phone and stays connected. Only with "Block connections without VPN" does traffic also stop while the VPN is down or reconnecting; without it, apps quietly use the normal network. Apps can't see which app is the always-on VPN, but the shell user Shizuku runs as can.
 
 **What to do:** Open Settings › Network & internet › VPN, tap the gear next to your VPN, and turn on both "Always-on VPN" and "Block connections without VPN".
+
+#### NETW-3202 Mobile network encryption
+
+Notice · Android 14 and later · fails when the phone accepts mobile connections without encryption (Require encryption is off)
+
+Calls, texts and mobile data are encrypted between the phone and the cell tower, but the network can tell the phone to turn that off (a "null cipher"). Fake cell towers (IMSI catchers) do exactly this to read texts, login codes included, and listen to calls. From Android 14, phones whose modem supports it can refuse such connections; Settings calls it "Require encryption". A few operators still use unencrypted connections, so with it on the phone may lose service in places; emergency calls never need encryption.
+
+**What to do:** Turn on Require encryption: Settings › Security & privacy › More security & privacy › Mobile network security on Android 15 and later, or Settings › Network & internet › SIMs › your SIM on Android 14 (the place varies by vendor). If calls or data stop working where you live, turn it off again. Turning off Allow 2G (NETW-3010) blocks the most common way to force a weak connection too.
+
+#### NETW-3203 Mobile network security alerts
+
+Notice · Android 15 and later · fails when the phone doesn't warn about signs of a fake cell tower (Network notifications are off)
+
+From Android 15, phones whose modem supports it can warn you when the network asks for your SIM's or phone's identity in the clear, or turns encryption off: both are signs of a fake cell tower (IMSI catcher) nearby. Settings calls these "Network notifications". A warning doesn't stop the attack, but tells you to keep sensitive calls and texts for later, or to switch to airplane mode.
+
+**What to do:** Turn on Network notifications: Settings › Security & privacy › More security & privacy › Mobile network security (the place varies by vendor).
 
 ## Root tier
 

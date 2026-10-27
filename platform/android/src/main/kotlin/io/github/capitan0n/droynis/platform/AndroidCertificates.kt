@@ -1,9 +1,11 @@
 package io.github.capitan0n.droynis.platform
 
 import io.github.capitan0n.droynis.checks.base.CertificateStore
+import io.github.capitan0n.droynis.checks.base.SystemCertificate
 import io.github.capitan0n.droynis.checks.base.UserCertificate
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import java.io.File
 import java.security.KeyStore
 import java.security.cert.X509Certificate
 import java.time.ZoneId
@@ -30,4 +32,34 @@ internal object AndroidCertificates : CertificateStore {
             Reading.Value(certificates, source)
         }
     }
+
+    override fun systemCertificates(): Reading<List<SystemCertificate>> {
+        val source = Source("KeyStore \"AndroidCAStore\", system: entries")
+        return probe(source) {
+            val store = KeyStore.getInstance("AndroidCAStore").apply { load(null) }
+            val certificates = store.aliases().toList()
+                .filter { it.startsWith(SYSTEM) }
+                .mapNotNull { alias ->
+                    val cert = store.getCertificate(alias) as? X509Certificate ?: return@mapNotNull null
+                    SystemCertificate(alias.removePrefix(SYSTEM), cert.subjectX500Principal.name, cert.notBefore.toInstant())
+                }
+            Reading.Value(certificates, source)
+        }
+    }
+
+    // A process may read its own mount table; apps share zygote's mounts, root modules' included.
+    override fun mountInfo(): Reading<String> {
+        val source = Source("/proc/self/mountinfo")
+        return probe(source) { Reading.Value(File("/proc/self/mountinfo").readText(), source) }
+    }
+
+    override fun fileNames(directory: String): Reading<Set<String>> {
+        val source = Source("File.list(\"$directory\")")
+        return probe(source) {
+            val names = File(directory).list() ?: return@probe Reading.Unavailable("the directory can't be listed", source)
+            Reading.Value(names.toSet(), source)
+        }
+    }
+
+    private const val SYSTEM = "system:"
 }

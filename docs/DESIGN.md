@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 65 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 68 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -109,6 +109,19 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   gone since Android 10), so `allow` on a user app comes from `appops set` over adb. Read from the
   same `dumpsys appops` modes as the special access checks. WARNING; the fix is a copy-paste
   `appops set <package> PROJECT_MEDIA ignore`, since Settings has no switch.
+- **Added system CA certificates** (NETW-3012): system CAs are what every app trusts (user CAs only
+  where an app opts in, and in Chrome), so adding one is how root modules and testing tools such as
+  HTTP Toolkit make every app's traffic readable. Three signs, none privileged: a subject naming an
+  interception tool (mitmproxy, PortSwigger, Charles, HTTP Toolkit, Fiddler, Proxyman); before
+  Android 14, a certificate valid from after `Build.TIME`, since the store there changes only with
+  the system image (a time before 2017 is a placeholder and is ignored); and a mount over a store
+  directory in `/proc/self/mountinfo`, which apps inherit from zygote. From Android 14 Conscrypt
+  reads the store from its APEX, and Google Play system updates may add CAs later, so the build date
+  proves nothing there; but a mount over `/apex/com.android.conscrypt/cacerts` doesn't reach the
+  module's versioned mount (`@<version>`, same device), so the aliases (file names) the mount added
+  are named, and a mount that only removes CAs passes. Before Android 14, or when that copy can't
+  be listed, a mount with no other sign is UNKNOWN. KernelSU's overlayfs over all of /system leaves
+  no mount on the directory; there only the first two signs work.
 - **Settings links**: each check opens its screen with plain intent actions, tried in order, then
   the main Settings screen; an action that opens the wrong screen on older releases is skipped there
   (`SettingsActions.minSdk`: Privacy opens Backup before Android 10). Evidence that names an app
@@ -199,10 +212,13 @@ Apps get no permission-free way to read the SIM PIN lock or, from Android 12, th
 `TelephonyManager.isIccLockEnabled` (Android 11+, system API) and `getAllowedNetworkTypesForReason`
 (Android 12+) need READ_PRIVILEGED_PHONE_STATE, which the shell user holds. `TelephonyReader` calls
 them through the `isub` and `phone` services' AIDL interfaces for each visible active subscription,
-plus `getSlotIndex`, and prints one line per SIM; only getters, no state. It runs in Droynis'
+plus `getSlotIndex`, and prints one line per SIM; then one `security` line with the device-wide
+`isNullCipherAndIntegrityPreferenceEnabled` (Android 14+), `isNullCipherNotificationsEnabled` and
+`isCellularIdentifierDisclosureNotificationsEnabled` (Android 15+), same permission. Only getters,
+no state. It runs in Droynis'
 Shizuku shell, or, with root only, in an `app_process` the root shell starts with Droynis' APK as
 class path (as Shizuku and scrcpy start their own code; hidden-API checks don't apply there). The
-APK path is Android's and is checked against a strict pattern. One read serves both checks per scan.
+APK path is Android's and is checked against a strict pattern. One read serves all four checks per scan.
 `dumpsys phone` was rejected: on a Samsung Android 11 it holds no SIM lock lines.
 
 - **2G** (NETW-3010, base tier): on Android 8–11 the per-SIM `preferred_network_mode<subId>` setting
@@ -216,6 +232,15 @@ APK path is Android's and is checked against a strict pattern. One read serves b
 - **SIM PIN** (ACCS-2201, Shizuku tier, Android 11+): FAIL for any SIM in use with its lock off.
   SIMs in use come from `getSimState` per slot and `SubscriptionManager.getSubscriptionIds`, which
   need no permission; Droynis never reads a number, IMSI or ICCID.
+- **Mobile network encryption** (NETW-3202, Shizuku tier, Android 14+): the stored preference is
+  "null ciphers allowed", true by default; Settings' "Require encryption" shows its opposite, and
+  the evidence does too. The telephony service throws UnsupportedOperationException when the radio
+  HAL is older than 2.1 or the modem lacks the feature, which is N/A. Pixels are the main phones
+  with it.
+- **Mobile network security alerts** (NETW-3203, Shizuku tier, Android 15+): warnings for null
+  ciphers and for identifiers (IMSI, IMEI) sent in the clear, both under Settings' "Network
+  notifications". FAIL when a supported one is off; an alert the modem lacks is left out, both
+  missing is N/A.
 
 ### Special app access
 

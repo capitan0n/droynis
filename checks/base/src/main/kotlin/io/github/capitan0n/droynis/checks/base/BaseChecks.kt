@@ -50,6 +50,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     HttpProxyCheck(probes.network),
     Cellular2gCheck(probes.cellular, probes.settings, probes.properties),
     UserCertificatesCheck(probes.certificates),
+    SystemCertificatesCheck(probes.certificates, probes.build),
     BluetoothCheck(probes.settings),
     NfcCheck(probes.radios),
     SecureNfcCheck(probes.radios),

@@ -141,6 +141,30 @@ class CellularChecksTest {
     }
 
     @Test
+    fun `the device-wide security line is parsed, with why a switch is missing`() {
+        val text = """
+            ${TelephonyDump.HEADER}
+            sub=1 slot=0 pin=true
+            security null_cipher=true null_cipher_alerts=false id_alerts=? id_alerts_error=UnsupportedOperationException
+        """.trimIndent()
+        val security = assertIs<TelephonyDump.Result.Parsed>(TelephonyDump.parse(text)).security
+
+        assertEquals(
+            CellularSecurity(
+                nullCipherAllowed = PrivilegedSwitch(true),
+                nullCipherAlerts = PrivilegedSwitch(false),
+                identifierAlerts = PrivilegedSwitch(null, "UnsupportedOperationException"),
+            ),
+            security,
+        )
+        assertEquals(true, security?.identifierAlerts?.unsupported)
+        // A getter that failed for another reason is unreadable, not unsupported.
+        assertEquals(false, PrivilegedSwitch(null, "SecurityException").unsupported)
+        // An older reader prints no security line.
+        assertNull(assertIs<TelephonyDump.Result.Parsed>(TelephonyDump.parse("${TelephonyDump.HEADER}\nsub=1")).security)
+    }
+
+    @Test
     fun `vendor and kernel patches pass when they keep up with Android's`() = runTest {
         suspend fun check(
             android: String = "2026-09-05",

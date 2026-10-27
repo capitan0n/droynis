@@ -9,8 +9,11 @@ import kotlin.system.exitProcess
 /**
  * Reads what Android tells only privileged callers about each active SIM: whether its PIN lock is on
  * (`isIccLockEnabled`, Android 11+) and the network types each reason allows, the Allow 2G switch
- * among them (`getAllowedNetworkTypesForReason`, Android 12+). The shell user holds the permission
- * both need, READ_PRIVILEGED_PHONE_STATE, and root passes every permission check.
+ * among them (`getAllowedNetworkTypesForReason`, Android 12+). Then the device-wide mobile network
+ * security switches: whether connections without encryption are allowed (Android 14+) and whether
+ * the phone warns about them and about identity requests in the clear (Android 15+); a modem without
+ * them makes the service throw UnsupportedOperationException. The shell user holds the permission all
+ * of these need, READ_PRIVILEGED_PHONE_STATE, and root passes every permission check.
  *
  * It never runs in the app: Droynis' Shizuku shell calls [read] as the shell user, and the root shell
  * starts [main] in an `app_process` for one read, as scrcpy and Shizuku start their own code. It talks
@@ -39,6 +42,7 @@ object TelephonyReader {
             val phone = service("phone", "com.android.internal.telephony.ITelephony")
             // Visible subscriptions only: the SIMs Settings lists.
             for (id in sub.call("getActiveSubIdList", true) as IntArray) appendLine(line(sub, phone, id))
+            appendLine(security(phone))
         } catch (e: Exception) {
             appendLine("error=${describe(e)}")
         }
@@ -55,6 +59,16 @@ object TelephonyReader {
             attempt { phone.call("getAllowedNetworkTypesForReason", id, reason) as Long }.value?.let {
                 append(" reason").append(reason).append('=').append(it)
             }
+        }
+    }
+
+    /** The device-wide switches on one line; a getter this Android or modem lacks reads `?` with its exception. */
+    private fun security(phone: Service): String = buildString {
+        append(TelephonyDump.SECURITY)
+        for ((key, getter) in SECURITY_GETTERS) {
+            val read = attempt { phone.call(getter) as Boolean }
+            append(' ').append(key).append('=').append(read.value ?: "?")
+            read.error?.let { append(' ').append(key).append("_error=").append(it) }
         }
     }
 
@@ -96,6 +110,13 @@ object TelephonyReader {
 
     /** `TelephonyManager.ALLOWED_NETWORK_TYPES_REASON_*`: user, power, carrier, enable 2G, user restrictions. */
     private val REASONS = 0..4
+
+    /** `ITelephony` getters behind [TelephonyDump]'s security keys. */
+    private val SECURITY_GETTERS = listOf(
+        TelephonyDump.NULL_CIPHER to "isNullCipherAndIntegrityPreferenceEnabled",
+        TelephonyDump.NULL_CIPHER_ALERTS to "isNullCipherNotificationsEnabled",
+        TelephonyDump.IDENTIFIER_ALERTS to "isCellularIdentifierDisclosureNotificationsEnabled",
+    )
 
     private const val MAX_ERROR = 200
 }

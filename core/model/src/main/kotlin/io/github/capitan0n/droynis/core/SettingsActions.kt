@@ -29,6 +29,12 @@ object SettingsActions {
     /** `Settings.ACTION_DATA_ROAMING_SETTINGS`: the Mobile network page, with network mode and Allow 2G. */
     const val MOBILE_NETWORK = "android.settings.DATA_ROAMING_SETTINGS"
 
+    /**
+     * Not in the SDK: Mobile network security, with Require encryption and Network notifications
+     * (Android 15+). The AOSP Settings app exports it.
+     */
+    const val CELLULAR_NETWORK_SECURITY = "android.settings.CELLULAR_NETWORK_SECURITY"
+
     /** `Settings.ACTION_APN_SETTINGS`: Access point names, where a mobile data proxy is set. */
     const val APN = "android.settings.APN_SETTINGS"
 
@@ -121,6 +127,9 @@ object SettingsActions {
      * Notification history screen, with its on/off switch. Exported by the AOSP Settings app.
      */
     const val NOTIFICATION_HISTORY = "android.settings.NOTIFICATION_HISTORY"
+
+    /** Not in the SDK: Trusted credentials, on its System tab. The AOSP Settings app exports it. */
+    const val TRUSTED_CREDENTIALS = "com.android.settings.TRUSTED_CREDENTIALS"
 
     /**
      * Not in the SDK: the User tab of Trusted credentials. The AOSP Settings app exports it, and

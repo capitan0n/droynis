@@ -6,6 +6,7 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
+import java.time.Instant
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.time.Duration
@@ -51,8 +52,10 @@ class FakeBuildInfo(
     private val patch: Reading<String>,
     private val type: String = "user",
     private val tags: String = "release-keys",
+    private val built: Reading<Instant> = value(Instant.parse("2026-09-01T00:00:00Z")),
 ) : BuildInfo {
     override fun securityPatch() = patch
+    override fun builtAt() = built
     override fun device() = DeviceSummary("Fairphone", "FP6", "17", 37, "2026-09-05", "TEST.1", "6.6.0", type, tags)
 }
 
@@ -120,8 +123,16 @@ fun cellular() = NetworkSnapshot(
     interfaceName = "rmnet0",
 )
 
-class FakeCertificates(private val certs: Reading<List<UserCertificate>> = value(emptyList())) : CertificateStore {
+class FakeCertificates(
+    private val certs: Reading<List<UserCertificate>> = value(emptyList()),
+    private val system: Reading<List<SystemCertificate>> = value(emptyList()),
+    private val mounts: Reading<String> = value(""),
+    private val directories: Map<String, Reading<Set<String>>> = emptyMap(),
+) : CertificateStore {
     override fun userCertificates() = certs
+    override fun systemCertificates() = system
+    override fun mountInfo() = mounts
+    override fun fileNames(directory: String) = directories[directory] ?: unavailable("no such directory")
 }
 
 class FakeRadios(
@@ -225,8 +236,10 @@ class FakeCellular(
     private val sims: Reading<List<SimCard>> = value(listOf(SimCard(slot = 0, subId = 1))),
     private val policy: Reading<Boolean> = unsupported("needs Android 14"),
     private val privileged: Reading<List<SimTelephony>> = unavailable("neither Shizuku nor root is connected"),
+    private val security: Reading<CellularSecurity> = unavailable("neither Shizuku nor root is connected"),
 ) : CellularProbe {
     override fun sims() = sims
     override fun twoGDisallowed() = policy
     override fun privileged() = privileged
+    override fun security() = security
 }

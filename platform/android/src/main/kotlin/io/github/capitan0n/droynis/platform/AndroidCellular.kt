@@ -8,6 +8,7 @@ import android.os.UserManager
 import android.telephony.SubscriptionManager
 import android.telephony.TelephonyManager
 import io.github.capitan0n.droynis.checks.base.CellularProbe
+import io.github.capitan0n.droynis.checks.base.CellularSecurity
 import io.github.capitan0n.droynis.checks.base.SimCard
 import io.github.capitan0n.droynis.checks.base.SimTelephony
 import io.github.capitan0n.droynis.checks.base.TelephonyDump
@@ -23,8 +24,9 @@ internal class AndroidCellular(context: Context, private val shells: ShellRouter
     private val app = context.applicationContext
     private val lock = Any()
 
-    // The 2G and SIM PIN checks share one successful privileged read per scan; as root it starts a process.
-    private var cached: Pair<Long, Reading<List<SimTelephony>>>? = null
+    // The 2G, SIM PIN and network security checks share one successful privileged read per scan; as
+    // root it starts a process.
+    private var cached: Pair<Long, Reading<TelephonyDump.Result.Parsed>>? = null
 
     override fun sims(): Reading<List<SimCard>> {
         val source = Source("TelephonyManager.getSimState and SubscriptionManager (no permission)")
@@ -84,17 +86,30 @@ internal class AndroidCellular(context: Context, private val shells: ShellRouter
         return probe(source) { Reading.Value(users.hasUserRestriction(UserManager.DISALLOW_CELLULAR_2G), source) }
     }
 
-    override fun privileged(): Reading<List<SimTelephony>> = synchronized(lock) {
+    override fun privileged(): Reading<List<SimTelephony>> = when (val read = dump()) {
+        is Reading.Value -> Reading.Value(read.value.sims, read.source)
+        is Reading.Unsupported -> read
+        is Reading.Unavailable -> read
+    }
+
+    override fun security(): Reading<CellularSecurity> = when (val read = dump()) {
+        is Reading.Value -> read.value.security?.let { Reading.Value(it, read.source) }
+            ?: Reading.Unavailable("the privileged read printed no network security line", read.source)
+        is Reading.Unsupported -> read
+        is Reading.Unavailable -> read
+    }
+
+    private fun dump(): Reading<TelephonyDump.Result.Parsed> = synchronized(lock) {
         val now = System.nanoTime()
         cached?.let { (at, reading) -> if (now - at < CACHE_NANOS) return reading }
         read().also { if (it is Reading.Value) cached = now to it }
     }
 
-    private fun read(): Reading<List<SimTelephony>> = when (val raw = shells.telephony()) {
+    private fun read(): Reading<TelephonyDump.Result.Parsed> = when (val raw = shells.telephony()) {
         is Reading.Unsupported -> raw
         is Reading.Unavailable -> raw
         is Reading.Value -> when (val parsed = TelephonyDump.parse(raw.value)) {
-            is TelephonyDump.Result.Parsed -> Reading.Value(parsed.sims, raw.source)
+            is TelephonyDump.Result.Parsed -> Reading.Value(parsed, raw.source)
             is TelephonyDump.Result.Failed -> Reading.Unavailable(parsed.reason, raw.source)
         }
     }

@@ -1,8 +1,10 @@
 package io.github.capitan0n.droynis.checks.shizuku
 
 import io.github.capitan0n.droynis.checks.base.CellularProbe
+import io.github.capitan0n.droynis.checks.base.CellularSecurity
 import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.checks.base.PrivilegedSwitch
 import io.github.capitan0n.droynis.checks.base.SimCard
 import io.github.capitan0n.droynis.checks.base.SimTelephony
 import io.github.capitan0n.droynis.checks.base.SystemSettings
@@ -52,12 +54,22 @@ class ShizukuChecksTest {
 
     private fun cellular(
         sims: Reading<List<SimCard>> = Reading.Value(listOf(SimCard(0, 1)), shellSource),
-        privileged: Reading<List<SimTelephony>>,
+        privileged: Reading<List<SimTelephony>> = Reading.Value(emptyList(), shellSource),
+        security: Reading<CellularSecurity> = Reading.Unavailable("neither Shizuku nor root is connected", shellSource),
     ) = object : CellularProbe {
         override fun sims() = sims
         override fun twoGDisallowed() = Reading.Unsupported("needs Android 14", shellSource)
         override fun privileged() = privileged
+        override fun security() = security
     }
+
+    private val unsupported = PrivilegedSwitch(null, "UnsupportedOperationException")
+
+    private fun security(
+        nullCipherAllowed: PrivilegedSwitch = PrivilegedSwitch(true),
+        nullCipherAlerts: PrivilegedSwitch = PrivilegedSwitch(false),
+        identifierAlerts: PrivilegedSwitch = PrivilegedSwitch(false),
+    ) = cellular(security = Reading.Value(CellularSecurity(nullCipherAllowed, nullCipherAlerts, identifierAlerts), shellSource))
 
     private suspend fun simPin(vararg sims: SimTelephony, inUse: List<SimCard> = listOf(SimCard(0, 1))) =
         SimPinCheck(cellular(Reading.Value(inUse, shellSource), Reading.Value(sims.toList(), shellSource))).run(context)
@@ -72,7 +84,7 @@ class ShizukuChecksTest {
         }
         val specs = shizukuChecks(probes).map { it.spec }
 
-        assertEquals(listOf("INTG-1201", "ACCS-2201", "NETW-3201"), specs.map { it.id })
+        assertEquals(listOf("INTG-1201", "ACCS-2201", "NETW-3201", "NETW-3202", "NETW-3203"), specs.map { it.id })
         assertEquals(setOf(Tier.SHIZUKU), specs.map { it.requiredTier }.toSet())
     }
 
@@ -150,5 +162,54 @@ class ShizukuChecksTest {
             cellular(Reading.Unsupported("no telephony", shellSource), Reading.Value(emptyList(), shellSource)),
         ).run(context)
         assertEquals(Status.UNSUPPORTED, noRadio.status)
+    }
+
+    @Test
+    fun `accepting connections without encryption fails, requiring encryption passes`() = runTest {
+        val allowed = CellularEncryptionCheck(security(nullCipherAllowed = PrivilegedSwitch(true))).run(context)
+        assertEquals(Status.FAIL, allowed.status)
+        assertEquals("The phone accepts mobile connections without encryption: Require encryption is off", allowed.summary)
+        // Evidence shows the switch the way Settings names it.
+        assertEquals("off", allowed.evidence.single { it.label == "Require encryption" }.value)
+        assertEquals(Grant.SHIZUKU, allowed.evidence.single().source.grant)
+
+        val required = CellularEncryptionCheck(security(nullCipherAllowed = PrivilegedSwitch(false))).run(context)
+        assertEquals(Status.PASS, required.status)
+        assertEquals("on", required.evidence.single().value)
+    }
+
+    @Test
+    fun `a modem without the encryption switch is not applicable, an unread one unknown`() = runTest {
+        assertEquals(Status.UNSUPPORTED, CellularEncryptionCheck(security(nullCipherAllowed = unsupported)).run(context).status)
+        assertEquals(
+            Status.UNKNOWN,
+            CellularEncryptionCheck(security(nullCipherAllowed = PrivilegedSwitch(null, "SecurityException"))).run(context).status,
+        )
+        assertEquals(Status.UNKNOWN, CellularEncryptionCheck(cellular()).run(context).status)
+        val noRadio = cellular(sims = Reading.Unsupported("no mobile network hardware", shellSource))
+        assertEquals(Status.UNSUPPORTED, CellularEncryptionCheck(noRadio).run(context).status)
+    }
+
+    @Test
+    fun `fake cell tower alerts fail when off and pass when every supported one is on`() = runTest {
+        val off = CellularAlertsCheck(security(nullCipherAlerts = PrivilegedSwitch(false), identifierAlerts = PrivilegedSwitch(true))).run(context)
+        assertEquals(Status.FAIL, off.status)
+        assertEquals("The phone doesn't warn about connections without encryption, signs of a fake cell tower", off.summary)
+
+        val on = CellularAlertsCheck(security(nullCipherAlerts = PrivilegedSwitch(true), identifierAlerts = PrivilegedSwitch(true))).run(context)
+        assertEquals(Status.PASS, on.status)
+
+        // A modem with only one of the two alerts is judged on that one.
+        val partial = CellularAlertsCheck(security(nullCipherAlerts = unsupported, identifierAlerts = PrivilegedSwitch(true))).run(context)
+        assertEquals(Status.PASS, partial.status)
+        assertEquals(
+            Status.UNSUPPORTED,
+            CellularAlertsCheck(security(nullCipherAlerts = unsupported, identifierAlerts = unsupported)).run(context).status,
+        )
+        assertEquals(
+            Status.UNKNOWN,
+            CellularAlertsCheck(security(nullCipherAlerts = PrivilegedSwitch(true), identifierAlerts = PrivilegedSwitch(null, "SecurityException")))
+                .run(context).status,
+        )
     }
 }
