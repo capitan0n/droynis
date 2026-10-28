@@ -143,4 +143,21 @@ class DeviceStateChecksTest {
         assertEquals(Status.FAIL, stale.status)
         assertEquals("WebView 141.0 came with a system update 150 days ago and was not updated since", stale.summary)
     }
+
+    @Test
+    fun `a placeholder webview date is unknown, not decades old`() = runTest {
+        // Issue #6: a phone reported Google WebView as updated on 1970-01-10.
+        fun check(updated: LocalDate, system: Boolean = false) = WebViewCheck(
+            FakeWebView(value(WebViewInfo("com.google.android.webview", "145.0", updated, fromSystemImage = system))),
+        )
+
+        val epoch = check(LocalDate.of(1970, 1, 10)).outcome()
+        assertEquals(Status.UNKNOWN, epoch.status)
+        assertEquals("WebView reports a placeholder update date (1970-01-10)", epoch.summary)
+        assertEquals("com.google.android.webview 145.0, no valid update date (reports 1970-01-10)", epoch.evidence.single().value)
+
+        // A system WebView is dated by Build.TIME, which can be a placeholder too.
+        assertEquals(Status.UNKNOWN, check(LocalDate.of(1970, 1, 1), system = true).status())
+        assertEquals(Status.FAIL, check(LocalDate.of(2017, 1, 1)).status())
+    }
 }

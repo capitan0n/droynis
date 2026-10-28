@@ -11,6 +11,7 @@ import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
 import io.github.capitan0n.droynis.core.toEvidence
+import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
 class WebViewCheck(private val webView: WebViewProbe) : Check {
@@ -36,8 +37,12 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
         val evidence = listOf(
             provider.toEvidence("WebView provider") { info ->
                 info?.let {
-                    val updated = if (it.fromSystemImage) "came with the system image of" else "updated"
-                    "${it.packageName} ${it.versionName}, $updated ${it.lastUpdated}"
+                    val updated = when {
+                        it.lastUpdated < PLAUSIBLE_UPDATE -> "no valid update date (reports ${it.lastUpdated})"
+                        it.fromSystemImage -> "came with the system image of ${it.lastUpdated}"
+                        else -> "updated ${it.lastUpdated}"
+                    }
+                    "${it.packageName} ${it.versionName}, $updated"
                 } ?: "none"
             }.copy(packageName = (provider as? Reading.Value)?.value?.packageName),
         )
@@ -46,6 +51,8 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
             val age = ChronoUnit.DAYS.between(info.lastUpdated, context.startedAt.toLocalDate())
             val updated = if (info.fromSystemImage) "came with a system update" else "was updated"
             when {
+                info.lastUpdated < PLAUSIBLE_UPDATE ->
+                    Outcome.unknown("WebView reports a placeholder update date (${info.lastUpdated})", evidence)
                 age < 0 -> Outcome.unknown("WebView's update date is ahead of the device clock", evidence)
                 age <= MAX_AGE_DAYS -> Outcome.pass("WebView ${info.versionName} $updated $age days ago", evidence)
                 info.fromSystemImage ->
@@ -58,5 +65,11 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
     companion object {
         /** About two Chromium release cycles. */
         const val MAX_AGE_DAYS = 60L
+
+        /**
+         * A date before Android 8 was released is a placeholder (1970 on some phones, 2009 from
+         * reproducible builds), not an update: Droynis runs on Android 8 and later.
+         */
+        private val PLAUSIBLE_UPDATE = LocalDate.of(2017, 1, 1)
     }
 }
