@@ -47,12 +47,15 @@ Each release lists the signing certificate's SHA-256.
 
 ### 3. Obtainium
 
-[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/capitan0n/droynis)
+[<img src="art/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.capitan0n.droynis%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fcapitan0n%2Fdroynis%22%2C%22author%22%3A%22capitan0n%22%2C%22name%22%3A%22Droynis%22%7D)
 
 [Obtainium](https://github.com/ImranR98/Obtainium) installs each GitHub release directly, with no
 store delay: tap the badge on your phone, or in Obtainium tap **Add App** and enter
 `https://github.com/capitan0n/droynis`. Pre-releases are skipped unless you turn on
 **Include prereleases**.
+
+On first install, check that the signing certificate matches the SHA-256 in the release notes
+(for example with AppVerifier); Android then refuses any update signed with another key.
 
 ## Tiers
 
