@@ -45,6 +45,15 @@ gh attestation verify droynis-<version>.apk --repo capitan0n/droynis   # built b
 
 Each release lists the signing certificate's SHA-256.
 
+### 3. Obtainium
+
+[<img src="https://raw.githubusercontent.com/ImranR98/Obtainium/main/assets/graphics/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect.html?r=obtainium://add/https://github.com/capitan0n/droynis)
+
+[Obtainium](https://github.com/ImranR98/Obtainium) installs each GitHub release directly, with no
+store delay: tap the badge on your phone, or in Obtainium tap **Add App** and enter
+`https://github.com/capitan0n/droynis`. Pre-releases are skipped unless you turn on
+**Include prereleases**.
+
 ## Tiers
 
 | Tier | Setup | Adds |
