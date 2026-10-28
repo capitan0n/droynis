@@ -1,7 +1,7 @@
 [versions]
 # AGP, Kotlin and Gradle (gradle-wrapper.properties) must stay compatible; move them together.
 # Kotlin 2.4.20 is tested against AGP <= 9.3.x and Gradle <= 9.7.x; Gradle 9.8.0 passed CI (2026-10-07).
-agp = "9.3.3"
+agp = "9.4.1"
 kotlin = "2.4.21"
 coroutines = "1.11.0"
 compose-bom = "2026.09.00"
