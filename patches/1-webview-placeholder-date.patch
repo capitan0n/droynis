@@ -1,0 +1,88 @@
+diff --git a/checks/base/src/main/kotlin/io/github/capitan0n/droynis/checks/base/WebViewCheck.kt b/checks/base/src/main/kotlin/io/github/capitan0n/droynis/checks/base/WebViewCheck.kt
+index e25e9d0..00f3c2c 100644
+--- a/checks/base/src/main/kotlin/io/github/capitan0n/droynis/checks/base/WebViewCheck.kt
++++ b/checks/base/src/main/kotlin/io/github/capitan0n/droynis/checks/base/WebViewCheck.kt
+@@ -11,6 +11,7 @@ import io.github.capitan0n.droynis.core.SettingsActions
+ import io.github.capitan0n.droynis.core.Severity
+ import io.github.capitan0n.droynis.core.evaluate
+ import io.github.capitan0n.droynis.core.toEvidence
++import java.time.LocalDate
+ import java.time.temporal.ChronoUnit
+ 
+ class WebViewCheck(private val webView: WebViewProbe) : Check {
+@@ -36,8 +37,12 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
+         val evidence = listOf(
+             provider.toEvidence("WebView provider") { info ->
+                 info?.let {
+-                    val updated = if (it.fromSystemImage) "came with the system image of" else "updated"
+-                    "${it.packageName} ${it.versionName}, $updated ${it.lastUpdated}"
++                    val updated = when {
++                        it.lastUpdated < PLAUSIBLE_UPDATE -> "no valid update date (reports ${it.lastUpdated})"
++                        it.fromSystemImage -> "came with the system image of ${it.lastUpdated}"
++                        else -> "updated ${it.lastUpdated}"
++                    }
++                    "${it.packageName} ${it.versionName}, $updated"
+                 } ?: "none"
+             }.copy(packageName = (provider as? Reading.Value)?.value?.packageName),
+         )
+@@ -46,6 +51,8 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
+             val age = ChronoUnit.DAYS.between(info.lastUpdated, context.startedAt.toLocalDate())
+             val updated = if (info.fromSystemImage) "came with a system update" else "was updated"
+             when {
++                info.lastUpdated < PLAUSIBLE_UPDATE ->
++                    Outcome.unknown("WebView reports a placeholder update date (${info.lastUpdated})", evidence)
+                 age < 0 -> Outcome.unknown("WebView's update date is ahead of the device clock", evidence)
+                 age <= MAX_AGE_DAYS -> Outcome.pass("WebView ${info.versionName} $updated $age days ago", evidence)
+                 info.fromSystemImage ->
+@@ -58,5 +65,11 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
+     companion object {
+         /** About two Chromium release cycles. */
+         const val MAX_AGE_DAYS = 60L
++
++        /**
++         * A date before Android 8 was released is a placeholder (1970 on some phones, 2009 from
++         * reproducible builds), not an update: Droynis runs on Android 8 and later.
++         */
++        private val PLAUSIBLE_UPDATE = LocalDate.of(2017, 1, 1)
+     }
+ }
+diff --git a/checks/base/src/test/kotlin/io/github/capitan0n/droynis/checks/base/DeviceStateChecksTest.kt b/checks/base/src/test/kotlin/io/github/capitan0n/droynis/checks/base/DeviceStateChecksTest.kt
+index 0b1ace7..ffd2efc 100644
+--- a/checks/base/src/test/kotlin/io/github/capitan0n/droynis/checks/base/DeviceStateChecksTest.kt
++++ b/checks/base/src/test/kotlin/io/github/capitan0n/droynis/checks/base/DeviceStateChecksTest.kt
+@@ -143,4 +143,21 @@ class DeviceStateChecksTest {
+         assertEquals(Status.FAIL, stale.status)
+         assertEquals("WebView 141.0 came with a system update 150 days ago and was not updated since", stale.summary)
+     }
++
++    @Test
++    fun `a placeholder webview date is unknown, not decades old`() = runTest {
++        // Issue #6: a phone reported Google WebView as updated on 1970-01-10.
++        fun check(updated: LocalDate, system: Boolean = false) = WebViewCheck(
++            FakeWebView(value(WebViewInfo("com.google.android.webview", "145.0", updated, fromSystemImage = system))),
++        )
++
++        val epoch = check(LocalDate.of(1970, 1, 10)).outcome()
++        assertEquals(Status.UNKNOWN, epoch.status)
++        assertEquals("WebView reports a placeholder update date (1970-01-10)", epoch.summary)
++        assertEquals("com.google.android.webview 145.0, no valid update date (reports 1970-01-10)", epoch.evidence.single().value)
++
++        // A system WebView is dated by Build.TIME, which can be a placeholder too.
++        assertEquals(Status.UNKNOWN, check(LocalDate.of(1970, 1, 1), system = true).status())
++        assertEquals(Status.FAIL, check(LocalDate.of(2017, 1, 1)).status())
++    }
+ }
+diff --git a/docs/DESIGN.md b/docs/DESIGN.md
+index cd1292c..4fecf52 100644
+--- a/docs/DESIGN.md
++++ b/docs/DESIGN.md
+@@ -39,7 +39,8 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
+ - **WebView** (INTG-1070): the provider package's `lastUpdateTime`. A system WebView that was never
+   updated on its own (ROMs that ship it with the OS) reports the file time from the system image,
+   which reproducible builds fix at 2009-01-01; there `Build.TIME`, the system image's build time,
+-  is its date instead, and the result says it came with a system update.
++  is its date instead, and the result says it came with a system update. A date before 2017 from
++  either source (some phones report 1970) is a placeholder: the result is Unknown, not decades old.
+ - **System properties** come from running `/system/bin/getprop` once per scan (cached 10 s).
+   SELinux filters what an app may read; a missing property is "not visible", never "false".
+   `sys.oem_unlock_allowed` is not readable on every device, so OEM unlocking can be UNKNOWN.

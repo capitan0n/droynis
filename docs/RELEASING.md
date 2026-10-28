@@ -36,7 +36,8 @@ The **Reproducible build** workflow builds the tag twice, from two directories, 
 
 ## F-Droid
 
-F-Droid reads the descriptions, changelogs, icon and screenshots from `fastlane/metadata` in the
-tagged source and builds the unsigned release itself. While the reproducible build passes, F-Droid
-can ship the APK signed here: its metadata then names the release download (`Binaries`) and the
-certificate SHA-256 from the release notes (`AllowedAPKSigningKeys`).
+F-Droid reads the descriptions, changelogs, icon, feature graphic and screenshots from
+`fastlane/metadata` in the tagged source and builds the unsigned release itself. The feature graphic
+is rendered from `art/feature-graphic.html` (the command is at its top). While the reproducible
+build passes, F-Droid can ship the APK signed here: its metadata then names the release download
+(`Binaries`) and the certificate SHA-256 from the release notes (`AllowedAPKSigningKeys`).
