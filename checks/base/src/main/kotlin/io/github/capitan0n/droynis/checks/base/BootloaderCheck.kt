@@ -4,11 +4,13 @@ import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Evidence
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Outcome
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.toEvidence
 import java.util.Locale
 import kotlin.time.Duration.Companion.seconds
@@ -16,6 +18,8 @@ import kotlin.time.Duration.Companion.seconds
 class BootloaderCheck(
     private val attestation: AttestationProbe,
     private val properties: SystemProperties,
+    private val files: FileProbe,
+    private val packages: PackageInventory,
 ) : Check {
 
     override val spec = CheckSpec(
@@ -70,10 +74,29 @@ class BootloaderCheck(
             flashLocked == "0" || deviceState == "unlocked" || bootState == "orange" ->
                 Outcome.fail("The bootloader is unlocked (reported by boot properties)", evidence)
             bootState == "red" -> Outcome.fail("Verified boot failed (reported by boot properties)", evidence)
-            lockedByProps && (bootState == "green" || bootState == "yellow") ->
-                Outcome.pass("The bootloader is locked (reported by boot properties, not hardware-attested)", evidence)
+            lockedByProps && (bootState == "green" || bootState == "yellow") -> {
+                // Custom ROMs and root modules often fake these as "locked" to pass Play Integrity.
+                // Rooting almost always means an unlocked bootloader, so on a rooted phone they prove nothing.
+                val rooted = rootEvidence(context)
+                if (rooted.isEmpty()) {
+                    Outcome.pass("The bootloader is locked (reported by boot properties, not hardware-attested)", evidence)
+                } else {
+                    Outcome.unknown(
+                        "Boot properties say the bootloader is locked, but this phone is rooted, so they may be faked",
+                        evidence + rooted,
+                    )
+                }
+            }
             else -> Outcome.unknown("The bootloader state could not be determined", evidence)
         }
+    }
+
+    /** Signs that this phone is rooted: Droynis holds a root shell, or what the root check looks for. */
+    private fun rootEvidence(context: ScanContext): List<Evidence> = buildList {
+        if (context.capabilities.has(Grant.ROOT)) {
+            add(Evidence("Root access", "granted to Droynis", Source("Droynis' root shell", Grant.ROOT)))
+        }
+        addAll(RootAccessCheck.signsOfRoot(files, packages))
     }
 
     private fun attestationEvidence(attested: Reading<KeyAttestation>): List<Evidence> {

@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
@@ -41,20 +42,11 @@ class RootAccessCheck(
         val suFiles = files.existing(SU_PATHS)
         val apps = packages.installedApps()
         val found = (suFiles as? Reading.Value)?.value.orEmpty()
-        val rootApps = (apps as? Reading.Value)?.value.orEmpty().filter { it.packageName in ROOT_APPS }
+        val rootApps = rootAppsIn(apps)
         val evidence = buildList {
             add(suFiles.toEvidence("su binaries") { if (it.isEmpty()) "none of ${SU_PATHS.size} known paths" else it.joinToString() })
             if (apps !is Reading.Value) add(apps.toEvidence("Installed apps"))
-            rootApps.forEach {
-                add(
-                    Evidence(
-                        "Root or hooking app",
-                        "${packages.label(it.packageName)} (${it.packageName})",
-                        apps.source,
-                        packageName = it.packageName,
-                    ),
-                )
-            }
+            rootApps.forEach { add(rootAppEvidence(it.packageName, packages, apps.source)) }
         }
         val signs = found.map { "su at $it" } + rootApps.map { "${packages.label(it.packageName)} installed" }
         return when {
@@ -94,6 +86,30 @@ class RootAccessCheck(
             "de.robv.android.xposed.installer", // Xposed
             "org.meowcat.edxposed.manager", // EdXposed
             "org.lsposed.manager", // LSPosed
+        )
+
+        /**
+         * Evidence of each sign of root this check fails on: su binaries, then root or hooking apps.
+         * Empty when none was found or the indicators could not be read.
+         */
+        fun signsOfRoot(files: FileProbe, packages: PackageInventory): List<Evidence> {
+            val suFiles = files.existing(SU_PATHS)
+            val apps = packages.installedApps()
+            val found = (suFiles as? Reading.Value)?.value.orEmpty()
+            return buildList {
+                if (found.isNotEmpty()) add(Evidence("su binaries", found.joinToString(), suFiles.source))
+                rootAppsIn(apps).forEach { add(rootAppEvidence(it.packageName, packages, apps.source)) }
+            }
+        }
+
+        private fun rootAppsIn(apps: Reading<List<InstalledApp>>): List<InstalledApp> =
+            (apps as? Reading.Value)?.value.orEmpty().filter { it.packageName in ROOT_APPS }
+
+        private fun rootAppEvidence(packageName: String, packages: PackageInventory, source: Source) = Evidence(
+            "Root or hooking app",
+            "${packages.label(packageName)} ($packageName)",
+            source,
+            packageName = packageName,
         )
     }
 }

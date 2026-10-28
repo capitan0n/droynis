@@ -8,7 +8,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     SecurityPatchAgeCheck(probes.build),
     VendorPatchCheck(probes.build, probes.attestation, probes.properties),
     StorageEncryptionCheck(probes.policy),
-    BootloaderCheck(probes.attestation, probes.properties),
+    BootloaderCheck(probes.attestation, probes.properties, probes.files, probes.packages),
     OemUnlockingCheck(probes.properties),
     RootAccessCheck(probes.files, probes.packages),
     AndroidBuildCheck(probes.build, probes.properties),

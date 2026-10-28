@@ -35,7 +35,9 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   KeyDescription extension with its own small DER reader (no Bouncy Castle) and only trusts TEE or
   StrongBox attestations. The chain is not yet checked against Google's roots, so this is posture,
   not proof (row 1). Without hardware attestation it falls back to `ro.boot.*` properties, which
-  root can fake towards "locked" but which do not lie about "unlocked" on their own.
+  root can fake towards "locked" but which do not lie about "unlocked" on their own. On a rooted
+  phone (the signs INTG-1050 looks for, or root granted to Droynis) a "locked" from them is
+  Unknown, not a pass.
 - **WebView** (INTG-1070): the provider package's `lastUpdateTime`. A system WebView that was never
   updated on its own (ROMs that ship it with the OS) reports the file time from the system image,
   which reproducible builds fix at 2009-01-01; there `Build.TIME`, the system image's build time,

@@ -1,5 +1,8 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Capabilities
+import io.github.capitan0n.droynis.core.Grant
+import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Status
 import java.time.LocalDate
@@ -16,8 +19,13 @@ class DeviceStateChecksTest {
         "ro.boot.verifiedbootstate" to "green",
     )
 
-    private suspend fun bootloader(attestation: FakeAttestation, props: FakeProperties = FakeProperties()) =
-        BootloaderCheck(attestation, props).outcome()
+    private suspend fun bootloader(
+        attestation: FakeAttestation,
+        props: FakeProperties = FakeProperties(),
+        files: FakeFiles = FakeFiles(),
+        packages: FakePackages = FakePackages(),
+        context: ScanContext = scanContext(),
+    ) = BootloaderCheck(attestation, props, files, packages).run(context)
 
     @Test
     fun `hardware attestation decides the bootloader state`() = runTest {
@@ -48,6 +56,32 @@ class DeviceStateChecksTest {
         assertEquals(Status.FAIL, bootloader(none, FakeProperties("ro.boot.verifiedbootstate" to "orange")).status)
         assertEquals(Status.UNKNOWN, bootloader(none, FakeProperties()).status)
         assertEquals(Status.UNKNOWN, bootloader(none, FakeProperties(unavailable("getprop failed"))).status)
+    }
+
+    @Test
+    fun `boot properties saying locked prove nothing on a rooted phone`() = runTest {
+        val none = FakeAttestation(unavailable("no attestation extension"))
+        val su = FakeFiles(value(listOf("/system/bin/su")))
+
+        val rooted = bootloader(none, lockedProps, files = su)
+        assertEquals(Status.UNKNOWN, rooted.status)
+        assertEquals(
+            "Boot properties say the bootloader is locked, but this phone is rooted, so they may be faked",
+            rooted.summary,
+        )
+        assertEquals("/system/bin/su", rooted.evidence.single { it.label == "su binaries" }.value)
+
+        val magisk = InstalledApp("com.topjohnwu.magisk", isSystem = false, isDebuggable = false, installer = null, targetSdk = 35)
+        val manager = bootloader(none, lockedProps, packages = FakePackages(value(listOf(magisk)), mapOf(magisk.packageName to "Magisk")))
+        assertEquals(Status.UNKNOWN, manager.status)
+        assertEquals("Magisk (com.topjohnwu.magisk)", manager.evidence.single { it.label == "Root or hooking app" }.value)
+
+        val shell = bootloader(none, lockedProps, context = scanContext().copy(capabilities = Capabilities(setOf(Grant.ROOT))))
+        assertEquals(Status.UNKNOWN, shell.status)
+        assertEquals("granted to Droynis", shell.evidence.single { it.label == "Root access" }.value)
+
+        // "Unlocked" is still reported honestly.
+        assertEquals(Status.FAIL, bootloader(none, FakeProperties("ro.boot.flash.locked" to "0"), files = su).status)
     }
 
     @Test
