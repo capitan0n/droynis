@@ -35,6 +35,22 @@ interface RootShellProbe {
     /** `magisk --sqlite "SELECT uid, policy, until FROM policies"`; Magisk only. */
     fun magiskPolicies(): Reading<String>
 
+    /** `magisk --sqlite "SELECT key, value FROM settings"`, one `key=…|value=…` per line; Magisk only. */
+    fun magiskSettings(): Reading<String>
+
+    /**
+     * The boot scripts root runs under `/data/adb` and the directories that hold them, each as a
+     * line `D|F <octal-perms> <owner> <path>` ([BootScripts] reads it). Covers `service.d`,
+     * `post-fs-data.d` and each module's `post-fs-data.sh`/`service.sh`.
+     */
+    fun bootScripts(): Reading<String>
+
+    /**
+     * What is staged in `/data/local/tmp`, each entry as `D|F <octal-perms> <owner> <size> <mtime> <path>`
+     * ([TempFiles] reads it).
+     */
+    fun tempFiles(): Reading<String>
+
     /** The contents of `/proc/net/<file>`; `Unsupported` when the kernel has no such table. */
     fun procNet(table: ProcNet): Reading<String>
 }

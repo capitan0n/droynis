@@ -217,6 +217,9 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
     override fun selinuxMode(): Reading<String> =
         call(Source("getenforce", Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.selinuxMode(), source) }
 
+    override fun kernelCmdline(): Reading<String> =
+        call(Source("cat /proc/cmdline", Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.kernelCmdline(), source) }
+
     override fun telephony(): Reading<String> =
         call(Source(TELEPHONY_SOURCE, Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.telephony().orEmpty(), source) }
 
@@ -256,7 +259,7 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
         const val MANAGER_PACKAGE = "moe.shizuku.privileged.api"
 
         /** Bump when [ShellService] changes, so Shizuku replaces a shell left from an older Droynis. */
-        private const val SERVICE_VERSION = 4
+        private const val SERVICE_VERSION = 5
 
         private const val REQUEST_CODE = 0x0D50
         private const val CONNECT_TIMEOUT_MILLIS = 10_000L

@@ -34,12 +34,18 @@ class RootChecksTest {
         var modules: Reading<String> = Reading.Value("", Source("su")),
         var manager: Reading<RootManager> = Reading.Value(RootManager.MAGISK, Source("su")),
         var policies: Reading<String> = Reading.Value("", Source("su")),
+        var settings: Reading<String> = Reading.Value("", Source("su")),
+        var bootScripts: Reading<String> = Reading.Value("", Source("su")),
+        var tempFiles: Reading<String> = Reading.Value("", Source("su")),
         var net: Map<ProcNet, Reading<String>> = ProcNet.entries.associateWith { Reading.Value(HEADER, Source("su")) },
     ) : RootShellProbe {
         override fun adbKeys() = keys
         override fun modules() = modules
         override fun manager() = manager
         override fun magiskPolicies() = policies
+        override fun magiskSettings() = settings
+        override fun bootScripts() = bootScripts
+        override fun tempFiles() = tempFiles
         override fun procNet(table: ProcNet) = net.getValue(table)
     }
 
@@ -57,7 +63,10 @@ class RootChecksTest {
             },
         ).map { it.spec }
 
-        assertEquals(listOf("INTG-1301", "ACCS-2301", "APPS-4301", "NETW-3301"), specs.map { it.id })
+        assertEquals(
+            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "NETW-3301"),
+            specs.map { it.id },
+        )
         assertEquals(setOf(Tier.ROOT), specs.map { it.requiredTier }.toSet())
     }
 
@@ -137,6 +146,69 @@ class RootChecksTest {
         assertEquals(Status.UNSUPPORTED, kernelSu.status)
         assertEquals(Status.UNKNOWN, RootAppsCheck(FakeRoot(policies = v("uid=1|policy=2")), packages).run(context).status)
         assertNull(MagiskPolicies.parse("uid=10130|policy=2|until=0|logging=1"))
+    }
+
+    @Test
+    fun `a boot script a non-root user can change fails`() = runTest {
+        val listing = "D 700 root /data/adb\n" +
+            "D 755 root /data/adb/service.d\n" +
+            "F 777 shell /data/adb/service.d/evil.sh\n"
+        val outcome = BootScriptsCheck(FakeRoot(bootScripts = v(listing))).run(context)
+        assertEquals(Status.FAIL, outcome.status)
+        assertTrue(outcome.summary.contains("evil.sh"), outcome.summary)
+
+        // Safe file, but its folder is world-writable: still exposed.
+        val badDir = "D 777 shell /data/adb/service.d\nF 700 root /data/adb/service.d/ok.sh\n"
+        assertEquals(Status.FAIL, BootScriptsCheck(FakeRoot(bootScripts = v(badDir))).run(context).status)
+    }
+
+    @Test
+    fun `root-owned boot scripts and an empty set pass, odd output is unknown`() = runTest {
+        val safe = "D 700 root /data/adb\nF 700 root /data/adb/service.d/ok.sh\n"
+        assertEquals(Status.PASS, BootScriptsCheck(FakeRoot(bootScripts = v(safe))).run(context).status)
+        assertEquals(Status.PASS, BootScriptsCheck(FakeRoot(bootScripts = v("D 700 root /data/adb\n"))).run(context).status)
+        assertEquals(Status.UNKNOWN, BootScriptsCheck(FakeRoot(bootScripts = v("junk"))).run(context).status)
+        assertEquals(Status.UNKNOWN, BootScriptsCheck(FakeRoot(bootScripts = Reading.Unavailable("denied", source))).run(context).status)
+    }
+
+    @Test
+    fun `scripts and executables staged in temp fail, data files and an empty folder pass`() = runTest {
+        val listing = "F 777 shell 987 1759000000 /data/local/tmp/rogue_rndis.sh\n" +
+            "F 644 shell 10 1759000000 /data/local/tmp/notes.txt\n"
+        val outcome = TempFilesCheck(FakeRoot(tempFiles = v(listing))).run(context)
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("1 program staged in /data/local/tmp: rogue_rndis.sh, 1 of them world-writable", outcome.summary)
+        assertTrue(outcome.evidence.single().note!!.contains("world-writable"))
+
+        val dataOnly = "F 644 shell 10 1759000000 /data/local/tmp/notes.txt\n"
+        assertEquals(Status.PASS, TempFilesCheck(FakeRoot(tempFiles = v(dataOnly))).run(context).status)
+        assertEquals(Status.PASS, TempFilesCheck(FakeRoot(tempFiles = v(""))).run(context).status)
+        assertEquals(Status.UNKNOWN, TempFilesCheck(FakeRoot(tempFiles = v("garbage"))).run(context).status)
+        assertEquals(Status.UNKNOWN, TempFilesCheck(FakeRoot(tempFiles = Reading.Unavailable("denied", source))).run(context).status)
+    }
+
+    @Test
+    fun `root over adb fails, apps-only passes, and the Magisk default fails`() = runTest {
+        fun adb(settings: String) = AdbRootCheck(FakeRoot(settings = v(settings))).run(context)
+
+        assertEquals(Status.FAIL, adb("key=root_access|value=3").status)
+        assertEquals(Status.FAIL, adb("key=root_access|value=2").status)
+        assertEquals(Status.PASS, adb("key=root_access|value=1").status)
+        assertEquals(Status.PASS, adb("key=root_access|value=0").status)
+
+        // Absent root_access means Magisk's default, which is Apps and ADB.
+        val default = adb("key=zygisk|value=1")
+        assertEquals(Status.FAIL, default.status)
+        assertTrue(default.evidence.single().note!!.contains("default"), default.evidence.single().note)
+    }
+
+    @Test
+    fun `root over adb is not applicable off Magisk, and unknown when it can't be read`() = runTest {
+        assertEquals(Status.UNSUPPORTED, AdbRootCheck(FakeRoot(manager = v(RootManager.KERNELSU))).run(context).status)
+        assertEquals(Status.UNKNOWN, AdbRootCheck(FakeRoot(settings = Reading.Unavailable("magisk missing", source))).run(context).status)
+        assertEquals(Status.UNKNOWN, AdbRootCheck(FakeRoot(settings = v("garbage output"))).run(context).status)
+        assertEquals(emptyMap(), MagiskSettings.parse(""))
+        assertNull(MagiskSettings.parse("nonsense"))
     }
 
     @Test

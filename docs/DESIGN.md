@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 68 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 73 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 

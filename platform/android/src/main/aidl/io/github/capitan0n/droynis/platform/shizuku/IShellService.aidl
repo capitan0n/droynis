@@ -21,4 +21,7 @@ interface IShellService {
 
     /** The SIM lock and allowed network types of each active SIM, in TelephonyDump's format. */
     String telephony() = 4;
+
+    /** The kernel command line (`/proc/cmdline`): the boot parameters the bootloader passed. */
+    String kernelCmdline() = 5;
 }
