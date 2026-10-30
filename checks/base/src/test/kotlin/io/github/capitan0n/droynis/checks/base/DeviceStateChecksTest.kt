@@ -194,4 +194,39 @@ class DeviceStateChecksTest {
         assertEquals(Status.UNKNOWN, check(LocalDate.of(1970, 1, 1), system = true).status())
         assertEquals(Status.FAIL, check(LocalDate.of(2017, 1, 1)).status())
     }
+
+    @Test
+    fun `without a valid date an old webview is judged by its chromium version`() = runTest {
+        // Issue #6 again: the same phone still reports 1970-01-10, but WebView 145 is from February 2026.
+        fun check(version: String) = WebViewCheck(
+            FakeWebView(value(WebViewInfo("com.google.android.webview", version, LocalDate.of(1970, 1, 10)))),
+        )
+
+        val old = check("145.0.7632.218").outcome()
+        assertEquals(Status.FAIL, old.status)
+        assertEquals("WebView 145.0.7632.218 is at least 233 days old, judging by its version", old.summary)
+        assertEquals("2026-02-10 or earlier", old.evidence.single { it.label == "Chromium 145 released" }.value)
+
+        // 152 came out 37 days before the scan, and later majors can't be dated: too new to tell.
+        assertEquals(Status.UNKNOWN, check("152.0.7977.64").status())
+        assertEquals(Status.UNKNOWN, check("156.0.8000.1").status())
+        // Not Chromium's numbering: a vendor's own version, or too few parts to be sure.
+        assertEquals(Status.UNKNOWN, check("14.0.0.302").status())
+        assertEquals(Status.UNKNOWN, check("145.0").status())
+        // Vanadium adds a fifth part; Chromium before 94 is bounded by 94's date.
+        assertEquals(Status.FAIL, check("145.0.7632.218.0").status())
+        assertEquals(Status.FAIL, check("90.0.4430.91").status())
+    }
+
+    @Test
+    fun `chromium release bound`() {
+        assertEquals(145, WebViewCheck.chromiumMajor("145.0.7632.218"))
+        assertEquals(null, WebViewCheck.chromiumMajor("57.0.2987.132"))
+        assertEquals(LocalDate.of(2026, 8, 25), WebViewCheck.releasedBy(152))
+        assertEquals(LocalDate.of(2026, 2, 10), WebViewCheck.releasedBy(145))
+        // A bound, never too early: Chromium 120 reached stable on 2023-12-05.
+        assertEquals(LocalDate.of(2024, 3, 12), WebViewCheck.releasedBy(120))
+        assertEquals(WebViewCheck.releasedBy(94), WebViewCheck.releasedBy(80))
+        assertEquals(null, WebViewCheck.releasedBy(153))
+    }
 }

@@ -42,7 +42,11 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   updated on its own (ROMs that ship it with the OS) reports the file time from the system image,
   which reproducible builds fix at 2009-01-01; there `Build.TIME`, the system image's build time,
   is its date instead, and the result says it came with a system update. A date before 2017 from
-  either source (some phones report 1970) is a placeholder: the result is Unknown, not decades old.
+  either source (some phones report 1970) is a placeholder, not decades old. Then the Chromium
+  major version dates it instead: up to 152 (stable 2026-08-25, the last four-week release) a
+  major came out no later than four weeks per version before 152, so the result is a lower bound
+  on its age. Majors after 152, and versions not numbered like Chromium's, stay Unknown. Moving
+  the anchor to a newer major needs a release date for it and a cadence that held up to it.
 - **System properties** come from running `/system/bin/getprop` once per scan (cached 10 s).
   SELinux filters what an app may read; a missing property is "not visible", never "false".
   `sys.oem_unlock_allowed` is not readable on every device, so OEM unlocking can be UNKNOWN.
