@@ -189,7 +189,7 @@ class RootChecksTest {
 
     @Test
     fun `root over adb fails, apps-only passes, and the Magisk default fails`() = runTest {
-        fun adb(settings: String) = AdbRootCheck(FakeRoot(settings = v(settings))).run(context)
+        suspend fun adb(settings: String) = AdbRootCheck(FakeRoot(settings = v(settings))).run(context)
 
         assertEquals(Status.FAIL, adb("key=root_access|value=3").status)
         assertEquals(Status.FAIL, adb("key=root_access|value=2").status)
@@ -207,7 +207,7 @@ class RootChecksTest {
         assertEquals(Status.UNSUPPORTED, AdbRootCheck(FakeRoot(manager = v(RootManager.KERNELSU))).run(context).status)
         assertEquals(Status.UNKNOWN, AdbRootCheck(FakeRoot(settings = Reading.Unavailable("magisk missing", source))).run(context).status)
         assertEquals(Status.UNKNOWN, AdbRootCheck(FakeRoot(settings = v("garbage output"))).run(context).status)
-        assertEquals(emptyMap(), MagiskSettings.parse(""))
+        assertEquals(emptyMap<String, Int>(), MagiskSettings.parse(""))
         assertNull(MagiskSettings.parse("nonsense"))
     }
 
