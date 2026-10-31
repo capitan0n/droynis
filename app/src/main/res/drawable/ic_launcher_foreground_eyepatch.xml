@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droynis with a pirate eyepatch, for the App icon setting. Master: art/droynis-eyepatch.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="54"
+                android:startY="28"
+                android:endX="54"
+                android:endY="84">
+                <item android:offset="0" android:color="#FF3FC8BC" />
+                <item android:offset="1" android:color="#FF0B6669" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- The shield's rim: a stroke clipped to the inside of the shape. -->
+    <group>
+        <clip-path android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z" />
+        <path
+            android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z"
+            android:strokeColor="#FF9BEFE6"
+            android:strokeWidth="3.4" />
+    </group>
+    <path
+        android:pathData="M34,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z M54,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z"
+        android:fillColor="#FFCFF5F0" />
+    <path
+        android:pathData="M37.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M57.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z"
+        android:fillColor="#FFF6B940" />
+    <path
+        android:pathData="M40.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z M60.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+        android:fillColor="#FF132029" />
+    <path
+        android:pathData="M41.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z M61.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M54,58.5 L57,62.5 L54,67 L51,62.5 Z"
+        android:fillColor="#FFD98E2B" />
+    <!-- Chest feathers, which double as small check marks. -->
+    <path
+        android:pathData="M48.5,71 L51.5,73.5 L54.5,71 M53.5,71 L56.5,73.5 L59.5,71 M51,76 L54,78.5 L57,76"
+        android:strokeColor="#FF6FD9CE"
+        android:strokeWidth="1.3"
+        android:strokeAlpha="0.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <group>
+        <clip-path android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z" />
+        <path
+            android:pathData="M26,64 L82,23"
+            android:strokeColor="#FF0E151B"
+            android:strokeWidth="2.6"
+            android:strokeLineCap="round" />
+    </group>
+    <path
+        android:pathData="M44,40.6 C51,40.6 55.6,45 55.6,51.2 C55.6,58.2 50.5,63.6 44,63.6 C37.5,63.6 32.4,58.2 32.4,51.2 C32.4,45 37,40.6 44,40.6 Z"
+        android:fillColor="#FF111A20"
+        android:strokeColor="#FF0A1015"
+        android:strokeWidth="0.8" />
+    <path
+        android:pathData="M44,43 L44.69,43.02 L45.36,43.07 L45.6,43.1 M46.87,43.34 L47.24,43.44 L47.82,43.62 L48.37,43.84 L48.39,43.85 M49.54,44.45 L49.88,44.67 L50.33,45 L50.75,45.36 L50.81,45.42 M51.68,46.38 L51.83,46.59 L52.13,47.04 L52.4,47.52 L52.51,47.75 M52.97,48.96 L53,49.08 L53.13,49.63 L53.22,50.21 L53.26,50.53 M53.29,51.83 L53.28,52.09 L53.22,52.77 L53.12,53.42 M52.8,54.68 L52.79,54.7 L52.58,55.31 L52.33,55.89 L52.19,56.16 M51.53,57.28 L51.38,57.51 L51,57.99 L50.6,58.45 L50.53,58.52 M49.56,59.39 L49.23,59.64 L48.72,59.98 L48.22,60.26 M47.03,60.78 L46.49,60.96 L45.89,61.1 L45.49,61.18 M44.19,61.29 L44,61.3 L43.36,61.28 L42.72,61.21 L42.6,61.19 M41.33,60.9 L40.92,60.77 L40.35,60.54 L39.85,60.3 M38.74,59.62 L38.29,59.28 L37.83,58.88 L37.53,58.58 M36.69,57.59 L36.62,57.51 L36.27,56.99 L35.96,56.46 L35.85,56.24 M35.33,55.05 L35.21,54.7 L35.03,54.08 L34.9,53.5 M34.73,52.22 L34.72,52.09 L34.7,51.4 L34.72,50.79 L34.74,50.62 M34.94,49.34 L35,49.08 L35.17,48.54 L35.37,48.02 L35.46,47.83 M36.1,46.7 L36.17,46.59 L36.5,46.16 L36.86,45.75 L37.13,45.48 M38.14,44.66 L38.6,44.37 L39.1,44.09 L39.53,43.89 M40.75,43.44 L40.76,43.44 L41.37,43.28 L41.99,43.16 L42.32,43.12 M43.61,43.01 L44,43 L44,43"
+        android:strokeColor="#FF2C3B47"
+        android:strokeWidth="0.8" />
+    <path
+        android:pathData="M37.5,47 C38.6,45 40.6,44 42.6,43.8"
+        android:strokeColor="#FF5A6E7C"
+        android:strokeWidth="1.2"
+        android:strokeAlpha="0.8"
+        android:strokeLineCap="round" />
+</vector>

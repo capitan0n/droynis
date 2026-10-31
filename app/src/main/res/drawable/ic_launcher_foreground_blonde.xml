@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Droynis with blonde hair, for the App icon setting. Master: art/droynis-blonde.svg. Drawn at 76% so it all fits the launcher's safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.76"
+        android:scaleY="0.76"
+        android:translateY="1">
+        <path
+            android:pathData="M54,13 C37,13 27,23 27,39 C27,53 26,66 21,80 C27,79 31,75 33,70 C33,74 31,78 28,82 C40,80 44,72 44,66 L64,66 C64,72 68,80 80,82 C77,78 75,74 75,70 C77,75 81,79 87,80 C82,66 81,53 81,39 C81,23 71,13 54,13 Z"
+            android:strokeColor="#FFB9822A"
+            android:strokeWidth="0.8">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="54"
+                    android:startY="12"
+                    android:endX="54"
+                    android:endY="82">
+                    <item android:offset="0" android:color="#FFFCE79A" />
+                    <item android:offset="0.5" android:color="#FFF2C85B" />
+                    <item android:offset="1" android:color="#FFD49A2E" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="54"
+                    android:startY="28"
+                    android:endX="54"
+                    android:endY="84">
+                    <item android:offset="0" android:color="#FF3FC8BC" />
+                    <item android:offset="1" android:color="#FF0B6669" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <!-- The shield's rim: a stroke clipped to the inside of the shape. -->
+        <group>
+            <clip-path android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z" />
+            <path
+                android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z"
+                android:strokeColor="#FF9BEFE6"
+                android:strokeWidth="3.4" />
+        </group>
+        <path
+            android:pathData="M34,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z M54,52 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0 Z"
+            android:fillColor="#FFCFF5F0" />
+        <path
+            android:pathData="M37.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M57.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z"
+            android:fillColor="#FFF6B940" />
+        <path
+            android:pathData="M40.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z M60.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+            android:fillColor="#FF132029" />
+        <path
+            android:pathData="M41.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z M61.45,50.6 a1.15,1.15 0 1,0 2.3,0 a1.15,1.15 0 1,0 -2.3,0 Z"
+            android:fillColor="#FFFFFFFF" />
+        <path
+            android:pathData="M54,58.5 L57,62.5 L54,67 L51,62.5 Z"
+            android:fillColor="#FFD98E2B" />
+        <!-- Chest feathers, which double as small check marks. -->
+        <path
+            android:pathData="M48.5,71 L51.5,73.5 L54.5,71 M53.5,71 L56.5,73.5 L59.5,71 M51,76 L54,78.5 L57,76"
+            android:strokeColor="#FF6FD9CE"
+            android:strokeWidth="1.3"
+            android:strokeAlpha="0.8"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+        <path
+            android:pathData="M29.5,38 C29,22 40,13.5 54,13.5 C68,13.5 79,22 78.5,38 C76,33.5 72.5,31 68,31 C64,36.5 57,40 48.5,40.2 C51,37.8 52.4,35.4 52.6,32.8 C47,37 41,39 35,40 C32.5,39.8 30.5,39.2 29.5,38 Z"
+            android:strokeColor="#FFB9822A"
+            android:strokeWidth="0.8"
+            android:strokeLineJoin="round">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="54"
+                    android:startY="12"
+                    android:endX="54"
+                    android:endY="82">
+                    <item android:offset="0" android:color="#FFFCE79A" />
+                    <item android:offset="0.5" android:color="#FFF2C85B" />
+                    <item android:offset="1" android:color="#FFD49A2E" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M38,21 C43,17 49,15.6 55,15.8"
+            android:strokeColor="#FFFFF6CF"
+            android:strokeWidth="1.6"
+            android:strokeAlpha="0.85"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M60,18 C66,20 70,24 72,29"
+            android:strokeColor="#FFC99030"
+            android:strokeWidth="1"
+            android:strokeAlpha="0.8"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M44,24 C41,28 39,32 37,36"
+            android:strokeColor="#FFC99030"
+            android:strokeWidth="1"
+            android:strokeAlpha="0.8"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M28.5,48 C28.4,58 27.5,67 24.5,76 M79.5,48 C79.6,58 80.5,67 83.5,76"
+            android:strokeColor="#FFC99030"
+            android:strokeWidth="0.9"
+            android:strokeAlpha="0.7"
+            android:strokeLineCap="round" />
+    </group>
+</vector>

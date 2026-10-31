@@ -14,13 +14,84 @@
         tools:targetApi="31">
 
         <activity
+            android:name=".DroynisActivity"
+            android:exported="false" />
+
+        <!--
+            One launcher entry per app icon (⋮ › App icon); AppIcon.kt keeps exactly one enabled. The
+            default is enabled here and the others are not, so a new install shows the default icon.
+            It keeps the name the launcher activity had before icons could change, so home screen
+            shortcuts from earlier versions still open the app.
+        -->
+        <activity-alias
             android:name=".MainActivity"
-            android:exported="true">
+            android:exported="true"
+            android:targetActivity=".DroynisActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconSombrero"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_sombrero"
+            android:targetActivity=".DroynisActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconGlasses"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_glasses"
+            android:targetActivity=".DroynisActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconEyepatch"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_eyepatch"
+            android:targetActivity=".DroynisActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconCowboy"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_cowboy"
+            android:targetActivity=".DroynisActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".IconBlonde"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_blonde"
+            android:targetActivity=".DroynisActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
     </application>
 

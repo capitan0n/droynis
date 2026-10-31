@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DataObject
@@ -79,6 +81,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -86,7 +89,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.capitan0n.droynis.AppIcon
 import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
@@ -110,6 +115,9 @@ interface AppActions {
     fun refreshTools()
     fun setThemeMode(mode: ThemeMode)
     fun setAccent(accent: ThemeAccent)
+
+    /** Switches the launcher icon. */
+    fun setAppIcon(icon: AppIcon)
 
     /** A muted check still runs and shows its result, but the score and counts leave it out. */
     fun setMuted(checkId: String, muted: Boolean)
@@ -197,6 +205,7 @@ fun DroynisApp(
     catalog: List<CheckSpec>,
     themeMode: ThemeMode,
     accent: ThemeAccent,
+    appIcon: AppIcon,
     appVersion: String,
     messages: Flow<String>,
     actions: AppActions,
@@ -215,6 +224,7 @@ fun DroynisApp(
     // Kept while the catalog is closed, so it fades out and reopens on the same tab.
     var catalogTier by rememberSaveable { mutableStateOf(Tier.BASE) }
     var showTheme by rememberSaveable { mutableStateOf(false) }
+    var showAppIcon by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val tabStates = rememberSaveableStateHolder()
 
@@ -275,6 +285,7 @@ fun DroynisApp(
                     onHelp = { tab = Tab.HELP },
                     showAboutButton = tab == Tab.HELP,
                     onTheme = { showTheme = true },
+                    onAppIcon = { showAppIcon = true },
                     onAbout = { showAbout = true },
                     onCatalog = { showCatalog = true },
                     scrollBehavior = scrollBehavior,
@@ -402,6 +413,10 @@ fun DroynisApp(
             onDismiss = { showTheme = false },
         )
     }
+
+    if (showAppIcon) {
+        AppIconDialog(selected = appIcon, onSelect = actions::setAppIcon, onDismiss = { showAppIcon = false })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -414,6 +429,7 @@ private fun MainTopBar(
     onHelp: () -> Unit,
     showAboutButton: Boolean,
     onTheme: () -> Unit,
+    onAppIcon: () -> Unit,
     onAbout: () -> Unit,
     onCatalog: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
@@ -477,6 +493,10 @@ private fun MainTopBar(
                     MenuItem(R.string.menu_theme, Icons.Rounded.Palette) {
                         menuOpen = false
                         onTheme()
+                    }
+                    MenuItem(R.string.menu_app_icon, Icons.Rounded.Apps) {
+                        menuOpen = false
+                        onAppIcon()
                     }
                     MenuItem(R.string.menu_help, Icons.AutoMirrored.Rounded.Help) {
                         menuOpen = false
@@ -618,5 +638,95 @@ private fun AccentSwatch(labelRes: Int, color: Color, selected: Boolean, onClick
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
+    }
+}
+
+/** Stays open on a pick, like the theme dialog; the launcher updates behind it. */
+@Composable
+private fun AppIconDialog(selected: AppIcon, onSelect: (AppIcon) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+        title = { Text(stringResource(R.string.menu_app_icon)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Column(Modifier.selectableGroup()) {
+                    for (row in AppIcon.entries.chunked(SWATCHES_PER_ROW)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            for (item in row) {
+                                AppIconChoice(
+                                    icon = item,
+                                    selected = item == selected,
+                                    onClick = { onSelect(item) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(SWATCHES_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.app_icon_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) } },
+    )
+}
+
+/** An icon as a round launcher shows it, with its name; the picked one has a ring and a tick. */
+@Composable
+private fun AppIconChoice(icon: AppIcon, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val ring = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier
+        Box(modifier = Modifier.size(64.dp).then(ring), contentAlignment = Alignment.Center) {
+            LauncherIcon(icon.foregroundRes, size = 52.dp)
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(icon.labelRes),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The two layers of an adaptive icon, cut to a circle. Layers are 108 units across but launchers
+ * show only the middle 72, so each is drawn 1.5 times [size] and the circle crops the rest.
+ */
+@Composable
+private fun LauncherIcon(foregroundRes: Int, size: Dp) {
+    Box(modifier = Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
+        val layer = Modifier.requiredSize(size * 1.5f)
+        Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = layer)
+        Image(painterResource(foregroundRes), contentDescription = null, modifier = layer)
     }
 }
