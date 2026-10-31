@@ -485,6 +485,14 @@ generated in `TonalPalette.kt`: one hue at Material 3's tones, where a tone is t
 lightness, so every role has the same contrast as in teal whatever the hue. Red, yellow and green
 are left out, as they are the status colors.
 
+⋮ › App icon swaps the launcher icon for the owl in a sombrero, glasses, a pirate eyepatch, a
+cowboy hat or blonde hair (masters in `art/`). Each icon is an `<activity-alias>` of
+`DroynisActivity`, and `AppIcon.kt` keeps exactly one enabled through the package manager, so the
+choice needs no stored setting. The default alias is the only one the manifest enables, so a new
+install always starts with the original icon, and it keeps the name `.MainActivity` so home screen
+shortcuts from older versions still work. The hat and hair icons are drawn at 76% so they stay
+inside the launcher's safe zone, and each has its own themed (monochrome) silhouette.
+
 The check catalog (⋮ menu, or a link at the top of Help) lists every check in one tab per tier:
 Base, ADB, Shizuku, Root. Each tab opens with what the tier is and how to set it up; the ADB tab
 lists each grant as held or not (read live), the exact `pm grant` commands, and `pm revoke`
@@ -506,7 +514,8 @@ until the eye in its header is tapped, so a screenshot gives none of them away. 
 stored: every new start of the app hides them again.
 
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,
-theme), implemented by `MainActivity`; screens take plain state, which keeps them previewable.
+theme, app icon), implemented by `DroynisActivity`; screens take plain state, which keeps them
+previewable.
 
 ## 9. Name and credit
 
