@@ -109,7 +109,8 @@ JDK 21 and the Android SDK (compileSdk 37).
 
 `assembleRelease` signs with `keystore.properties` (git-ignored) or `DROYNIS_*` environment
 variables, and builds an unsigned APK without them, as F-Droid expects. Debug builds are slow by
-design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEASING.md).
+design; use a release build day to day. To publish a release, push a version tag; the one-time
+setup is at the top of [.github/workflows/release.yml](.github/workflows/release.yml).
 
 ## More
 

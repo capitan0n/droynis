@@ -1,6 +1,16 @@
 name: Release
 
-# Push a tag such as v1.0.0 to build, sign and publish that version. Setup: docs/RELEASING.md.
+# Push a tag such as v1.0.0 to build, sign and publish that version; v1.3.0-rc1 is a pre-release.
+#
+# Once: create the key and back it up offline (another key can't update installed copies):
+#   keytool -genkeypair -v -keystore droynis-release.jks -alias droynis -keyalg RSA -keysize 4096 -validity 10000
+# then add the Actions secrets KEYSTORE_BASE64 (base64 -w0 droynis-release.jks), KEYSTORE_PASSWORD,
+# KEY_ALIAS and KEY_PASSWORD.
+#
+# Each release: raise versionCode and versionName in app/build.gradle.kts, write
+# fastlane/metadata/android/en-US/changelogs/<versionCode>.txt (max 500 characters; release notes
+# here and on F-Droid), run ./gradlew check, then:
+#   git tag -a v1.2.3 -m "Droynis 1.2.3" && git push origin main v1.2.3
 on:
   push:
     tags: ["v*"]
@@ -46,7 +56,7 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::error::The signing secrets are missing; see docs/RELEASING.md"
+            echo "::error::The signing secrets are missing; see the setup notes at the top of this workflow"
             exit 1
           fi
           printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
