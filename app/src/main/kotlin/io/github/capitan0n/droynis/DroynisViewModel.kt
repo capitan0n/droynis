@@ -28,6 +28,7 @@ import io.github.capitan0n.droynis.report.DeviceFact
 import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.report.JsonReport
 import io.github.capitan0n.droynis.report.MarkdownReport
+import io.github.capitan0n.droynis.ui.theme.ThemeAccent
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 import java.io.IOException
 import java.time.ZonedDateTime
@@ -112,6 +113,9 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
 
     private val _themeMode = MutableStateFlow(readThemeMode())
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
+    private val _accent = MutableStateFlow(readAccent())
+    val accent: StateFlow<ThemeAccent> = _accent.asStateFlow()
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
 
@@ -295,6 +299,11 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         _themeMode.value = mode
     }
 
+    fun setAccent(accent: ThemeAccent) {
+        prefs.edit().putString(KEY_ACCENT, accent.name).apply()
+        _accent.value = accent
+    }
+
     /** The last finished scan as a report, or null before the first one finishes. */
     fun report(format: ReportFormat): String? {
         val result = _state.value.result ?: return null
@@ -356,9 +365,15 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         return ThemeMode.entries.firstOrNull { it.name == name } ?: ThemeMode.SYSTEM
     }
 
+    private fun readAccent(): ThemeAccent {
+        val name = prefs.getString(KEY_ACCENT, null)
+        return ThemeAccent.entries.firstOrNull { it.name == name && it.available } ?: ThemeAccent.TEAL
+    }
+
     companion object {
         private const val PREFS = "settings"
         private const val KEY_THEME = "theme"
+        private const val KEY_ACCENT = "accent"
         private const val KEY_MUTED = "muted_checks"
         private const val KEY_HIDE_PERSONAL = "hide_personal"
         private const val KEY_ROOT = "root_tier"

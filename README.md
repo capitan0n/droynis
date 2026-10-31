@@ -94,9 +94,9 @@ The score is passed weight ÷ scored weight × 100 (critical 10, warning 5, noti
 critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute what you can't fix,
 such as a patch level only the maker can update; the Muted filter has Unmute all.
 
-⋮ › Save the report as Markdown or JSON, share or copy it. **Hide personal details** (on by default)
-replaces IP addresses, DNS and proxy servers, the Private DNS host, trusted computers and saved
-Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
+⋮ › Save the report as Markdown or JSON, or share it; Tools › Report can also copy it.
+**Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private
+DNS host, trusted computers and saved Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
 
 ## Build
 
@@ -109,8 +109,7 @@ JDK 21 and the Android SDK (compileSdk 37).
 
 `assembleRelease` signs with `keystore.properties` (git-ignored) or `DROYNIS_*` environment
 variables, and builds an unsigned APK without them, as F-Droid expects. Debug builds are slow by
-design; use a release build day to day. To publish a release, push a version tag; the one-time
-setup is at the top of [.github/workflows/release.yml](.github/workflows/release.yml).
+design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## More
 

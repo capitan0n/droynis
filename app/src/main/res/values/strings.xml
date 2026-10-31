@@ -14,7 +14,6 @@
     <string name="menu_save_report">Save report (Markdown)…</string>
     <string name="menu_save_json">Save report (JSON)…</string>
     <string name="menu_share_report">Share report</string>
-    <string name="menu_copy_report">Copy report</string>
     <string name="menu_hide_personal">Hide personal details</string>
     <string name="personal_hidden">Reports leave out IP addresses, DNS and proxy servers and trusted computers.</string>
     <string name="personal_included">Reports include IP addresses, DNS and proxy servers and trusted computers.</string>
@@ -26,6 +25,13 @@
     <string name="theme_system">System default</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_accent">Accent color</string>
+    <string name="accent_teal">Teal</string>
+    <string name="accent_blue">Blue</string>
+    <string name="accent_purple">Purple</string>
+    <string name="accent_pink">Pink</string>
+    <string name="accent_graphite">Graphite</string>
+    <string name="accent_wallpaper">Wallpaper</string>
     <string name="dialog_close">Close</string>
     <string name="about_title">About Droynis</string>
     <string name="about_version">Version %1$s</string>

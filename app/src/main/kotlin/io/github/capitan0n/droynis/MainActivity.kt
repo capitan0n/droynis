@@ -24,6 +24,7 @@ import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import io.github.capitan0n.droynis.ui.AppActions
 import io.github.capitan0n.droynis.ui.DroynisApp
 import io.github.capitan0n.droynis.ui.theme.DroynisTheme
+import io.github.capitan0n.droynis.ui.theme.ThemeAccent
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 
 class MainActivity : ComponentActivity(), AppActions {
@@ -47,6 +48,7 @@ class MainActivity : ComponentActivity(), AppActions {
         val viewModel = viewModel
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+            val accent by viewModel.accent.collectAsStateWithLifecycle()
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.LIGHT -> false
@@ -62,12 +64,13 @@ class MainActivity : ComponentActivity(), AppActions {
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 onDispose {}
             }
-            DroynisTheme(darkTheme = darkTheme) {
+            DroynisTheme(darkTheme = darkTheme, accent = accent) {
                 val state by viewModel.state.collectAsStateWithLifecycle()
                 DroynisApp(
                     state = state,
                     catalog = viewModel.catalog,
                     themeMode = themeMode,
+                    accent = accent,
                     appVersion = BuildConfig.VERSION_NAME,
                     messages = viewModel.messages,
                     actions = this,
@@ -81,6 +84,8 @@ class MainActivity : ComponentActivity(), AppActions {
     override fun refreshTools() = viewModel.refreshTools()
 
     override fun setThemeMode(mode: ThemeMode) = viewModel.setThemeMode(mode)
+
+    override fun setAccent(accent: ThemeAccent) = viewModel.setAccent(accent)
 
     override fun setMuted(checkId: String, muted: Boolean) = viewModel.setMuted(checkId, muted)
 
