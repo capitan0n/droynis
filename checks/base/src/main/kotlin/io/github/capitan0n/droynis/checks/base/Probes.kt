@@ -298,6 +298,82 @@ interface DefaultAppsProbe {
     fun phoneApp(): Reading<String?>
 }
 
+/** The USB port as the system's last sticky `USB_STATE` broadcast describes it. */
+data class UsbState(
+    /** Connected to a USB host, such as a computer (`UsbManager.USB_CONNECTED`); false on a charger. */
+    val connected: Boolean,
+    /**
+     * adb is among the USB functions in use (`UsbManager.USB_FUNCTION_ADB`). UsbDeviceManager adds
+     * it only while USB debugging is on.
+     */
+    val adb: Boolean,
+)
+
+interface UsbProbe {
+    /**
+     * The last `USB_STATE` broadcast, `Value(null)` when there was none since boot. Unplugged, it can
+     * keep describing the last connection, so only [UsbState.adb] while [UsbState.connected] is current.
+     */
+    fun state(): Reading<UsbState?>
+}
+
+/** Mirrors the results of `BiometricManager.canAuthenticate(int)`. */
+enum class BiometricAvailability {
+    /** `BIOMETRIC_SUCCESS`: at least one biometric of that class is enrolled and ready. */
+    ENROLLED,
+
+    /** `BIOMETRIC_ERROR_NONE_ENROLLED`: a sensor of that class exists, but nothing is enrolled on it. */
+    NONE_ENROLLED,
+
+    /** `BIOMETRIC_ERROR_NO_HARDWARE`: no sensor of that class. */
+    NO_HARDWARE,
+
+    /** Any other answer: the sensor is busy, needs a security update, is turned off for apps… */
+    OTHER,
+}
+
+/** Biometric hardware a phone can declare as a system feature. */
+enum class BiometricModality(val label: String) { FINGERPRINT("fingerprint"), FACE("face"), IRIS("iris") }
+
+data class BiometricState(
+    /** `canAuthenticate(BIOMETRIC_WEAK)`: any Class 2 (weak) or Class 3 (strong) biometric. */
+    val weak: BiometricAvailability,
+    /** `canAuthenticate(BIOMETRIC_STRONG)`: a Class 3 (strong) biometric only. */
+    val strong: BiometricAvailability,
+    /** The raw result codes, for the evidence. */
+    val weakCode: Int,
+    val strongCode: Int,
+    /** The biometric sensors the phone declares (`FEATURE_FINGERPRINT`, `FEATURE_FACE`, `FEATURE_IRIS`). */
+    val hardware: Set<BiometricModality>,
+)
+
+interface BiometricProbe {
+    /** Unsupported below Android 11, where `canAuthenticate` can't ask for a class. */
+    fun state(): Reading<BiometricState>
+}
+
+/** One installed package, read in more detail than [InstalledApp]: too slow to do for every app. */
+data class PackageDetails(
+    val isEnabled: Boolean,
+    /**
+     * Installed in a read-only system partition, updates of it included: `MATCH_SYSTEM_ONLY` finds it.
+     * Read from the package manager's own record, not from the flags it reports to apps.
+     */
+    val inSystemImage: Boolean,
+    /**
+     * SHA-1 fingerprints of its signing certificates, lowercase hex, past keys included where Android
+     * keeps them; empty when they can't be read. SHA-1 because that is how microG and Google publish them.
+     */
+    val signerSha1: Set<String>,
+    /** The class names of its activities; null when they can't be read. */
+    val activities: List<String>?,
+)
+
+interface PackageDetailsProbe {
+    /** `Value(null)` when [packageName] isn't installed for this user. */
+    fun details(packageName: String): Reading<PackageDetails?>
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -320,4 +396,7 @@ interface BaseProbes {
     val cellular: CellularProbe
     val uptime: UptimeProbe
     val battery: BatteryProbe
+    val usb: UsbProbe
+    val biometrics: BiometricProbe
+    val packageDetails: PackageDetailsProbe
 }

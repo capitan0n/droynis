@@ -33,7 +33,7 @@ import org.junit.runner.RunWith
 class DroynisAppTest {
 
     @get:Rule
-    val compose = createAndroidComposeRule<MainActivity>()
+    val compose = createAndroidComposeRule<DroynisActivity>()
 
     private fun text(id: Int) = compose.activity.getString(id)
 

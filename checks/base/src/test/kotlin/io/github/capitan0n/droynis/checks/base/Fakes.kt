@@ -205,6 +205,9 @@ class FakeProbes(
     override val cellular: CellularProbe = FakeCellular(),
     override val uptime: UptimeProbe = FakeUptime(),
     override val battery: BatteryProbe = FakeBattery(),
+    override val usb: UsbProbe = FakeUsb(),
+    override val biometrics: BiometricProbe = FakeBiometrics(),
+    override val packageDetails: PackageDetailsProbe = FakePackageDetails(),
 ) : BaseProbes
 
 /** [exempt] lists the allowlisted packages; [asked] records which packages a check asked about. */
@@ -242,4 +245,24 @@ class FakeCellular(
     override fun twoGDisallowed() = policy
     override fun privileged() = privileged
     override fun security() = security
+}
+
+/** By default the phone has had no USB connection since boot. */
+class FakeUsb(private val state: Reading<UsbState?> = value(null)) : UsbProbe {
+    override fun state() = state
+}
+
+class FakeBiometrics(private val state: Reading<BiometricState> = unsupported("needs Android 11")) : BiometricProbe {
+    override fun state() = state
+}
+
+fun biometrics(
+    weak: BiometricAvailability,
+    strong: BiometricAvailability,
+    vararg hardware: BiometricModality,
+) = value(BiometricState(weak, strong, weakCode = weak.ordinal, strongCode = strong.ordinal, hardware = hardware.toSet()))
+
+/** Packages missing from [packages] aren't installed. */
+class FakePackageDetails(private val packages: Map<String, Reading<PackageDetails?>> = emptyMap()) : PackageDetailsProbe {
+    override fun details(packageName: String) = packages[packageName] ?: value(null)
 }

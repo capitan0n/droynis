@@ -170,4 +170,23 @@ class AppsChecksTest {
         assertEquals("2 apps from outside an app store: com.example.apk and com.example.adb", outcome.summary)
         assertEquals(Status.PASS, UnknownSourceAppsCheck(FakePackages(value(apps.take(3)))).status())
     }
+
+    @Test
+    fun `apps from App Lounge and the e OS preinstaller are not sideloaded`() = runTest {
+        // From a Fairphone 5 on /e/OS: App Lounge is its store, the preinstaller ships its own apps.
+        val preinstaller = InstalledApp("foundation.e.apk_preinstaller", isSystem = true, isDebuggable = false, installer = null, targetSdk = 35)
+        val lounge = InstalledApp("org.organicmaps", isSystem = false, isDebuggable = false, installer = "foundation.e.apps", targetSdk = 35)
+        val workspace = InstalledApp("foundation.e.workspace", isSystem = false, isDebuggable = false, installer = preinstaller.packageName, targetSdk = 35)
+
+        assertEquals(Status.PASS, UnknownSourceAppsCheck(FakePackages(value(listOf(preinstaller, lounge, workspace)))).status())
+        val apps = mapOf(preinstaller.packageName to preinstaller, lounge.packageName to lounge, workspace.packageName to workspace)
+        assertEquals(AppOrigin.STORE, originOf(lounge.packageName, apps))
+        assertEquals(AppOrigin.PREINSTALLED, originOf(workspace.packageName, apps))
+
+        // An app merely named like the preinstaller vouches for nothing.
+        val impostor = preinstaller.copy(isSystem = false, installer = "com.google.android.packageinstaller")
+        val outcome = UnknownSourceAppsCheck(FakePackages(value(listOf(impostor, workspace)))).outcome()
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("2 apps from outside an app store: foundation.e.apk_preinstaller and foundation.e.workspace", outcome.summary)
+    }
 }

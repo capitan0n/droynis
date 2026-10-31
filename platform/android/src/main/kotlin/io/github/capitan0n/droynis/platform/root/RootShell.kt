@@ -175,6 +175,21 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
 
+    override fun magiskSettings(): Reading<String> =
+        read("magisk --sqlite (settings)", MAGISK_SETTINGS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+
+    override fun bootScripts(): Reading<String> =
+        read("stat boot scripts", BOOT_SCRIPTS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+
+    override fun tempFiles(): Reading<String> =
+        read("stat /data/local/tmp", TEMP_FILES) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+
     override fun procNet(table: ProcNet): Reading<String> {
         val path = "/proc/net/${table.file}"
         return read("cat $path", ifExists(path)) { exit, output, source ->
@@ -199,6 +214,11 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
     override fun selinuxMode(): Reading<String> =
         read("getenforce", "getenforce") { exit, output, source ->
             if (exit == 0) Reading.Value(output.trim(), source) else failed(exit, output, source)
+        }
+
+    override fun kernelCmdline(): Reading<String> =
+        read("cat /proc/cmdline", "cat /proc/cmdline") { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
 
     override fun dumpsys(service: String): Reading<String> {
@@ -353,6 +373,22 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             "elif [ -e /data/adb/ksud ]; then echo kernelsu; elif [ -e /data/adb/apd ]; then echo apatch; " +
             "else echo other; fi"
         const val MAGISK_POLICIES = "magisk --sqlite 'SELECT uid, policy, until FROM policies'"
+        const val MAGISK_SETTINGS = "magisk --sqlite 'SELECT key, value FROM settings'"
+
+        /**
+         * Stats the boot scripts root runs and the folders that hold them, one per line as
+         * `D|F <octal> <owner> <path>`. Paths are fixed; the only variable part is the shell glob.
+         */
+        val BOOT_SCRIPTS = "for p in /data/adb /data/adb/service.d /data/adb/post-fs-data.d /data/adb/modules/*; do " +
+            "[ -d \"\$p\" ] && stat -c \"D %a %U %n\" \"\$p\"; done; " +
+            "for f in /data/adb/service.d/* /data/adb/post-fs-data.d/* " +
+            "/data/adb/modules/*/post-fs-data.sh /data/adb/modules/*/service.sh; do " +
+            "[ -f \"\$f\" ] && stat -c \"F %a %U %n\" \"\$f\"; done; true"
+
+        /** Stats what is staged in /data/local/tmp, one per line as `D|F <octal> <owner> <size> <mtime> <path>`. */
+        val TEMP_FILES = "for f in /data/local/tmp/*; do [ -e \"\$f\" ] || continue; " +
+            "if [ -d \"\$f\" ]; then stat -c \"D %a %U %s %Y %n\" \"\$f\"; " +
+            "else stat -c \"F %a %U %s %Y %n\" \"\$f\"; fi; done; true"
 
         /** Lists /data/adb/modules in the format [RootModules.parse] reads. */
         val MODULES = "for d in /data/adb/modules/*; do [ -d \"\$d\" ] || continue; " +

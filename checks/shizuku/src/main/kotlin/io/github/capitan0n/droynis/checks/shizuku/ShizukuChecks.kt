@@ -9,6 +9,7 @@ import io.github.capitan0n.droynis.core.Check
 fun shizukuChecks(probes: ShizukuProbes): List<Check> = listOf(
     // Device integrity
     SelinuxCheck(probes.shell),
+    BootPropertiesCheck(probes.shell, probes.properties),
     // Access control
     SimPinCheck(probes.cellular),
     // Network

@@ -181,6 +181,10 @@ class CellularChecksTest {
         val current = check()
         assertEquals(Status.PASS, current.status)
         assertEquals("A202FXXU3CVA1", current.evidence.single { it.label == "Modem firmware (baseband)" }.value)
+        // Dual SIM: one entry per modem slot, shown once when they match.
+        fun baseband(value: String) = FakeProperties(VendorPatchCheck.BASEBAND to value)
+        assertEquals("QCM6490.LA.4.0", check(props = baseband("QCM6490.LA.4.0,QCM6490.LA.4.0")).evidence.single { it.label == "Modem firmware (baseband)" }.value)
+        assertEquals("A, B", check(props = baseband("A,B")).evidence.single { it.label == "Modem firmware (baseband)" }.value)
 
         // A custom ROM on 2025 firmware: the kernel is a year and a half behind.
         val rom = check(vendor = 20250301, boot = 202503)

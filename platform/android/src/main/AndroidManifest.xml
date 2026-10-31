@@ -7,6 +7,9 @@
     <!-- Coarse screen lock strength (NONE/LOW/MEDIUM/HIGH) for ACCS-2001, API 29+. -->
     <uses-permission android:name="android.permission.REQUEST_PASSWORD_COMPLEXITY" />
 
+    <!-- Ask which biometric classes are enrolled (never the biometrics themselves), for ACCS-2009. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
     <!-- Read the default network's state (VPN, Private DNS) for the NETW checks. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 

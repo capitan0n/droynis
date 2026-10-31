@@ -80,7 +80,20 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
             evidence += apps.toEvidence("Installed apps") { "${it.size} apps" }
             return Outcome.unknown("The app list could not be read to look for find-my-device services", evidence)
         }
-        val services = KNOWN_SERVICES.filterKeys { pkg -> apps.value.any { it.packageName == pkg && it.isEnabled } }
+        val enabled = KNOWN_SERVICES.filterKeys { pkg -> apps.value.any { it.packageName == pkg && it.isEnabled } }
+        // microG (/e/OS, CalyxOS, LineageOS for microG) takes Play services' package name but has no Find Hub.
+        val playLabel = if (PLAY_SERVICES in enabled) packages.label(PLAY_SERVICES) else null
+        val microG = playLabel?.contains("microG", ignoreCase = true) == true
+        if (microG) {
+            evidence += Evidence(
+                "Google Play services",
+                "$playLabel ($PLAY_SERVICES)",
+                apps.source,
+                note = "microG, which has no find-my-device service",
+                packageName = PLAY_SERVICES,
+            )
+        }
+        val services = if (microG) enabled - PLAY_SERVICES else enabled
         services.forEach { (pkg, name) -> evidence += Evidence("Find-my-device service", "$name ($pkg)", apps.source, packageName = pkg) }
         if (services.isNotEmpty()) {
             return Outcome.unknown(
@@ -115,12 +128,14 @@ class RemoteLockCheck(private val policy: DevicePolicy, private val packages: Pa
     }
 
     companion object {
+        private const val PLAY_SERVICES = "com.google.android.gms"
+
         /**
          * Find-my-device services that may lock and erase a lost phone without showing up as a
          * device admin, so whether they are on stays UNKNOWN. A service missing here counts as absent.
          */
         val KNOWN_SERVICES = linkedMapOf(
-            "com.google.android.gms" to "Find Hub (Google Play services)",
+            PLAY_SERVICES to "Find Hub (Google Play services)",
             "com.samsung.android.fmm" to "Samsung Find My Mobile",
             "com.xiaomi.finddevice" to "Xiaomi Find device",
             "de.nulide.findmydevice" to "FMD",

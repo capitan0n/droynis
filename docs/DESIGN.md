@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 68 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 75 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -22,7 +22,7 @@ Android (API 37, October 2026) and the decisions taken so far.
 | 12 | Security patch age | Since mid-2025 most fixes ship in quarterly bulletins (March, June, September, December); monthly ones can be empty. `SECURITY_PATCH` is self-reported and vendors have over-claimed it before. | PASS up to 90 days, WARNING up to a year, CRITICAL beyond. Cross-check with the attested `osPatchLevel` once attestation lands. |
 | 13 | Reports exclude IMEI, serial, phone number, account names | The base tier cannot read those anyway: IMEI and serial are privileged since API 29, and phone number and accounts need permissions Droynis does not request. The real leaks are the installed-app list (health, religion, politics…), CA certificate subjects (employer), Private DNS hostname and raw dumpsys text. | Export redacted by default (package names omitted or hashed); raw only on explicit choice. |
 | 14 | Advanced Protection (API 36+) | Readable with the normal permission `QUERY_ADVANCED_PROTECTION_MODE`. It also blocks installs from unknown sources, which conflicts with F-Droid users. GrapheneOS reports it off but has no such switch; it offers similar protections one by one under Exploit protection. | INFO (no score impact), with that trade-off in the remediation text. On GrapheneOS, recognized by its Vanadium WebView or preinstalled `app.grapheneos.*` apps, "off" is N/A instead of a FAIL. |
-| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. |
+| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. Without Shizuku, two signs still prove "on", never "off": the sticky `USB_STATE` broadcast lists the `adb` function while a computer is connected (unplugged, it can describe an older connection, so it counts only with `connected`), which fails both checks; and `adb_wifi_enabled` = 1 (or a real `adb_enabled` = 1) fails Developer options, since Settings turns USB and wireless debugging off with them. |
 
 Smaller points: StrongBox absence is not user-fixable (INFO, no score impact). Emulators have
 adb on and no lock screen, so instrumented tests assert that a verdict was reached, not which.
@@ -47,6 +47,9 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   major came out no later than four weeks per version before 152, so the result is a lower bound
   on its age. Majors after 152, and versions not numbered like Chromium's, stay Unknown. Moving
   the anchor to a newer major needs a release date for it and a cadence that held up to it.
+  The same bound applies when the date is valid but recent: a ROM can ship an old WebView in a new
+  system image (/e/OS on a Fairphone 5 reported WebView 148 with a 43-day-old image), so a
+  version more than 60 days old fails even then.
 - **System properties** come from running `/system/bin/getprop` once per scan (cached 10 s).
   SELinux filters what an app may read; a missing property is "not visible", never "false".
   `sys.oem_unlock_allowed` is not readable on every device, so OEM unlocking can be UNKNOWN.
@@ -67,7 +70,9 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   profile, is a PASS when it answers to the user: the device owner, a known anti-theft service, or
   an app the user installed. A preinstalled admin with those powers (Samsung's Knox Guard, a
   carrier's or lender's lock) may answer to someone else, so on its own it gives UNKNOWN, never
-  PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL.
+  PASS. A known service without such an admin is UNKNOWN; nothing at all is a FAIL. microG (on
+  /e/OS, CalyxOS…) takes Play services' package name but has no Find Hub: recognized by its label,
+  it doesn't count as a service.
   The theft protection switches (Theft Detection Lock, Offline Device Lock, Identity Check) are not
   in the Android 17 Settings provider (only Identity Check promo flags are), so no check reads them.
 - **Restart** (INTG-1080): `SystemClock.elapsedRealtime()`, the time since boot with deep sleep,
@@ -84,6 +89,22 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **Lock strength** (ACCS-2007): `KeyguardManager.getPasswordComplexity()` (API 29+). LOW, a
   pattern or a PIN with repeating or ordered digits, is a FAIL; MEDIUM and HIGH pass; no lock is
   N/A here because ACCS-2001 already fails it.
+- **Biometric unlock strength** (ACCS-2009, Android 11+): `BiometricManager.canAuthenticate()` for
+  `BIOMETRIC_WEAK` and `BIOMETRIC_STRONG` (the normal permission USE_BIOMETRIC) says only whether
+  some biometric of at least that class is enrolled, never which, and convenience (Class 1) sensors
+  are hidden from it, as is face unlock a maker builds outside the framework. So a weak one enrolled
+  with no strong one is a FAIL; a strong one is a PASS only when the phone declares a single kind of
+  sensor (`FEATURE_FINGERPRINT`, `FEATURE_FACE`, `FEATURE_IRIS`); nothing enrolled is a PASS only
+  without face or iris hardware, which could be Class 1. Any other answer is UNKNOWN. Not yet checked
+  on a device: what `canAuthenticate` answers for a biometric that unlocks the phone but is turned
+  off for apps.
+- **Google Play services** (APPS-4014): microG installs as `com.google.android.gms` and signature
+  spoofing can make it report Google's key, so `org.microg.*` activities (or microG's key) mark it
+  first. Then Google's key (SHA-1 fingerprints from microG's own `Constants`) and
+  `getApplicationInfo(MATCH_SYSTEM_ONLY)`, which filters on the package manager's record of the
+  install location rather than the flags GrapheneOS sets on sandboxed Google Play, tell a privileged
+  system copy (a FAIL, INFO so no score impact) from an ordinary app (PASS). Disabled or absent is a
+  PASS; an unknown signer, or Google's key with unreadable activities, is UNKNOWN.
 - **SMS and call log** (APPS-4008): apps granted READ_SMS or RECEIVE_SMS, or READ_CALL_LOG, from
   `PackageManager` (granted flags, not just requested). The default SMS app is expected to hold the
   SMS ones and the default phone app the call log; preinstalled apps are listed, not counted.
@@ -451,12 +472,26 @@ directories, and compares the APKs (baseline profiles are the usual suspect if t
 
 ## 8. UI
 
-Material 3 with a fixed teal brand scheme (light and dark, user-selectable), large rounded cards
-and a bottom navigation bar: Dashboard, Checks, Tools, Help. Status colors never change with the
-theme and always come with a glyph and a label: green ✓ passed, yellow – needs attention, red ✗
+Material 3 with a teal brand scheme by default, large rounded cards and a bottom navigation bar:
+Dashboard, Checks, Tools, Help. Status colors never change with the theme or accent and always
+come with a glyph and a label: green ✓ passed, yellow – needs attention, red ✗
 critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, green) are
 used for category icons only, so they never read as a status. The score ring is colored by the
 result (red whenever a critical failure caps it) on a faded track of the same hue.
+
+⋮ › Theme picks the mode (system, light, dark) and an accent: Teal (the hand-tuned brand scheme),
+Blue, Purple, Pink, Graphite, or Wallpaper (Android 12+ dynamic colors). The other accents are
+generated in `TonalPalette.kt`: one hue at Material 3's tones, where a tone is the CIELAB
+lightness, so every role has the same contrast as in teal whatever the hue. Red, yellow and green
+are left out, as they are the status colors.
+
+⋮ › App icon swaps the launcher icon for the owl in a sombrero, glasses, a pirate eyepatch, a
+cowboy hat or blonde hair (masters in `art/`). Each icon is an `<activity-alias>` of
+`DroynisActivity`, and `AppIcon.kt` keeps exactly one enabled through the package manager, so the
+choice needs no stored setting. The default alias is the only one the manifest enables, so a new
+install always starts with the original icon, and it keeps the name `.MainActivity` so home screen
+shortcuts from older versions still work. The hat and hair icons are drawn at 76% so they stay
+inside the launcher's safe zone, and each has its own themed (monochrome) silhouette.
 
 The check catalog (⋮ menu, or a link at the top of Help) lists every check in one tab per tier:
 Base, ADB, Shizuku, Root. Each tab opens with what the tier is and how to set it up; the ADB tab
@@ -479,7 +514,8 @@ until the eye in its header is tapped, so a screenshot gives none of them away. 
 stored: every new start of the app hides them again.
 
 The UI talks to the platform only through `AppActions` (open Settings, save/share/copy the report,
-theme), implemented by `MainActivity`; screens take plain state, which keeps them previewable.
+theme, app icon), implemented by `DroynisActivity`; screens take plain state, which keeps them
+previewable.
 
 ## 9. Name and credit
 

@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 68 checks.
+Every check Droynis runs, by privilege tier and category: 75 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -13,10 +13,10 @@ Any critical failure caps the score at 40, and muted checks don't count.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 48 |
+| [Base](#base-tier) | 51 |
 | [ADB](#adb-tier) | 11 |
-| [Shizuku](#shizuku-tier) | 5 |
-| [Root](#root-tier) | 4 |
+| [Shizuku](#shizuku-tier) | 6 |
+| [Root](#root-tier) | 7 |
 
 ## Base tier
 
@@ -32,7 +32,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [INTG-1041](#intg-1041-oem-unlocking) | OEM unlocking | Notice | the OEM unlocking switch is on |
 | [INTG-1050](#intg-1050-root-access) | Root access | Critical | an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found |
 | [INTG-1060](#intg-1060-android-build) | Android build | Warning | it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 (critical when ro.adb.secure=0 lets adb in without authorization) |
-| [INTG-1070](#intg-1070-webview-updates) | WebView updates | Warning | WebView hasn't been updated for more than 60 days |
+| [INTG-1070](#intg-1070-webview-updates) | WebView updates | Warning | WebView hasn't been updated for more than 60 days, or its Chromium version is older than that |
 | [INTG-1080](#intg-1080-time-since-restart) | Time since restart | Notice | the phone hasn't restarted for more than 7 days |
 | [ACCS-2001](#accs-2001-secure-lock-screen) | Secure lock screen | Critical | no PIN, pattern or password is set |
 | [ACCS-2002](#accs-2002-screen-timeout) | Screen timeout | Notice | the screen stays on for more than 2 minutes |
@@ -42,6 +42,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [ACCS-2006](#accs-2006-lock-after-screen-timeout) | Lock after screen timeout | Notice | the phone stays unlocked for more than 30 seconds after the screen turns off |
 | [ACCS-2007](#accs-2007-screen-lock-strength) | Screen lock strength (Android 10+) | Notice | the screen lock is a pattern or a PIN with repeated or ordered digits |
 | [ACCS-2008](#accs-2008-notification-history) | Notification history (Android 11+) | Notice | notification history is on, keeping 24 hours of notification text |
+| [ACCS-2009](#accs-2009-biometric-unlock-strength) | Biometric unlock strength (Android 11+) | Notice | the only biometric unlock set up is weak (Class 2), such as most camera-only face unlock |
 | [ACCS-2010](#accs-2010-developer-options) | Developer options | Notice | developer options are on |
 | [ACCS-2011](#accs-2011-usb-debugging) | USB debugging | Warning | adb over USB is on |
 | [ACCS-2012](#accs-2012-wireless-debugging) | Wireless debugging (Android 11+) | Warning | adb over Wi-Fi is on |
@@ -60,6 +61,8 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4011](#apps-4011-digital-assistant-app) | Digital assistant app | Notice | the digital assistant is an app you installed (a warning when it came from outside an app store) |
 | [APPS-4012](#apps-4012-apps-with-location-all-the-time) | Apps with location all the time (Android 10+) | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
 | [APPS-4013](#apps-4013-apps-that-skip-battery-optimization) | Apps that skip battery optimization | Info | an app you installed may skip battery optimization (information only) |
+| [APPS-4014](#apps-4014-google-play-services) | Google Play services | Info | Google Play services is built into the system, with privileged access (information only) |
+| [APPS-4015](#apps-4015-app-scanning-play-protect) | App scanning (Play Protect) | Warning | the install-time app verifier (Play Protect) is turned off |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -141,7 +144,7 @@ Phones ship "user" builds signed with the vendor's private keys. A userdebug or 
 
 #### INTG-1070 WebView updates
 
-Warning · Android 8.0 and later · fails when WebView hasn't been updated for more than 60 days
+Warning · Android 8.0 and later · fails when WebView hasn't been updated for more than 60 days, or its Chromium version is older than that
 
 Most apps show web pages through the system WebView, a full browser engine that receives security fixes every few weeks. Browser engines are a favourite target for exploits, so an outdated WebView puts every app that uses it at risk.
 
@@ -220,6 +223,14 @@ Notice · Android 11 and later · fails when notification history is on, keeping
 With notification history on, Android saves the text of every notification from the last 24 hours, message previews and one-time login codes included. The copy stays after you dismiss the notification and after the app deletes the message or makes it disappear. Anyone who gets into the unlocked phone can scroll through it, and forensic tools can extract it.
 
 **What to do:** Turn off notification history (Settings › Notifications › Notification history); Android then deletes what it saved. In messaging apps, also hide message content in notifications, for example in Signal under Settings › Notifications › Show.
+
+#### ACCS-2009 Biometric unlock strength
+
+Notice · Android 11 and later · fails when the only biometric unlock set up is weak (Class 2), such as most camera-only face unlock
+
+Android rates fingerprint and face unlock by how hard they are to fool. A weak (Class 2) one, typically face unlock that uses only the front camera, can be fooled more easily, by a photo or a look-alike, yet it still unlocks the phone. Strong (Class 3) sensors are much harder to fool. Some phones also have a convenience (Class 1) face unlock, weaker still, which Android hides from apps, as it does face unlock some makers build on their own.
+
+**What to do:** In Settings › Security (Device unlock or Biometrics on some phones), remove the weak face unlock or turn off its use for unlocking the phone, and keep a fingerprint or your PIN or password instead. If the phone has a face unlock Droynis can't see, check it there too.
 
 #### ACCS-2010 Developer options
 
@@ -366,6 +377,22 @@ Info · Android 8.0 and later · fails when an app you installed may skip batter
 An app set to "Unrestricted" battery use ("Not optimized" on older Android) is exempt from Doze and App Standby, so it can wake the phone and keep running in the background at any time. Messengers, sync and automation apps use this to work on time; stalkerware and remote-access tools ask for it to keep running unnoticed. Apps that came with the phone aren't listed. This check is for your information and doesn't count in the score.
 
 **What to do:** Open Settings › Apps › the app › App battery usage (Battery on some phones) and choose "Optimized" for apps that don't need to run in the background. Uninstall apps you don't recognize.
+
+#### APPS-4014 Google Play services
+
+Info · Android 8.0 and later · fails when Google Play services is built into the system, with privileged access (information only)
+
+Google Play services is the layer behind Google sign-in, push notifications, location services and the advertising ID, and it shares device data with Google. Built into the system, as on most phones, it holds privileged access that no ordinary app can have and that you can't take back. Installed as an ordinary app, as GrapheneOS's sandboxed Google Play is, it gets only the permissions you grant; microG is an open-source replacement that shares far less.
+
+**What to do:** Information only: on most phones it can't be removed without replacing the operating system. To limit it, turn off the Google features you don't use (Settings › Google), delete the advertising ID (Settings › Privacy › Ads) and review its permissions in App info. GrapheneOS, or a microG-based system such as /e/OS or LineageOS for microG, runs without it in the system.
+
+#### APPS-4015 App scanning (Play Protect)
+
+Warning · Android 8.0 and later · fails when the install-time app verifier (Play Protect) is turned off
+
+Before an app is installed, Android asks the package verifier (Play Protect on phones with Google services, an OEM scanner on others) to check it against known malware. With the verifier off, apps from any source install unchecked, so a sideloaded or repackaged app carrying malware is not flagged.
+
+**What to do:** Turn scanning back on in Play Protect (Play Store › your profile › Play Protect › Settings › Scan apps with Play Protect), or under Settings › Security. The verifier only scans; it still lets you install an app it warns about.
 
 ### Network and radios
 
@@ -599,6 +626,7 @@ A network without a password, open, Enhanced Open or WEP, proves nothing about w
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [INTG-1201](#intg-1201-selinux-mode) | SELinux mode | Critical | SELinux is permissive or disabled |
+| [INTG-1202](#intg-1202-spoofed-boot-properties) | Spoofed boot properties | Warning | a security-relevant ro.boot.* property differs from the kernel command line (a props spoofer) |
 | [ACCS-2201](#accs-2201-sim-card-pin) | SIM card PIN (Android 11+) | Notice | a SIM in use has its PIN turned off |
 | [NETW-3201](#netw-3201-always-on-vpn-lockdown) | Always-on VPN lockdown | Notice | an always-on VPN lets traffic out while it is down |
 | [NETW-3202](#netw-3202-mobile-network-encryption) | Mobile network encryption (Android 14+) | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
@@ -613,6 +641,14 @@ Critical · Android 8.0 and later · fails when SELinux is permissive or disable
 SELinux confines every app and system service to what its policy allows, so a bug in one of them can't take over the whole phone. Production Android always enforces it; a permissive or disabled SELinux usually means a modified kernel or ROM. Apps can't read the mode, but the shell user Shizuku runs as can.
 
 **What to do:** Settings can't turn SELinux back on. Install firmware that keeps it enforcing, such as the manufacturer's stock firmware or a ROM whose kernel enforces SELinux.
+
+#### INTG-1202 Spoofed boot properties
+
+Warning · Android 8.0 and later · fails when a security-relevant ro.boot.* property differs from the kernel command line (a props spoofer)
+
+Android copies the bootloader's state into ro.boot.* properties at boot: whether the bootloader is unlocked, whether verified boot passed, and on Samsung whether the Knox warranty fuse is blown. Modules that hide root rewrite these to look clean, which lets other apps trust a phone whose bootloader is actually open. The kernel command line keeps the real values, and only a shell can read it.
+
+**What to do:** A mismatch means a module is faking the bootloader state. Decide whether you want that: it is how some apps are made to trust a rooted phone. To see the true state, remove the props-spoofing module (often a Play Integrity or "MagiskHide props" module) and scan again; the real values are what the kernel command line shows here.
 
 ### Access control
 
@@ -661,8 +697,11 @@ For phones that are already rooted. Once you turn it on, Droynis asks the root m
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [INTG-1301](#intg-1301-root-modules) | Root modules | Info | an enabled root module is installed (information only) |
+| [INTG-1302](#intg-1302-root-boot-code-others-can-change) | Root boot code others can change | Notice | a boot script root runs, or a folder holding it, is not owned by root or is writable by others |
+| [INTG-1303](#intg-1303-programs-staged-in-shared-temp) | Programs staged in shared temp | Notice | a script or executable is staged in /data/local/tmp |
 | [ACCS-2301](#accs-2301-computers-trusted-for-usb-debugging) | Computers trusted for USB debugging | Notice | a computer is trusted for USB debugging |
 | [APPS-4301](#apps-4301-apps-with-root-access) | Apps with root access | Warning | an app other than Droynis may get root |
+| [APPS-4302](#apps-4302-root-access-over-adb) | Root access over ADB | Warning | Magisk grants root to the ADB shell (Superuser access includes ADB; the default) |
 | [NETW-3301](#netw-3301-apps-listening-on-the-network) | Apps listening on the network | Notice | a user app accepts connections from the network |
 
 ### Device integrity
@@ -674,6 +713,22 @@ Info · Android 8.0 and later · fails when an enabled root module is installed 
 Magisk, KernelSU and APatch modules change the system at every boot, with full root rights and before any app or security setting can stop them. Each one is code you trust completely. This check lists them for your review and doesn't count in the score.
 
 **What to do:** Open your root manager's Modules screen and remove modules you no longer use or don't fully trust. Install modules only from their authors' own pages.
+
+#### INTG-1302 Root boot code others can change
+
+Notice · Android 8.0 and later · fails when a boot script root runs, or a folder holding it, is not owned by root or is writable by others
+
+Your root manager runs the scripts in /data/adb/service.d and post-fs-data.d, and each module's own boot scripts, as root every time the phone starts. If one of those files, or a folder on the way to it, can be written by a user other than root, that user can swap in their own code and it runs with full root rights at the next boot.
+
+**What to do:** Make every boot script and its folders owned by root and writable by root alone: for a file, `chown root:root <file>` and `chmod 700 <file>`; check that /data/adb and its subfolders are 700 root too. A module's scripts are fixed by removing or reinstalling the module from a source you trust.
+
+#### INTG-1303 Programs staged in shared temp
+
+Notice · Android 8.0 and later · fails when a script or executable is staged in /data/local/tmp
+
+/data/local/tmp is where a computer with adb, or an app using Shizuku, drops files, since it is the one place they can write without root. Scripts or executables sitting there are often left over from setup or testing. They matter most if you ever run them as root: the folder is owned by the shell user, so adb or a Shizuku app can replace a file there before root runs it.
+
+**What to do:** Remove what you no longer need from /data/local/tmp. For anything you do run as root, move it somewhere only root can write (for example /data/adb) and set it to `chown root:root` and `chmod 700` first, so the shell user can't change it under you.
 
 ### Access control
 
@@ -694,6 +749,14 @@ Warning · Android 8.0 and later · fails when an app other than Droynis may get
 An app with root can read every other app's data, change the system and hide what it does: Android's app sandbox no longer limits it. Grant root only to apps you trust completely, and take it back from apps you no longer use. Droynis reads Magisk's list; KernelSU and APatch keep theirs in formats it can't read yet.
 
 **What to do:** Open your root manager's Superuser screen and revoke root from apps you don't use or don't fully trust. Revoking adb shell's root means a computer with adb gets no root.
+
+#### APPS-4302 Root access over ADB
+
+Warning · Android 8.0 and later · fails when Magisk grants root to the ADB shell (Superuser access includes ADB; the default)
+
+Magisk can hand root to apps, to the ADB shell, to both or to neither. The default is both, so any computer you have trusted for USB debugging can run `adb shell su` and get a full root shell, and so can malware on that computer. Limiting root to apps keeps adb, and anything reaching the phone over it, out of root.
+
+**What to do:** In the Magisk app, open Settings › Superuser access and set it to "Apps only". Keep USB debugging off when you don't need it, and review the computers trusted for it (ACCS-2301).
 
 ### Network and radios
 

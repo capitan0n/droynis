@@ -3,6 +3,8 @@ package io.github.capitan0n.droynis.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,11 +12,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.FactCheck
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
@@ -24,8 +31,9 @@ import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
@@ -68,8 +76,12 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -77,7 +89,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import io.github.capitan0n.droynis.AppIcon
 import io.github.capitan0n.droynis.R
 import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
@@ -88,7 +102,10 @@ import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Verdict
 import io.github.capitan0n.droynis.report.issues
 import io.github.capitan0n.droynis.report.withoutMuted
+import io.github.capitan0n.droynis.ui.theme.ThemeAccent
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
+import io.github.capitan0n.droynis.ui.theme.colorSchemeFor
+import io.github.capitan0n.droynis.ui.theme.isDarkTheme
 import kotlinx.coroutines.flow.Flow
 
 /** Everything the UI asks the platform to do. Implemented by the activity. */
@@ -97,6 +114,10 @@ interface AppActions {
     fun scan()
     fun refreshTools()
     fun setThemeMode(mode: ThemeMode)
+    fun setAccent(accent: ThemeAccent)
+
+    /** Switches the launcher icon. */
+    fun setAppIcon(icon: AppIcon)
 
     /** A muted check still runs and shows its result, but the score and counts leave it out. */
     fun setMuted(checkId: String, muted: Boolean)
@@ -183,6 +204,8 @@ fun DroynisApp(
     state: UiState,
     catalog: List<CheckSpec>,
     themeMode: ThemeMode,
+    accent: ThemeAccent,
+    appIcon: AppIcon,
     appVersion: String,
     messages: Flow<String>,
     actions: AppActions,
@@ -201,6 +224,7 @@ fun DroynisApp(
     // Kept while the catalog is closed, so it fades out and reopens on the same tab.
     var catalogTier by rememberSaveable { mutableStateOf(Tier.BASE) }
     var showTheme by rememberSaveable { mutableStateOf(false) }
+    var showAppIcon by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val tabStates = rememberSaveableStateHolder()
 
@@ -261,6 +285,7 @@ fun DroynisApp(
                     onHelp = { tab = Tab.HELP },
                     showAboutButton = tab == Tab.HELP,
                     onTheme = { showTheme = true },
+                    onAppIcon = { showAppIcon = true },
                     onAbout = { showAbout = true },
                     onCatalog = { showCatalog = true },
                     scrollBehavior = scrollBehavior,
@@ -379,14 +404,18 @@ fun DroynisApp(
     }
 
     if (showTheme) {
+        // Stays open on a pick, so mode and color can both be tried; the app restyles behind it.
         ThemeDialog(
-            current = themeMode,
-            onPick = {
-                actions.setThemeMode(it)
-                showTheme = false
-            },
+            mode = themeMode,
+            accent = accent,
+            onMode = actions::setThemeMode,
+            onAccent = actions::setAccent,
             onDismiss = { showTheme = false },
         )
+    }
+
+    if (showAppIcon) {
+        AppIconDialog(selected = appIcon, onSelect = actions::setAppIcon, onDismiss = { showAppIcon = false })
     }
 }
 
@@ -400,6 +429,7 @@ private fun MainTopBar(
     onHelp: () -> Unit,
     showAboutButton: Boolean,
     onTheme: () -> Unit,
+    onAppIcon: () -> Unit,
     onAbout: () -> Unit,
     onCatalog: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
@@ -432,11 +462,6 @@ private fun MainTopBar(
                     Icon(Icons.Rounded.MoreVert, stringResource(R.string.more_options))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    MenuItem(R.string.menu_scan_again, Icons.Rounded.Refresh, enabled = !scanning) {
-                        menuOpen = false
-                        actions.scan()
-                    }
-                    HorizontalDivider()
                     MenuItem(R.string.menu_save_report, Icons.Rounded.Save, enabled = reportReady) {
                         menuOpen = false
                         actions.saveReport(ReportFormat.MARKDOWN)
@@ -448,10 +473,6 @@ private fun MainTopBar(
                     MenuItem(R.string.menu_share_report, Icons.Rounded.Share, enabled = reportReady) {
                         menuOpen = false
                         actions.shareReport()
-                    }
-                    MenuItem(R.string.menu_copy_report, Icons.Rounded.ContentCopy, enabled = reportReady) {
-                        menuOpen = false
-                        actions.copyReport()
                     }
                     // Applies to all three exports above; stays open so the tick can be seen to change.
                     DropdownMenuItem(
@@ -472,6 +493,10 @@ private fun MainTopBar(
                     MenuItem(R.string.menu_theme, Icons.Rounded.Palette) {
                         menuOpen = false
                         onTheme()
+                    }
+                    MenuItem(R.string.menu_app_icon, Icons.Rounded.Apps) {
+                        menuOpen = false
+                        onAppIcon()
                     }
                     MenuItem(R.string.menu_help, Icons.AutoMirrored.Rounded.Help) {
                         menuOpen = false
@@ -499,36 +524,209 @@ private fun MenuItem(labelRes: Int, icon: ImageVector, enabled: Boolean = true, 
 }
 
 @Composable
-private fun ThemeDialog(current: ThemeMode, onPick: (ThemeMode) -> Unit, onDismiss: () -> Unit) {
+private fun ThemeDialog(
+    mode: ThemeMode,
+    accent: ThemeAccent,
+    onMode: (ThemeMode) -> Unit,
+    onAccent: (ThemeAccent) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val dark = isDarkTheme
+    // Each swatch shows its accent's primary color in the current mode.
+    val swatches = remember(dark, context) {
+        ThemeAccent.entries.filter { it.available }.map { it to colorSchemeFor(it, dark, context).primary }
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.Palette, contentDescription = null) },
         title = { Text(stringResource(R.string.menu_theme)) },
         text = {
-            Column(Modifier.selectableGroup()) {
-                for (mode in ThemeMode.entries) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .selectable(selected = mode == current, onClick = { onPick(mode) }, role = Role.RadioButton)
-                            .padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = mode == current, onClick = null)
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            stringResource(
-                                when (mode) {
-                                    ThemeMode.SYSTEM -> R.string.theme_system
-                                    ThemeMode.LIGHT -> R.string.theme_light
-                                    ThemeMode.DARK -> R.string.theme_dark
-                                },
-                            ),
-                        )
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Column(Modifier.selectableGroup()) {
+                    for (item in ThemeMode.entries) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(selected = item == mode, onClick = { onMode(item) }, role = Role.RadioButton)
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = item == mode, onClick = null)
+                            Spacer(Modifier.width(12.dp))
+                            Text(
+                                stringResource(
+                                    when (item) {
+                                        ThemeMode.SYSTEM -> R.string.theme_system
+                                        ThemeMode.LIGHT -> R.string.theme_light
+                                        ThemeMode.DARK -> R.string.theme_dark
+                                    },
+                                ),
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(stringResource(R.string.theme_accent), style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(8.dp))
+                Column(Modifier.selectableGroup()) {
+                    for (row in swatches.chunked(SWATCHES_PER_ROW)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            for ((item, color) in row) {
+                                AccentSwatch(
+                                    labelRes = item.labelRes,
+                                    color = color,
+                                    selected = item == accent,
+                                    onClick = { onAccent(item) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            // Keeps a short last row in the same columns as the rows above.
+                            repeat(SWATCHES_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
             }
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) } },
     )
+}
+
+private const val SWATCHES_PER_ROW = 3
+
+private val ThemeAccent.labelRes: Int
+    get() = when (this) {
+        ThemeAccent.TEAL -> R.string.accent_teal
+        ThemeAccent.BLUE -> R.string.accent_blue
+        ThemeAccent.PURPLE -> R.string.accent_purple
+        ThemeAccent.PINK -> R.string.accent_pink
+        ThemeAccent.GRAPHITE -> R.string.accent_graphite
+        ThemeAccent.WALLPAPER -> R.string.accent_wallpaper
+    }
+
+/** A color dot with its name; the picked one has a ring and a tick. */
+@Composable
+private fun AccentSwatch(labelRes: Int, color: Color, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val ring = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier
+        Box(modifier = Modifier.size(48.dp).then(ring), contentAlignment = Alignment.Center) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(color),
+                contentAlignment = Alignment.Center,
+            ) {
+                // The picked accent is the one in use, so its dot is the primary color.
+                if (selected) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(labelRes),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** Stays open on a pick, like the theme dialog; the launcher updates behind it. */
+@Composable
+private fun AppIconDialog(selected: AppIcon, onSelect: (AppIcon) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.Apps, contentDescription = null) },
+        title = { Text(stringResource(R.string.menu_app_icon)) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Column(Modifier.selectableGroup()) {
+                    for (row in AppIcon.entries.chunked(SWATCHES_PER_ROW)) {
+                        Row(Modifier.fillMaxWidth()) {
+                            for (item in row) {
+                                AppIconChoice(
+                                    icon = item,
+                                    selected = item == selected,
+                                    onClick = { onSelect(item) },
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            repeat(SWATCHES_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.app_icon_note),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_close)) } },
+    )
+}
+
+/** An icon as a round launcher shows it, with its name; the picked one has a ring and a tick. */
+@Composable
+private fun AppIconChoice(icon: AppIcon, selected: Boolean, onClick: () -> Unit, modifier: Modifier) {
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        val ring = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier
+        Box(modifier = Modifier.size(64.dp).then(ring), contentAlignment = Alignment.Center) {
+            LauncherIcon(icon.foregroundRes, size = 52.dp)
+            if (selected) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(icon.labelRes),
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The two layers of an adaptive icon, cut to a circle. Layers are 108 units across but launchers
+ * show only the middle 72, so each is drawn 1.5 times [size] and the circle crops the rest.
+ */
+@Composable
+private fun LauncherIcon(foregroundRes: Int, size: Dp) {
+    Box(modifier = Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
+        val layer = Modifier.requiredSize(size * 1.5f)
+        Image(painterResource(R.drawable.ic_launcher_background), contentDescription = null, modifier = layer)
+        Image(painterResource(foregroundRes), contentDescription = null, modifier = layer)
+    }
 }
