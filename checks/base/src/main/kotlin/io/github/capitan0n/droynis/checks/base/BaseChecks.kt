@@ -43,6 +43,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     AssistantAppCheck(probes.settings, probes.packages),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
+    PlayProtectCheck(probes.settings),
     OutdatedAppsCheck(probes.packages),
     PlayServicesCheck(probes.packageDetails),
     // Network
