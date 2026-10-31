@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 68 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 75 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -22,7 +22,7 @@ Android (API 37, October 2026) and the decisions taken so far.
 | 12 | Security patch age | Since mid-2025 most fixes ship in quarterly bulletins (March, June, September, December); monthly ones can be empty. `SECURITY_PATCH` is self-reported and vendors have over-claimed it before. | PASS up to 90 days, WARNING up to a year, CRITICAL beyond. Cross-check with the attested `osPatchLevel` once attestation lands. |
 | 13 | Reports exclude IMEI, serial, phone number, account names | The base tier cannot read those anyway: IMEI and serial are privileged since API 29, and phone number and accounts need permissions Droynis does not request. The real leaks are the installed-app list (health, religion, politics…), CA certificate subjects (employer), Private DNS hostname and raw dumpsys text. | Export redacted by default (package names omitted or hashed); raw only on explicit choice. |
 | 14 | Advanced Protection (API 36+) | Readable with the normal permission `QUERY_ADVANCED_PROTECTION_MODE`. It also blocks installs from unknown sources, which conflicts with F-Droid users. GrapheneOS reports it off but has no such switch; it offers similar protections one by one under Exploit protection. | INFO (no score impact), with that trade-off in the remediation text. On GrapheneOS, recognized by its Vanadium WebView or preinstalled `app.grapheneos.*` apps, "off" is N/A instead of a FAIL. |
-| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. |
+| 15 | Developer options and USB debugging are plain public settings | Android 17 annotates `adb_enabled` and `development_settings_enabled` with `@Readable(redactedValue = "0")`: behind the platform flag `enable_redacted_value_for_readable`, every app with UID ≥ 10000 reads "0" whatever the real state, at any target SDK. The mechanism is absent from Android 16. `adb_wifi_enabled` is not redacted. | On API 37+ a "0" is UNKNOWN ("can't be verified"), never PASS; a "1" is still a real FAIL. With Shizuku connected, these two keys (and any key the app is denied) are read again with `settings get` as the shell user, which is never redacted; a reading whose `Source` carries the SHIZUKU grant is trusted. Without Shizuku, two signs still prove "on", never "off": the sticky `USB_STATE` broadcast lists the `adb` function while a computer is connected (unplugged, it can describe an older connection, so it counts only with `connected`), which fails both checks; and `adb_wifi_enabled` = 1 (or a real `adb_enabled` = 1) fails Developer options, since Settings turns USB and wireless debugging off with them. |
 
 Smaller points: StrongBox absence is not user-fixable (INFO, no score impact). Emulators have
 adb on and no lock screen, so instrumented tests assert that a verdict was reached, not which.
@@ -89,6 +89,22 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **Lock strength** (ACCS-2007): `KeyguardManager.getPasswordComplexity()` (API 29+). LOW, a
   pattern or a PIN with repeating or ordered digits, is a FAIL; MEDIUM and HIGH pass; no lock is
   N/A here because ACCS-2001 already fails it.
+- **Biometric unlock strength** (ACCS-2009, Android 11+): `BiometricManager.canAuthenticate()` for
+  `BIOMETRIC_WEAK` and `BIOMETRIC_STRONG` (the normal permission USE_BIOMETRIC) says only whether
+  some biometric of at least that class is enrolled, never which, and convenience (Class 1) sensors
+  are hidden from it, as is face unlock a maker builds outside the framework. So a weak one enrolled
+  with no strong one is a FAIL; a strong one is a PASS only when the phone declares a single kind of
+  sensor (`FEATURE_FINGERPRINT`, `FEATURE_FACE`, `FEATURE_IRIS`); nothing enrolled is a PASS only
+  without face or iris hardware, which could be Class 1. Any other answer is UNKNOWN. Not yet checked
+  on a device: what `canAuthenticate` answers for a biometric that unlocks the phone but is turned
+  off for apps.
+- **Google Play services** (APPS-4014): microG installs as `com.google.android.gms` and signature
+  spoofing can make it report Google's key, so `org.microg.*` activities (or microG's key) mark it
+  first. Then Google's key (SHA-1 fingerprints from microG's own `Constants`) and
+  `getApplicationInfo(MATCH_SYSTEM_ONLY)`, which filters on the package manager's record of the
+  install location rather than the flags GrapheneOS sets on sandboxed Google Play, tell a privileged
+  system copy (a FAIL, INFO so no score impact) from an ordinary app (PASS). Disabled or absent is a
+  PASS; an unknown signer, or Google's key with unreadable activities, is UNKNOWN.
 - **SMS and call log** (APPS-4008): apps granted READ_SMS or RECEIVE_SMS, or READ_CALL_LOG, from
   `PackageManager` (granted flags, not just requested). The default SMS app is expected to hold the
   SMS ones and the default phone app the call log; preinstalled apps are listed, not counted.
