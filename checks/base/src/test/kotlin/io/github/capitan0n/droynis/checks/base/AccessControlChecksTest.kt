@@ -43,7 +43,6 @@ class AccessControlChecksTest {
     fun `developer options`() = runTest {
         suspend fun status(raw: String?, sdk: Int = 36) = DeveloperOptionsCheck(
             FakeSettings(global = mapOf("development_settings_enabled" to value(raw))),
-            FakeUsb(),
         ).run(scanContext(sdk = sdk)).status
 
         assertEquals(Status.FAIL, status("1"))
@@ -52,7 +51,7 @@ class AccessControlChecksTest {
         assertEquals(Status.UNKNOWN, status("yes"))
         assertEquals(
             Status.UNKNOWN,
-            DeveloperOptionsCheck(FakeSettings(global = mapOf("development_settings_enabled" to unavailable())), FakeUsb()).status(),
+            DeveloperOptionsCheck(FakeSettings(global = mapOf("development_settings_enabled" to unavailable()))).status(),
         )
 
         // Android 17 may redact the key to "0" for apps; "1" and unset are still real.
@@ -62,49 +61,9 @@ class AccessControlChecksTest {
         val shell = Reading.Value<String?>("0", Source("settings get global development_settings_enabled", Grant.SHIZUKU))
         assertEquals(
             Status.PASS,
-            DeveloperOptionsCheck(FakeSettings(global = mapOf("development_settings_enabled" to shell)), FakeUsb())
+            DeveloperOptionsCheck(FakeSettings(global = mapOf("development_settings_enabled" to shell)))
                 .run(scanContext(sdk = 37)).status,
         )
-    }
-
-    @Test
-    fun `on Android 17 USB or wireless debugging seen on proves developer options on`() = runTest {
-        suspend fun outcome(
-            adb: String? = "0",
-            wifiAdb: Reading<String?> = value("0"),
-            usb: Reading<UsbState?> = value(null),
-            sdk: Int = 37,
-        ) = DeveloperOptionsCheck(
-            FakeSettings(
-                global = mapOf(
-                    "development_settings_enabled" to value("0"),
-                    "adb_enabled" to value(adb),
-                    "adb_wifi_enabled" to wifiAdb,
-                ),
-            ),
-            FakeUsb(usb),
-        ).run(scanContext(sdk = sdk))
-
-        assertEquals("Developer options are on: wireless debugging is on", outcome(wifiAdb = value("1")).summary)
-        assertEquals(Status.FAIL, outcome(wifiAdb = value("1")).status)
-        // A redacting platform answers "0", so a "1" is real.
-        assertEquals("Developer options are on: USB debugging is on", outcome(adb = "1").summary)
-        assertEquals(
-            "Developer options are on: a connected computer is using adb",
-            outcome(usb = value(UsbState(connected = true, adb = true))).summary,
-        )
-
-        val none = outcome(usb = value(UsbState(connected = true, adb = false)))
-        assertEquals(Status.UNKNOWN, none.status)
-        assertTrue(none.summary.startsWith("Can't be verified"))
-        val evidence = none.evidence.associateBy { it.label }
-        assertTrue(evidence.getValue("adb_enabled").note!!.contains("Android 17"))
-        assertEquals("0", evidence.getValue("adb_wifi_enabled").value)
-        assertEquals(Status.UNKNOWN, outcome(wifiAdb = unavailable("access denied")).status)
-        assertEquals(Status.UNKNOWN, outcome(usb = value(UsbState(connected = false, adb = true))).status) // stale
-
-        // Before Android 17 a "0" is real and nothing else is consulted.
-        assertEquals(Status.PASS, outcome(wifiAdb = value("1"), sdk = 36).status)
     }
 
     @Test
@@ -277,5 +236,22 @@ class AccessControlChecksTest {
         val unreadable = AdminApp(AppRef("org.example.admin", "Admin"), false, false, canLock = null, canWipe = null)
         assertEquals(Status.UNKNOWN, check(value(emptyList()), listOf(unreadable)).status())
         assertEquals(Status.UNKNOWN, RemoteLockCheck(FakePolicy(admins = unavailable()), FakePackages()).status())
+    }
+
+    @Test
+    fun `microG is not taken for Find Hub`() = runTest {
+        // /e/OS: microG uses Play services' package name, but has no find-my-device service.
+        val gms = InstalledApp("com.google.android.gms", isSystem = true, isDebuggable = false, installer = null, targetSdk = 35)
+        fun check(label: String) =
+            RemoteLockCheck(FakePolicy(admins = value(emptyList())), FakePackages(value(listOf(gms)), mapOf(gms.packageName to label)))
+
+        val microG = check("microG Services").outcome()
+        assertEquals(Status.FAIL, microG.status)
+        val evidence = microG.evidence.single { it.label == "Google Play services" }
+        assertEquals("microG Services (com.google.android.gms)", evidence.value)
+        assertEquals("microG, which has no find-my-device service", evidence.note)
+        assertTrue(microG.evidence.none { it.label == "Find-my-device service" })
+
+        assertEquals(Status.UNKNOWN, check("Google Play services").status())
     }
 }

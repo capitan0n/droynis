@@ -31,7 +31,7 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
                 "your app store, and install pending system updates.",
             settingsActions = listOf(SettingsActions.APPS),
         ),
-        failsWhen = "WebView hasn't been updated for more than 60 days",
+        failsWhen = "WebView hasn't been updated for more than 60 days, or its Chromium version is older than that",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -52,9 +52,17 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
             if (info == null) return@evaluate Outcome.unsupported("This phone has no WebView", evidence)
             val age = ChronoUnit.DAYS.between(info.lastUpdated, context.startedAt.toLocalDate())
             val updated = if (info.fromSystemImage) "came with a system update" else "was updated"
+            // A recent date doesn't prove a recent engine: a ROM can ship an old WebView in a new system image.
+            val stale = staleVersion(info, context)
             when {
-                info.lastUpdated < PLAUSIBLE_UPDATE -> byVersion(info, context, evidence)
+                info.lastUpdated < PLAUSIBLE_UPDATE -> stale
+                    ?.let { Outcome.fail("WebView ${info.versionName} is at least ${it.days} days old, judging by its version", evidence + it.evidence) }
+                    ?: Outcome.unknown("WebView reports a placeholder update date (${info.lastUpdated})", evidence)
                 age < 0 -> Outcome.unknown("WebView's update date is ahead of the device clock", evidence)
+                age <= MAX_AGE_DAYS && stale != null -> Outcome.fail(
+                    "WebView ${info.versionName} $updated $age days ago, but its version is at least ${stale.days} days old",
+                    evidence + stale.evidence,
+                )
                 age <= MAX_AGE_DAYS -> Outcome.pass("WebView ${info.versionName} $updated $age days ago", evidence)
                 info.fromSystemImage ->
                     Outcome.fail("WebView ${info.versionName} came with a system update $age days ago and was not updated since", evidence)
@@ -63,18 +71,19 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
         }
     }
 
+    private class StaleVersion(val days: Long, val evidence: Evidence)
+
     /**
-     * Without a valid update date, WebView's version still tells how old it is at least: Chromium
-     * versions come out on a fixed schedule. Unknown when the version is too new to tell.
+     * WebView's version tells how old it is at least, whatever its update date says: Chromium
+     * versions come out on a fixed schedule. Null when that doesn't make it older than
+     * [MAX_AGE_DAYS], or when the version is too new or not numbered like Chromium's.
      */
-    private fun byVersion(info: WebViewInfo, context: ScanContext, evidence: List<Evidence>): Outcome {
-        val placeholder = Outcome.unknown("WebView reports a placeholder update date (${info.lastUpdated})", evidence)
-        val major = chromiumMajor(info.versionName) ?: return placeholder
-        val releasedBy = releasedBy(major) ?: return placeholder
-        val age = ChronoUnit.DAYS.between(releasedBy, context.startedAt.toLocalDate())
-        if (age <= MAX_AGE_DAYS) return placeholder
-        val release = Evidence("Chromium $major released", "$releasedBy or earlier", Source("Chromium release schedule"))
-        return Outcome.fail("WebView ${info.versionName} is at least $age days old, judging by its version", evidence + release)
+    private fun staleVersion(info: WebViewInfo, context: ScanContext): StaleVersion? {
+        val major = chromiumMajor(info.versionName) ?: return null
+        val releasedBy = releasedBy(major) ?: return null
+        val days = ChronoUnit.DAYS.between(releasedBy, context.startedAt.toLocalDate())
+        if (days <= MAX_AGE_DAYS) return null
+        return StaleVersion(days, Evidence("Chromium $major released", "$releasedBy or earlier", Source("Chromium release schedule")))
     }
 
     companion object {

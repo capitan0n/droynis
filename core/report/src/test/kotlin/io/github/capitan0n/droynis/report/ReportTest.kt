@@ -79,6 +79,13 @@ class ReportTest {
     }
 
     @Test
+    fun `markdown report keeps the command of a remediation`() {
+        val findings = listOf(finding(Status.FAIL, Severity.CRITICAL, id = "INTG-1040", command = "fastboot flashing lock"))
+        val markdown = MarkdownReport.render(context, findings, HardeningIndex.of(findings), facts = emptyList(), appVersion = "0.2.0")
+        assertTrue("- What to do: Fix it. `fastboot flashing lock`" in markdown)
+    }
+
+    @Test
     fun `a capped score also shows the score without the cap`() {
         val findings = listOf(
             finding(Status.FAIL, Severity.CRITICAL, id = "INTG-1040"),
@@ -168,8 +175,9 @@ class ReportTest {
         title: String = "Test",
         summary: String = "summary",
         category: Category = Category.ACCESS_CONTROL,
+        command: String? = null,
     ) = Finding(
-        spec = CheckSpec(id, category, title, severity, "Why.", Remediation("Fix it.")),
+        spec = CheckSpec(id, category, title, severity, "Why.", Remediation("Fix it.", command = command)),
         status = status,
         severity = severity,
         summary = summary,

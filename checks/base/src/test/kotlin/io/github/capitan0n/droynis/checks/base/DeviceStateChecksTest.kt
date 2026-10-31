@@ -179,6 +179,29 @@ class DeviceStateChecksTest {
     }
 
     @Test
+    fun `a recent system image doesn't hide an old webview`() = runTest {
+        // /e/OS on a Fairphone 5 shipped WebView 148 (May 2026) in a September 2026 system image.
+        fun check(version: String) = WebViewCheck(
+            FakeWebView(value(WebViewInfo("com.android.webview", version, LocalDate.of(2026, 9, 17), fromSystemImage = true))),
+        )
+
+        val old = check("148.0.7778.178").outcome()
+        assertEquals(Status.FAIL, old.status)
+        assertEquals(
+            "WebView 148.0.7778.178 came with a system update 14 days ago, but its version is at least 149 days old",
+            old.summary,
+        )
+        assertEquals("2026-05-05 or earlier", old.evidence.single { it.label == "Chromium 148 released" }.value)
+
+        // 152 came out 37 days before the scan; later majors can't be dated, so the date decides.
+        assertEquals(Status.PASS, check("152.0.7977.64").status())
+        assertEquals(Status.PASS, check("156.0.8000.1").status())
+        // Updated from a store recently but still old: the engine is what counts.
+        val store = WebViewCheck(FakeWebView(value(WebViewInfo("com.google.android.webview", "148.0.7778.178", LocalDate.of(2026, 9, 20)))))
+        assertEquals(Status.FAIL, store.status())
+    }
+
+    @Test
     fun `a placeholder webview date is unknown, not decades old`() = runTest {
         // Issue #6: a phone reported Google WebView as updated on 1970-01-10.
         fun check(updated: LocalDate, system: Boolean = false) = WebViewCheck(

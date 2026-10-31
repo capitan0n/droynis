@@ -35,8 +35,10 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
 
     override suspend fun run(context: ScanContext): Outcome {
         val apps = packages.installedApps()
-        val sideloaded = (apps as? Reading.Value)?.value
-            ?.filter { !it.isSystem && it.installer !in KNOWN_STORES }
+        val all = (apps as? Reading.Value)?.value
+        val byPackage = all?.associateBy { it.packageName }
+        val sideloaded = all
+            ?.filter { originOf(it.packageName, byPackage) == AppOrigin.SIDELOADED }
             .orEmpty()
         val evidence = buildList {
             add(apps.toEvidence("User apps inspected") { list -> list.count { !it.isSystem }.toString() })
@@ -76,6 +78,15 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
             "com.huawei.appmarket", // AppGallery
             "com.amazon.venezia", // Amazon Appstore
             "com.xiaomi.mipicks", // Xiaomi GetApps
+            "foundation.e.apps", // App Lounge (/e/OS)
+        )
+
+        /**
+         * System apps that install apps shipped with the OS as removable user apps. Their apps came
+         * with the phone; an app using one of these names without being a system app counts for nothing.
+         */
+        val OS_INSTALLERS = setOf(
+            "foundation.e.apk_preinstaller", // /e/OS
         )
     }
 }
