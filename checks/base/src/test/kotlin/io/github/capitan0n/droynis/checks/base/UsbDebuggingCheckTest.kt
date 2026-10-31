@@ -12,8 +12,13 @@ import kotlinx.coroutines.test.runTest
 
 class UsbDebuggingCheckTest {
 
+    private fun check(adbEnabled: Reading<String?>?, usb: Reading<UsbState?> = value(null)) = UsbDebuggingCheck(
+        FakeSettings(adbEnabled?.let { mapOf("adb_enabled" to it) }.orEmpty()),
+        FakeUsb(usb),
+    )
+
     private suspend fun statusFor(adbEnabled: Reading<String?>, sdk: Int = 36): Status =
-        UsbDebuggingCheck(FakeSettings(mapOf("adb_enabled" to adbEnabled))).run(scanContext(sdk = sdk)).status
+        check(adbEnabled).run(scanContext(sdk = sdk)).status
 
     @Test
     fun `enabled is a FAIL`() = runTest {
@@ -28,11 +33,12 @@ class UsbDebuggingCheckTest {
 
     @Test
     fun `from Android 17 a 0 may be the redaction placeholder, so it is UNKNOWN`() = runTest {
-        val outcome = UsbDebuggingCheck(FakeSettings(mapOf("adb_enabled" to value("0")))).run(scanContext(sdk = 37))
+        val outcome = check(value("0")).run(scanContext(sdk = 37))
 
         assertEquals(Status.UNKNOWN, outcome.status)
         assertTrue(outcome.summary.startsWith("Can't be verified"))
-        assertTrue(outcome.evidence.single().note!!.contains("Android 17"))
+        assertTrue(outcome.evidence.first().note!!.contains("Android 17"))
+        assertEquals("no USB state reported since boot", outcome.evidence.last().value)
         assertEquals(Status.FAIL, statusFor(value("1"), sdk = 37)) // a real value is never redacted to 1
     }
 
@@ -54,15 +60,45 @@ class UsbDebuggingCheckTest {
     @Test
     fun `evidence records the raw value and where it came from`() = runTest {
         val source = Source("Settings.Global \"adb_enabled\"")
-        val check = UsbDebuggingCheck(FakeSettings(mapOf("adb_enabled" to Reading.Value("1", source))))
+        val check = check(Reading.Value("1", source))
 
         assertEquals(listOf(Evidence("adb_enabled", "1", source)), check.outcome().evidence)
     }
 
     @Test
     fun `an unset key is shown as such in the evidence`() = runTest {
-        val evidence = UsbDebuggingCheck(FakeSettings()).outcome().evidence.single()
+        val evidence = check(null).outcome().evidence.single()
 
         assertEquals("(not set)", evidence.value)
+    }
+
+    @Test
+    fun `from Android 17 a computer using adb over USB proves it is on`() = runTest {
+        val outcome = check(value("0"), usb = value(UsbState(connected = true, adb = true))).run(scanContext(sdk = 37))
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("USB debugging is on: a connected computer is using adb", outcome.summary)
+        assertEquals("connected to a computer, using adb", outcome.evidence.last().value)
+    }
+
+    @Test
+    fun `the USB state never proves it off, and is stale while unplugged`() = runTest {
+        suspend fun status(usb: Reading<UsbState?>) = check(value("0"), usb).run(scanContext(sdk = 37)).status
+
+        assertEquals(Status.UNKNOWN, status(value(UsbState(connected = true, adb = false))))
+        // Unplugged, the last broadcast can describe an earlier connection.
+        assertEquals(Status.UNKNOWN, status(value(UsbState(connected = false, adb = true))))
+        assertEquals(Status.UNKNOWN, status(unavailable("receiver refused")))
+    }
+
+    @Test
+    fun `below Android 17 the setting decides and the USB state isn't read`() = runTest {
+        val usb = object : UsbProbe {
+            override fun state(): Reading<UsbState?> = error("not needed")
+        }
+
+        val outcome = UsbDebuggingCheck(FakeSettings(mapOf("adb_enabled" to value("0"))), usb).run(scanContext(sdk = 36))
+
+        assertEquals(Status.PASS, outcome.status)
     }
 }

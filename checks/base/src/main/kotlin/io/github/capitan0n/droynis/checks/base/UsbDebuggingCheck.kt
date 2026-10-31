@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.checks.base
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
+import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Outcome
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
@@ -10,7 +11,11 @@ import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
 
-class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
+/**
+ * Android 17 hides the switch from apps (it reads "0"), so there a "0" is UNKNOWN. A computer using
+ * adb over USB right now still shows the switch is on.
+ */
+class UsbDebuggingCheck(private val settings: SystemSettings, private val usb: UsbProbe) : Check {
 
     override val spec = CheckSpec(
         id = "ACCS-2011",
@@ -36,7 +41,7 @@ class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
                 SwitchState.ON -> Outcome.fail("USB debugging is enabled", evidence)
                 SwitchState.OFF ->
                     if (adb.mayBeRedacted(context)) {
-                        Outcome.unknown(REDACTED_SUMMARY, evidence.map { it.redacted() })
+                        redacted(evidence)
                     } else {
                         Outcome.pass("USB debugging is disabled", evidence)
                     }
@@ -44,6 +49,16 @@ class UsbDebuggingCheck(private val settings: SystemSettings) : Check {
                 SwitchState.UNSET -> Outcome.unknown("$ADB_ENABLED is not set", evidence)
                 SwitchState.UNEXPECTED -> Outcome.unknown("Unexpected value \"$raw\" for $ADB_ENABLED", evidence)
             }
+        }
+    }
+
+    private fun redacted(setting: List<Evidence>): Outcome {
+        val state = usb.state()
+        val evidence = setting.map { it.redacted() } + state.usbEvidence()
+        return if (state.provesAdbOn()) {
+            Outcome.fail("USB debugging is on: a connected computer is using adb", evidence)
+        } else {
+            Outcome.unknown(REDACTED_SUMMARY, evidence)
         }
     }
 

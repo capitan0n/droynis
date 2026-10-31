@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.checks.base
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
+import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Outcome
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
@@ -10,7 +11,12 @@ import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
 
-class DeveloperOptionsCheck(private val settings: SystemSettings) : Check {
+/**
+ * Android 17 hides the switch from apps (it reads "0"), so there a "0" is UNKNOWN unless something
+ * that lives in Developer options is seen on: USB or wireless debugging. Settings turns both off
+ * with Developer options, so either one on shows Developer options are on.
+ */
+class DeveloperOptionsCheck(private val settings: SystemSettings, private val usb: UsbProbe) : Check {
 
     override val spec = CheckSpec(
         id = "ACCS-2010",
@@ -36,7 +42,7 @@ class DeveloperOptionsCheck(private val settings: SystemSettings) : Check {
                 SwitchState.ON -> Outcome.fail("Developer options are enabled", evidence)
                 SwitchState.OFF ->
                     if (enabled.mayBeRedacted(context)) {
-                        Outcome.unknown(REDACTED_SUMMARY, evidence.map { it.redacted() })
+                        redacted(evidence, context)
                     } else {
                         Outcome.pass("Developer options are disabled", evidence)
                     }
@@ -47,6 +53,25 @@ class DeveloperOptionsCheck(private val settings: SystemSettings) : Check {
                     Outcome.unknown("Unexpected value \"$raw\" for $DEVELOPMENT_SETTINGS_ENABLED", evidence)
             }
         }
+    }
+
+    private fun redacted(setting: List<Evidence>, context: ScanContext): Outcome {
+        val usbDebugging = settings.global(UsbDebuggingCheck.ADB_ENABLED)
+        val wirelessDebugging = settings.global(WirelessDebuggingCheck.ADB_WIFI_ENABLED)
+        val usbState = usb.state()
+        val adbSetting = usbDebugging.settingEvidence(UsbDebuggingCheck.ADB_ENABLED)
+        val evidence = setting.map { it.redacted() } + listOf(
+            if (usbDebugging.mayBeRedacted(context)) adbSetting.redacted() else adbSetting,
+            wirelessDebugging.settingEvidence(WirelessDebuggingCheck.ADB_WIFI_ENABLED),
+            usbState.usbEvidence(),
+        )
+        val proof = when {
+            usbDebugging.isOn() -> "USB debugging is on"
+            wirelessDebugging.isOn() -> "wireless debugging is on"
+            usbState.provesAdbOn() -> "a connected computer is using adb"
+            else -> return Outcome.unknown(REDACTED_SUMMARY, evidence)
+        }
+        return Outcome.fail("Developer options are on: $proof", evidence)
     }
 
     companion object {

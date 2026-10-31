@@ -24,9 +24,10 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     PasswordVisibilityCheck(probes.settings),
     LockScreenNotificationsCheck(probes.settings),
     NotificationHistoryCheck(probes.settings),
+    BiometricUnlockCheck(probes.keyguard, probes.biometrics),
     RemoteLockCheck(probes.policy, probes.packages),
-    DeveloperOptionsCheck(probes.settings),
-    UsbDebuggingCheck(probes.settings),
+    DeveloperOptionsCheck(probes.settings, probes.usb),
+    UsbDebuggingCheck(probes.settings, probes.usb),
     WirelessDebuggingCheck(probes.settings),
     AdbAuthorizationTimeoutCheck(probes.settings),
     // Apps and permissions
@@ -42,8 +43,8 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     AssistantAppCheck(probes.settings, probes.packages),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
-    PlayProtectCheck(probes.settings),
     OutdatedAppsCheck(probes.packages),
+    PlayServicesCheck(probes.packageDetails),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),
