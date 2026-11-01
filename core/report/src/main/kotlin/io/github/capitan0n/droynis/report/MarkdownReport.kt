@@ -88,7 +88,8 @@ object MarkdownReport {
             appendLine("- ${item.label}: `$value`$note, via ${item.source}")
         }
         if (verdict == Verdict.CRITICAL || verdict == Verdict.ATTENTION) {
-            appendLine("- What to do: ${finding.spec.remediation.text}")
+            val command = finding.spec.remediation.command?.let { " `$it`" }.orEmpty()
+            appendLine("- What to do: ${finding.spec.remediation.text}$command")
         }
         appendLine()
     }

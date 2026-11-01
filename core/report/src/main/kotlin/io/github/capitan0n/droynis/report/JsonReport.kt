@@ -73,6 +73,7 @@ object JsonReport {
                         )
                     },
                     "remediation" to finding.spec.remediation.text,
+                    "remediationCommand" to finding.spec.remediation.command,
                     "elapsedMillis" to finding.elapsedMillis,
                 )
             },

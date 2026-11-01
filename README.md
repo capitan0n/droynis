@@ -11,7 +11,7 @@ never changes anything itself.
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
 > but it can't tell you whether that app is malware.
 
-- 68 checks: device integrity, access control, apps and permissions, network and radios. Every
+- 75 checks: device integrity, access control, apps and permissions, network and radios. Every
   check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
@@ -61,10 +61,10 @@ On first install, check that the signing certificate matches the SHA-256 in the 
 
 | Tier | Setup | Adds |
 |---|---|---|
-| Base | none | 48 checks through public Android APIs |
+| Base | none | 51 checks through public Android APIs |
 | ADB | two grants from a computer, once | 11 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically |
-| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, always-on VPN lockdown, SIM PIN, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
-| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network; runs the ADB and Shizuku checks |
+| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
+| Root | opt-in switch in the app | trusted computers, apps with root, root modules, root boot scripts others can change, programs staged in shared temp, root access over ADB, apps listening on the network; runs the ADB and Shizuku checks |
 
 In the app, **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku
 and root run only a fixed set of read-only commands; root stays off until you turn it on.
@@ -94,9 +94,9 @@ The score is passed weight ÷ scored weight × 100 (critical 10, warning 5, noti
 critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute what you can't fix,
 such as a patch level only the maker can update; the Muted filter has Unmute all.
 
-⋮ › Save the report as Markdown or JSON, share or copy it. **Hide personal details** (on by default)
-replaces IP addresses, DNS and proxy servers, the Private DNS host, trusted computers and saved
-Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
+⋮ › Save the report as Markdown or JSON, or share it; Tools › Report can also copy it.
+**Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private
+DNS host, trusted computers and saved Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
 
 ## Build
 

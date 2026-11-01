@@ -66,7 +66,9 @@ class VendorPatchCheck(
             add(vendor?.evidence() ?: Evidence("Vendor patch level", null, props.source, "not reported"))
             add(kernel?.evidence() ?: Evidence("Kernel patch level", null, attested.source, "not reported"))
             if (hardware == null) add(attested.toEvidence("Key attestation") { "software only, not trusted" })
-            val baseband = propValues[BASEBAND]?.takeIf { it.isNotBlank() }
+            // Dual-SIM phones list one version per modem slot: "A,A" is one firmware.
+            val baseband = propValues[BASEBAND]?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }?.distinct()
+                ?.joinToString(", ")?.takeIf { it.isNotEmpty() }
             add(Evidence("Modem firmware (baseband)", baseband, props.source, note = if (baseband == null) "not readable" else null))
         }
         if (androidDate == null) return Outcome.unknown("Android's patch level could not be read", evidence)
