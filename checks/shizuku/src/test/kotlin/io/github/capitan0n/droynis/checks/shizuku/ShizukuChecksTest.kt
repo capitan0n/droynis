@@ -7,6 +7,7 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PrivilegedSwitch
 import io.github.capitan0n.droynis.checks.base.SimCard
 import io.github.capitan0n.droynis.checks.base.SimTelephony
+import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
@@ -18,6 +19,7 @@ import io.github.capitan0n.droynis.core.Tier
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 
@@ -33,9 +35,28 @@ class ShizukuChecksTest {
         override fun label(packageName: String) = if (packageName == "org.example.vpn") "Example VPN" else packageName
     }
 
-    private fun shell(reading: Reading<String>) = object : PrivilegedShell {
-        override fun selinuxMode() = reading
+    private fun shell(
+        selinux: Reading<String> = Reading.Value("Enforcing", shellSource),
+        cmdline: Reading<String> = Reading.Value("", shellSource),
+    ) = object : PrivilegedShell {
+        override fun selinuxMode() = selinux
+        override fun kernelCmdline() = cmdline
     }
+
+    private fun props(map: Map<String, String>): SystemProperties = object : SystemProperties {
+        override fun all() = Reading.Value(map, shellSource)
+    }
+
+    private fun bootProps(cmdline: Reading<String>, getprop: Reading<Map<String, String>>) =
+        BootPropertiesCheck(
+            object : PrivilegedShell {
+                override fun selinuxMode() = Reading.Value("Enforcing", shellSource)
+                override fun kernelCmdline() = cmdline
+            },
+            object : SystemProperties {
+                override fun all() = getprop
+            },
+        )
 
     private fun settings(app: Reading<String?>, lockdown: Reading<String?>) = object : SystemSettings {
         override fun global(key: String) = value(null)
@@ -81,11 +102,63 @@ class ShizukuChecksTest {
             override val packages = inventory
             override val shell = shell(Reading.Value("Enforcing", shellSource))
             override val cellular = cellular(privileged = Reading.Value(emptyList(), shellSource))
+            override val properties = props(emptyMap())
         }
         val specs = shizukuChecks(probes).map { it.spec }
 
-        assertEquals(listOf("INTG-1201", "ACCS-2201", "NETW-3201", "NETW-3202", "NETW-3203"), specs.map { it.id })
+        assertEquals(listOf("INTG-1201", "INTG-1202", "ACCS-2201", "NETW-3201", "NETW-3202", "NETW-3203"), specs.map { it.id })
         assertEquals(setOf(Tier.SHIZUKU), specs.map { it.requiredTier }.toSet())
+    }
+
+    @Test
+    fun `boot properties that disagree with the kernel command line fail, with both values`() = runTest {
+        val cmdline = Reading.Value(
+            "console=ttyMSM0,115200n8 androidboot.verifiedbootstate=orange androidboot.warranty_bit=1",
+            shellSource,
+        )
+        val getprop = Reading.Value(
+            mapOf("ro.boot.verifiedbootstate" to "green", "ro.boot.warranty_bit" to "0"),
+            shellSource,
+        )
+        val outcome = bootProps(cmdline, getprop).run(context)
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertTrue(outcome.summary.contains("Verified boot state shows green but the kernel says orange"), outcome.summary)
+        assertTrue(outcome.summary.contains("Knox warranty bit shows 0 but the kernel says 1"), outcome.summary)
+        assertEquals(Grant.SHIZUKU, bootProps(cmdline, getprop).spec.requires.single())
+    }
+
+    @Test
+    fun `boot properties that match the kernel command line pass`() = runTest {
+        val cmdline = Reading.Value("androidboot.verifiedbootstate=green androidboot.flash.locked=1", shellSource)
+        val getprop = Reading.Value(
+            mapOf("ro.boot.verifiedbootstate" to "green", "ro.boot.flash.locked" to "1"),
+            shellSource,
+        )
+        assertEquals(Status.PASS, bootProps(cmdline, getprop).run(context).status)
+    }
+
+    @Test
+    fun `the boot-property check never passes on what it could not compare`() = runTest {
+        val props = Reading.Value(mapOf("ro.boot.verifiedbootstate" to "green"), shellSource)
+        // Command line read, but holding none of the boot keys (some phones keep them in /proc/bootconfig).
+        assertEquals(Status.UNKNOWN, bootProps(Reading.Value("console=tty quiet", shellSource), props).run(context).status)
+        // Command line unreadable.
+        assertEquals(Status.UNKNOWN, bootProps(Reading.Unavailable("the shell is not open", shellSource), props).run(context).status)
+        // No command line on this kernel.
+        assertEquals(Status.UNSUPPORTED, bootProps(Reading.Unsupported("no /proc/cmdline", shellSource), props).run(context).status)
+        // Properties unreadable though the command line is fine.
+        val cmdline = Reading.Value("androidboot.verifiedbootstate=orange", shellSource)
+        assertEquals(Status.UNKNOWN, bootProps(cmdline, Reading.Unavailable("getprop failed", shellSource)).run(context).status)
+    }
+
+    @Test
+    fun `the kernel command line parses into its tokens`() {
+        val map = KernelCmdline.parse("  a=1   b=two  flag androidboot.x=y\n")
+        assertEquals("1", map["a"])
+        assertEquals("two", map["b"])
+        assertEquals("", map["flag"])
+        assertEquals("y", map["androidboot.x"])
     }
 
     @Test

@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.AutofillProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
 import io.github.capitan0n.droynis.checks.base.BatteryProbe
+import io.github.capitan0n.droynis.checks.base.BiometricProbe
 import io.github.capitan0n.droynis.checks.base.BuildInfo
 import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.CertificateStore
@@ -19,12 +20,14 @@ import io.github.capitan0n.droynis.checks.base.FileProbe
 import io.github.capitan0n.droynis.checks.base.InputMethodProbe
 import io.github.capitan0n.droynis.checks.base.Keyguard
 import io.github.capitan0n.droynis.checks.base.NetworkProbe
+import io.github.capitan0n.droynis.checks.base.PackageDetailsProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.checks.base.UptimeProbe
+import io.github.capitan0n.droynis.checks.base.UsbProbe
 import io.github.capitan0n.droynis.checks.base.WebViewProbe
 import io.github.capitan0n.droynis.checks.root.RootProbes
 import io.github.capitan0n.droynis.checks.shizuku.PrivilegedShell
@@ -74,6 +77,9 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val cellular: CellularProbe = AndroidCellular(app, shells)
     override val uptime: UptimeProbe = AndroidUptime
     override val battery: BatteryProbe = AndroidBattery(app)
+    override val usb: UsbProbe = AndroidUsb(app)
+    override val biometrics: BiometricProbe = AndroidBiometrics(app)
+    override val packageDetails: PackageDetailsProbe = AndroidPackageDetails(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells

@@ -47,6 +47,28 @@ internal const val REDACTED_SUMMARY =
 internal fun Evidence.redacted(): Evidence =
     copy(note = "Android 17+ may show apps \"0\" here whatever the real state")
 
+/** A 0/1 switch that was read and is on. */
+internal fun Reading<String?>.isOn(): Boolean = this is Reading.Value && switchState(value) == SwitchState.ON
+
+/**
+ * The USB connection proves USB debugging on: a computer is connected and adb is among the USB
+ * functions in use. It never proves it off: unplugged, the last broadcast may be out of date.
+ */
+internal fun Reading<UsbState?>.provesAdbOn(): Boolean =
+    this is Reading.Value && value?.let { it.connected && it.adb } == true
+
+internal fun Reading<UsbState?>.usbEvidence(): Evidence {
+    val evidence = toEvidence("USB connection") { state ->
+        when {
+            state == null -> "no USB state reported since boot"
+            state.connected && state.adb -> "connected to a computer, using adb"
+            state.connected -> "connected to a computer, not using adb"
+            else -> "not connected to a computer"
+        }
+    }
+    return if (provesAdbOn()) evidence else evidence.copy(note = "shows USB debugging only while it is on and a computer is connected")
+}
+
 /** "1 app" or "3 apps". */
 fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
     if (n == 1) "1 $singular" else "$n $plural"

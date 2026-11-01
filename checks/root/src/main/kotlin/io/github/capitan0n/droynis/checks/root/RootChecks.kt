@@ -9,10 +9,13 @@ import io.github.capitan0n.droynis.core.Check
 fun rootChecks(probes: RootProbes): List<Check> = listOf(
     // Device integrity
     RootModulesCheck(probes.root),
+    BootScriptsCheck(probes.root),
+    TempFilesCheck(probes.root),
     // Access control
     TrustedComputersCheck(probes.root),
     // Apps and permissions
     RootAppsCheck(probes.root, probes.packages),
+    AdbRootCheck(probes.root),
     // Network
     ListeningAppsCheck(probes.root, probes.packages),
 )

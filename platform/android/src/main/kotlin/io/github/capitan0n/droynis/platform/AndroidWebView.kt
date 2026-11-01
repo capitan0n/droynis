@@ -19,7 +19,8 @@ internal object AndroidWebView : WebViewProbe {
             val flags = info.applicationInfo?.flags ?: 0
             // A system WebView that was never updated on its own (LineageOS and other ROMs update it
             // only with the OS) reports the file time from the system image, which reproducible
-            // builds fix at 2009-01-01. It is as new as the system image it came with.
+            // builds fix at 2009-01-01. It is at best as new as the system image it came with, so
+            // WebViewCheck also dates it by its Chromium version.
             val fromSystemImage = flags and ApplicationInfo.FLAG_SYSTEM != 0 &&
                 flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP == 0 &&
                 info.lastUpdateTime < Build.TIME

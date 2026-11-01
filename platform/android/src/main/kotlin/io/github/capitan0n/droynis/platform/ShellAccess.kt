@@ -16,6 +16,9 @@ interface ShellAccess {
 
     fun selinuxMode(): Reading<String>
 
+    /** `/proc/cmdline`: the boot parameters the bootloader passed, which apps can't read. */
+    fun kernelCmdline(): Reading<String>
+
     /** `dumpsys <service>` for an allowlisted service. */
     fun dumpsys(service: String): Reading<String>
 
@@ -40,6 +43,9 @@ internal class ShellRouter(
 
     override fun selinuxMode(): Reading<String> =
         active()?.selinuxMode() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("getenforce"))
+
+    override fun kernelCmdline(): Reading<String> =
+        active()?.kernelCmdline() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("/proc/cmdline"))
 
     fun telephony(): Reading<String> =
         active()?.telephony() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("telephony service"))

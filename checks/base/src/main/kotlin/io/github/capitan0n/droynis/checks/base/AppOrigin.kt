@@ -28,6 +28,7 @@ fun originOf(packageName: String, apps: Map<String, InstalledApp>?): AppOrigin {
     val app = apps?.get(packageName) ?: return AppOrigin.UNKNOWN
     return when {
         app.isSystem -> AppOrigin.PREINSTALLED
+        app.installer in UnknownSourceAppsCheck.OS_INSTALLERS && apps[app.installer]?.isSystem == true -> AppOrigin.PREINSTALLED
         app.installer in UnknownSourceAppsCheck.KNOWN_STORES -> AppOrigin.STORE
         else -> AppOrigin.SIDELOADED
     }

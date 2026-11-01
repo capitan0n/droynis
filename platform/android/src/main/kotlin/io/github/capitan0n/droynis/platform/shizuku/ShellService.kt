@@ -41,6 +41,13 @@ class ShellService : IShellService.Stub() {
 
     override fun telephony(): String = TelephonyReader.read()
 
+    /** Read straight from the file, no subprocess: it is a few hundred bytes the shell user can read. */
+    override fun kernelCmdline(): String = try {
+        java.io.File(PROC_CMDLINE).readText()
+    } catch (e: IOException) {
+        throw IllegalStateException("could not read $PROC_CMDLINE: ${e.message}")
+    }
+
     override fun dumpsys(service: String?): ParcelFileDescriptor {
         require(service != null && service in DUMPSYS_SERVICES) { "dumpsys service not allowed" }
         val process = start(listOf(DUMPSYS, service), DUMPSYS_TIMEOUT_SECONDS)
@@ -123,6 +130,7 @@ class ShellService : IShellService.Stub() {
         const val SETTINGS = "/system/bin/settings"
         const val GETENFORCE = "/system/bin/getenforce"
         const val DUMPSYS = "/system/bin/dumpsys"
+        const val PROC_CMDLINE = "/proc/cmdline"
 
         val TABLES = setOf("global", "secure", "system")
 

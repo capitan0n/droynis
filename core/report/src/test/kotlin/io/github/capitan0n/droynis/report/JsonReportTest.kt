@@ -20,8 +20,15 @@ class JsonReportTest {
 
     private val context = ScanContext(ZonedDateTime.of(2026, 10, 5, 14, 2, 0, 0, ZoneOffset.ofHours(3)), sdkInt = 36)
 
-    private fun finding(id: String, status: Status, severity: Severity, summary: String, evidence: List<Evidence>) = Finding(
-        spec = CheckSpec(id, Category.DEVICE_INTEGRITY, "Title of $id", severity, "Why.", Remediation("Fix \"it\".")),
+    private fun finding(
+        id: String,
+        status: Status,
+        severity: Severity,
+        summary: String,
+        evidence: List<Evidence>,
+        command: String? = null,
+    ) = Finding(
+        spec = CheckSpec(id, Category.DEVICE_INTEGRITY, "Title of $id", severity, "Why.", Remediation("Fix \"it\".", command = command)),
         status = status,
         severity = severity,
         summary = summary,
@@ -33,6 +40,7 @@ class JsonReportTest {
         finding(
             "INTG-1040", Status.FAIL, Severity.CRITICAL, "The bootloader is unlocked",
             listOf(Evidence("Device locked (attested)", "false", Source("Key attestation"), note = "line 1\nline 2")),
+            command = "fastboot flashing lock",
         ),
         finding(
             "ACCS-2011", Status.PASS, Severity.WARNING, "Path C:\\temp \"quoted\"\ttab",
@@ -71,6 +79,8 @@ class JsonReportTest {
         assertEquals("INTG-1040", first["id"])
         assertEquals("CRITICAL", first["verdict"])
         assertEquals("Fix \"it\".", first["remediation"])
+        assertEquals("fastboot flashing lock", first["remediationCommand"])
+        assertEquals(null, ((root["findings"] as List<*>)[1] as Map<*, *>)["remediationCommand"])
         assertEquals(false, first["muted"])
         assertEquals(emptyList<Any>(), score["muted"])
     }
