@@ -94,6 +94,11 @@ The score is passed weight ÷ scored weight × 100 (critical 10, warning 5, noti
 critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute what you can't fix,
 such as a patch level only the maker can update; the Muted filter has Unmute all.
 
+Some apps need a lot of access to do their job, such as a watch app that reads notifications and
+SMS. Instead of muting whole checks, open one that lists the app and tap **Trust** under it: the app
+stays listed in every check but no longer counts in any of them. **⋮ › Trusted apps** shows where
+each one is listed and removes them, and reports name every trusted app.
+
 ⋮ › Save the report as Markdown or JSON, or share it; Tools › Report can also copy it.
 **Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private
 DNS host, trusted computers and saved Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.

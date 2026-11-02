@@ -4,6 +4,10 @@ import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.count
 import io.github.capitan0n.droynis.checks.base.joinNames
+import io.github.capitan0n.droynis.checks.base.onlyTrusted
+import io.github.capitan0n.droynis.checks.base.splitTrusted
+import io.github.capitan0n.droynis.checks.base.trustOf
+import io.github.capitan0n.droynis.checks.base.withTrustNote
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
@@ -142,17 +146,35 @@ class ListeningAppsCheck(
         val apps = (packages.installedApps() as? Reading.Value)?.value.orEmpty().filter { it.uid != null }.groupBy { it.uid }
         // System services (uids below 10000) and system apps are part of the OS: listed, not counted.
         val byUid = ports.distinctBy { listOf(it.protocol, it.port, it.uid) }.groupBy { it.uid }
-        val user = byUid.filterKeys { uid -> uid % PER_USER_RANGE >= FIRST_APP && apps[uid]?.all { it.isSystem } != true }
-        val system = byUid - user.keys
+        val listening = byUid.filterKeys { uid -> uid % PER_USER_RANGE >= FIRST_APP && apps[uid]?.all { it.isSystem } != true }
+        val system = byUid - listening.keys
+        // A shared uid names several apps; only a single app gets its own Settings link, and can be trusted.
+        fun appOf(uid: Int) = apps[uid]?.singleOrNull()?.packageName
+        val (trustedEntries, userEntries) = context.splitTrusted(listening.entries.toList()) { appOf(it.key) }
+        val trusted = trustedEntries.associate { it.key to it.value }
+        val user = userEntries.associate { it.key to it.value }
 
         val evidence = buildList {
             add(Evidence("Open ports", ports.size.toString(), src))
-            user.forEach { (uid, open) ->
-                // A shared uid names several apps; only a single app gets its own Settings link.
-                val pkg = apps[uid]?.singleOrNull()?.packageName
-                add(Evidence("Listening app", name(uid, apps), src, note = describe(open), packageName = pkg))
+            listening.forEach { (uid, open) ->
+                val pkg = appOf(uid)
+                val isTrusted = uid in trusted
+                add(
+                    Evidence(
+                        "Listening app",
+                        name(uid, apps),
+                        src,
+                        note = withTrustNote(describe(open), isTrusted),
+                        packageName = pkg,
+                        trust = if (pkg == null) null else trustOf(counted = true, trusted = isTrusted),
+                    ),
+                )
             }
             if (system.isNotEmpty()) add(Evidence("System services listening", system.values.sumOf { it.size }.toString(), src, note = describe(system.values.flatten())))
+        }
+        if (user.isEmpty() && trusted.isNotEmpty()) {
+            val names = trusted.keys.map { name(it, apps, withPackage = false) }
+            return Outcome.pass(onlyTrusted("accept connections from the network", names), evidence)
         }
         if (user.isEmpty()) return Outcome.pass("No user app accepts connections from the network", evidence)
         val names = user.map { (uid, open) -> "${name(uid, apps, withPackage = false)} (${describe(open)})" }

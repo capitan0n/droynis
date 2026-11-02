@@ -25,7 +25,15 @@ data class ScanContext(
     val appPackage: String? = null,
     /** Droynis' own uid, for lists that name apps by uid. */
     val appUid: Int? = null,
-)
+    /**
+     * Package names of apps the user trusts, such as a watch app that needs a lot of access: every
+     * check that lists apps still lists them, but doesn't count them.
+     */
+    val trustedApps: Set<String> = emptySet(),
+) {
+    /** Whether the user trusts [packageName]; never true for an app the check couldn't name. */
+    fun trusts(packageName: String?): Boolean = packageName != null && packageName in trustedApps
+}
 
 /**
  * Runs checks concurrently and isolates them: a check that throws or exceeds its timeout yields

@@ -4,6 +4,9 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.UnknownSourceAppsCheck
 import io.github.capitan0n.droynis.checks.base.count
 import io.github.capitan0n.droynis.checks.base.joinNames
+import io.github.capitan0n.droynis.checks.base.onlyTrusted
+import io.github.capitan0n.droynis.checks.base.splitTrusted
+import io.github.capitan0n.droynis.checks.base.withTrustNote
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
@@ -16,6 +19,7 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Source
+import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
@@ -242,14 +246,23 @@ class SpecialAccessCheck(
         val expected = holders.filter { it.first in access.expected }
         val system = holders.filter { (pkg, _) -> pkg != null && byPackage[pkg]?.isSystem == true }
         // Packages missing from the list (another user's apps, an unknown uid) count as user apps: never hide them.
-        val flagged = holders - own.toSet() - expected.toSet() - system.toSet()
+        val (trusted, flagged) = context.splitTrusted(holders - own.toSet() - expected.toSet() - system.toSet()) { it.first }
 
         val evidence = buildList {
             add(checked)
-            flagged.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = modeNote(grant))) }
-            expected.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "an app store; not counted")) }
-            own.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "Droynis itself; not counted")) }
+            flagged.forEach { (pkg, grant) ->
+                add(holderEvidence(pkg, grant, source, note = modeNote(grant), trust = Trust.COUNTED.takeIf { pkg != null }))
+            }
+            trusted.forEach { (pkg, grant) ->
+                add(holderEvidence(pkg, grant, source, note = withTrustNote(modeNote(grant), trusted = true), trust = Trust.TRUSTED))
+            }
+            val notCounted = { pkg: String? -> Trust.NOT_COUNTED.takeIf { pkg != null } }
+            expected.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "an app store; not counted", trust = notCounted(pkg))) }
+            own.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "Droynis itself; not counted", trust = notCounted(pkg))) }
             if (system.isNotEmpty()) add(Evidence("System apps allowed", system.size.toString(), source))
+        }
+        if (flagged.isEmpty() && trusted.isNotEmpty()) {
+            return Outcome.pass(onlyTrusted(access.phrase, trusted.mapNotNull { it.first?.let(packages::label) }), evidence)
         }
         if (flagged.isEmpty()) return Outcome.pass("No user app ${access.phrase}", evidence)
 
@@ -257,13 +270,14 @@ class SpecialAccessCheck(
         return Outcome.fail("${count(names.size, "app")} ${access.phrase}: ${names.joinNames()}", evidence)
     }
 
-    private fun holderEvidence(pkg: String?, grant: OpGrant, source: Source, note: String?) =
+    private fun holderEvidence(pkg: String?, grant: OpGrant, source: Source, note: String?, trust: Trust? = null) =
         Evidence(
             access.label,
             pkg?.let { "${packages.label(it)} ($it)" } ?: "unknown app (uid ${grant.uid})",
             source,
             note = note,
             packageName = pkg,
+            trust = trust,
         )
 
     private fun modeNote(grant: OpGrant): String? =

@@ -51,8 +51,16 @@ class NotificationAccessCheck(
             }
             // Apps that came with the phone, such as the launcher showing badges, are part of the system.
             val all = holders(apps, packages.byPackage())
-            val counted = all.filter { it.origin != AppOrigin.PREINSTALLED }
-            val evidence = all.map { it.evidence("Notification listener", listeners.source, counted = it in counted) }
+            val (trusted, counted) = context.splitTrusted(all.filter { it.origin != AppOrigin.PREINSTALLED }) {
+                it.app.packageName
+            }
+            val evidence = all.map {
+                it.evidence("Notification listener", listeners.source, counted = it in counted, trusted = it in trusted)
+            }
+            if (counted.isEmpty() && trusted.isNotEmpty()) {
+                val others = "apps that came with the phone".takeIf { all.size > trusted.size }
+                return@evaluate Outcome.pass(onlyTrusted("can read your notifications", trusted.labels(), others = others), evidence)
+            }
             if (counted.isEmpty()) {
                 return@evaluate Outcome.pass("Only apps that came with the phone can read your notifications", evidence)
             }

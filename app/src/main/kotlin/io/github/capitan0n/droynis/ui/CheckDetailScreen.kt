@@ -5,6 +5,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,12 +23,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Code
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,6 +47,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -56,6 +61,7 @@ import io.github.capitan0n.droynis.core.Evidence
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.Status
 import io.github.capitan0n.droynis.core.Tier
+import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.report.verdict
 
 @Composable
@@ -68,6 +74,10 @@ fun CheckDetailScreen(
     onCopy: (label: String, text: String) -> Unit,
     muted: Boolean,
     onMute: (Boolean) -> Unit,
+    /** Packages of the apps the user trusts. */
+    trusted: Set<String> = emptySet(),
+    /** Trusts an app in every check, or stops trusting it. */
+    onTrust: (packageName: String, trust: Boolean) -> Unit = { _, _ -> },
     /** Set when the check needs grants Droynis does not hold; opens that tier's setup. */
     onSetUpTier: (() -> Unit)? = null,
 ) {
@@ -154,11 +164,31 @@ fun CheckDetailScreen(
             }
             evidence.forEachIndexed { i, item ->
                 if (i > 0) HorizontalDivider(Modifier.padding(vertical = 10.dp))
+                // Read from the saved trust, not the evidence, so the button flips at once while the check runs again.
+                val pkg = item.packageName
+                val isTrusted = pkg != null && pkg in trusted
                 EvidenceItem(
                     item,
-                    onOpenApp = item.packageName?.let { pkg ->
+                    onOpenApp = if (pkg != null) {
                         { onOpenAppSettings(spec.remediation.appSettingsActions, pkg) }
+                    } else {
+                        null
                     },
+                    trusted = isTrusted,
+                    onTrust = if (pkg != null && (item.trust == Trust.COUNTED || item.trust == Trust.TRUSTED)) {
+                        { onTrust(pkg, !isTrusted) }
+                    } else {
+                        null
+                    },
+                    notCounted = item.trust == Trust.NOT_COUNTED,
+                )
+            }
+            if (evidence.any { it.trust != null }) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    stringResource(R.string.detail_trust_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -242,9 +272,21 @@ private fun ResultHeader(spec: CheckSpec, finding: Finding?, muted: Boolean) {
     }
 }
 
-/** [onOpenApp] is set when the evidence names an installed app: a button opens that app's settings. */
+/**
+ * [onOpenApp] is set when the evidence names an installed app: a button opens that app's settings.
+ * [onTrust] is set when the user may trust that app, or stop: [trusted] says which. [notCounted]
+ * marks an app the check lists but never counts, so there is nothing to trust: a label says so
+ * instead of a missing button.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EvidenceItem(item: Evidence, onOpenApp: (() -> Unit)? = null) {
+private fun EvidenceItem(
+    item: Evidence,
+    onOpenApp: (() -> Unit)? = null,
+    trusted: Boolean = false,
+    onTrust: (() -> Unit)? = null,
+    notCounted: Boolean = false,
+) {
     Column {
         Text(item.label, style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(6.dp))
@@ -264,23 +306,48 @@ private fun EvidenceItem(item: Evidence, onOpenApp: (() -> Unit)? = null) {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (onOpenApp != null) {
-            // Several rows can carry this button, so screen readers hear which app each one opens.
-            val description = stringResource(R.string.detail_open_app_settings_for, item.value ?: item.label)
-            TextButton(
-                onClick = onOpenApp,
-                contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
-                modifier = Modifier.semantics { contentDescription = description },
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Rounded.OpenInNew,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.detail_open_app_settings))
+        if (onOpenApp != null || onTrust != null || notCounted) {
+            // Several rows can carry these buttons, so screen readers hear which app each one is for.
+            val app = item.value ?: item.label
+            // Wraps to a second line on narrow screens instead of squeezing the second button.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (onOpenApp != null) {
+                    EvidenceButton(
+                        icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                        label = stringResource(R.string.detail_open_app_settings),
+                        description = stringResource(R.string.detail_open_app_settings_for, app),
+                        onClick = onOpenApp,
+                    )
+                }
+                if (onTrust != null) {
+                    EvidenceButton(
+                        icon = if (trusted) Icons.Rounded.Close else Icons.Rounded.VerifiedUser,
+                        label = stringResource(if (trusted) R.string.detail_untrust_app else R.string.detail_trust_app),
+                        description = stringResource(
+                            if (trusted) R.string.detail_untrust_app_for else R.string.detail_trust_app_for,
+                            app,
+                        ),
+                        onClick = onTrust,
+                    )
+                }
+                if (notCounted) {
+                    Pill(stringResource(R.string.detail_not_counted), modifier = Modifier.align(Alignment.CenterVertically))
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun EvidenceButton(icon: ImageVector, label: String, description: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        contentPadding = ButtonDefaults.TextButtonWithIconContentPadding,
+        modifier = Modifier.semantics { contentDescription = description },
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+        Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+        Text(label)
     }
 }
 

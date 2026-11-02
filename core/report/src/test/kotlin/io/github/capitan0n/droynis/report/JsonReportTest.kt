@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
+import io.github.capitan0n.droynis.core.Trust
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.Test
@@ -96,6 +97,30 @@ class JsonReportTest {
         assertEquals(0L, (root["verdicts"] as Map<*, *>)["CRITICAL"])
         val muted = (root["findings"] as List<*>).map { (it as Map<*, *>)["muted"] }
         assertEquals(listOf(true, false), muted) // still reported, with its real result
+    }
+
+    @Test
+    fun `trusted apps are listed with the scan, and trusted evidence is marked`() {
+        val trusting = context.copy(trustedApps = setOf("org.example.watch", "org.example.reader"))
+        val withApp = listOf(
+            finding(
+                "APPS-4005", Status.PASS, Severity.NOTICE, "Only apps you trust can read your notifications: Watch",
+                listOf(
+                    Evidence(
+                        "Notification listener", "Watch (org.example.watch)", Source("Settings.Secure"),
+                        packageName = "org.example.watch", trust = Trust.TRUSTED,
+                    ),
+                ),
+            ),
+        )
+        val root = MiniJson.parse(JsonReport.render(trusting, withApp, HardeningIndex.of(withApp), emptyList(), "0.16.0")) as Map<*, *>
+
+        val trusted = (root["scan"] as Map<*, *>)["trustedApps"] as List<*>
+        assertEquals(listOf("org.example.reader", "org.example.watch"), trusted)
+        val evidence = (((root["findings"] as List<*>).single() as Map<*, *>)["evidence"] as List<*>).single() as Map<*, *>
+        assertEquals("TRUSTED", evidence["trust"])
+        val untrusted = MiniJson.parse(json) as Map<*, *>
+        assertEquals(emptyList<Any>(), (untrusted["scan"] as Map<*, *>)["trustedApps"])
     }
 
     @Test

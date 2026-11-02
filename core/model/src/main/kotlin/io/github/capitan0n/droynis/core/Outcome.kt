@@ -21,6 +21,10 @@ data class Source(val method: String, val grant: Grant? = null) {
  *   a proxy, a computer's name): reports leave it out unless the user asks for personal details.
  * @property packageName the installed app this evidence is about, if any: the UI offers a button that
  *   opens that app's own Settings screen ([Remediation.appSettingsActions], then App info).
+ * @property trust for evidence that names an app in a check that lists apps: whether the check
+ *   counts it, the user trusts it ([ScanContext.trustedApps]), or the check never counts it. The UI
+ *   offers Trust or Stop trusting for the first two and says "Not counted" for the third. Null for
+ *   evidence where trust means nothing, such as the WebView provider.
  */
 data class Evidence(
     val label: String,
@@ -29,7 +33,27 @@ data class Evidence(
     val note: String? = null,
     val personal: Boolean = false,
     val packageName: String? = null,
-)
+    val trust: Trust? = null,
+) {
+    init {
+        require(trust == null || packageName != null) { "Only evidence that names an app can be trusted" }
+    }
+}
+
+/** Whether an app named in evidence counts against the check, the user trusts it, or neither applies. */
+enum class Trust {
+    /** Counted against the check; the user may trust it. */
+    COUNTED,
+
+    /** The user trusts this app: listed, but not counted. */
+    TRUSTED,
+
+    /**
+     * Listed, but this check never counts it: it came with the phone, it is an app store, your
+     * default SMS or phone app using its role, or Droynis itself. Nothing to trust.
+     */
+    NOT_COUNTED,
+}
 
 /** What a check concluded. Build with the factory functions. */
 data class Outcome(

@@ -393,6 +393,38 @@ Muted ids are stored on the device (`SharedPreferences`) and the index is recomp
 without a new scan. Ids that no longer exist are dropped when read. The Checks tab's Muted filter offers
 Unmute all, after a confirmation, since re-muting means opening each check again.
 
+### Trusted apps
+
+Muting a whole check is too blunt for apps that need a lot of access on purpose: a watch app
+(Gadgetbridge, a vendor's companion app) reads notifications and SMS, sends SMS, keeps location
+all the time and skips battery optimization. The user can trust such an app once, by package name
+(stored in `SharedPreferences` under `trusted_apps`), and every check that lists apps stops
+counting it.
+
+- Trust is per app, not per check: one tap covers everything a watch app does. The cost is that
+  a trusted app gaining more access later (an accessibility service, screen capture) is listed
+  but not counted either, so the UI and the FAQ say to trust only apps you know.
+- Checks apply it themselves, through `ScanContext.trustedApps`: a trusted app is left out of the
+  count, the summary and the sideloaded escalation, but stays in the evidence with the note
+  "trusted by you, not counted". A check whose remaining apps are all trusted passes, and says so
+  ("Only apps you trust can read your notifications: Gadgetbridge"). Doing it in the check, not
+  in the report layer, keeps summaries and escalations right.
+- Evidence marks every app a check lists (`Evidence.trust`): COUNTED and TRUSTED rows get Trust or
+  Stop trusting; NOT_COUNTED rows (apps that came with the phone, app stores, the default SMS or
+  phone app using its role, Droynis itself) show a "Not counted" label instead, since trusting them
+  would change nothing. A row with no button and no label looked like a bug. Shared uids and adb's
+  shell name no single app and carry no mark.
+- Changing trust runs again only the checks whose last result lists that app (a full scan if one
+  is running), so the score follows at once without rescanning everything.
+- It is never silent: ⋮ › Trusted apps lists every trusted app with the checks that list it, JSON
+  reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
+  name them in the header.
+- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4101 to 4108, APPS-4301 and
+  NETW-3301.
+- Limit: trust follows the package name, not the signing key. An app reinstalled under the same
+  name by someone else keeps its trust; Android refuses such an update while the original is
+  installed, but not after an uninstall.
+
 ### Why the critical cap stays
 
 A weighted average lets many small passes hide one critical gap: 29 passes and no screen lock would
@@ -405,8 +437,8 @@ kept, shown next to a capped score and written to both reports.
 
 Markdown is for people. JSON (`JsonReport`, `"schema": "droynis-report"`, `schemaVersion` 1) is for
 diffing and tools: findings in catalog order, stable keys, two-space indentation, `null` for
-values that could not be read. Fields added since (`scan.grants`, `score.muted`, `muted` per
-finding) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
+values that could not be read. Fields added since (`scan.grants`, `scan.trustedApps`,
+`score.muted`, `muted` per finding, `trust` per evidence: COUNTED, TRUSTED or NOT_COUNTED) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
 out. Both contain only scan results and the device facts passed in.
 
 Reports are made to be shared, so by default they leave out personal details (`PersonalDetails`):

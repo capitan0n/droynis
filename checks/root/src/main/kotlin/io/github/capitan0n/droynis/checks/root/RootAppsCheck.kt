@@ -4,6 +4,10 @@ import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.count
 import io.github.capitan0n.droynis.checks.base.joinNames
+import io.github.capitan0n.droynis.checks.base.onlyTrusted
+import io.github.capitan0n.droynis.checks.base.splitTrusted
+import io.github.capitan0n.droynis.checks.base.trustOf
+import io.github.capitan0n.droynis.checks.base.withTrustNote
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
@@ -92,17 +96,33 @@ class RootAppsCheck(
         val holders = granted.map { policy -> policy to appsFor(policy.uid, installed) }
         val ownUid = context.appUid
         val own = holders.filter { (policy, _) -> ownUid != null && sameApp(policy.uid, ownUid) }
-        val others = holders - own.toSet()
+        // A shared uid names several apps, and adb's shell is no app: only a single app gets a Settings
+        // link, and only a single app can be trusted.
+        fun appOf(policy: SuPolicy, apps: List<String>) = apps.singleOrNull()?.takeIf { policy.uid % PER_USER_RANGE != SHELL_UID }
+        val (trusted, others) = context.splitTrusted(holders - own.toSet()) { (policy, apps) -> appOf(policy, apps) }
 
         val evidence = buildList {
             add(managerEvidence)
             add(Evidence("Root grants", count(granted.size, "uid"), table.source))
-            others.forEach { (policy, apps) ->
-                // A shared uid names several apps, and adb's shell is no app: only a single app gets a Settings link.
-                val pkg = apps.singleOrNull()?.takeIf { policy.uid % PER_USER_RANGE != SHELL_UID }
-                add(Evidence("Root access", describe(policy.uid, apps), table.source, note = note(policy), packageName = pkg))
+            (holders - own.toSet()).forEach { (policy, apps) ->
+                val pkg = appOf(policy, apps)
+                val isTrusted = trusted.any { it.first == policy }
+                add(
+                    Evidence(
+                        "Root access",
+                        describe(policy.uid, apps),
+                        table.source,
+                        note = withTrustNote(note(policy), isTrusted),
+                        packageName = pkg,
+                        trust = if (pkg == null) null else trustOf(counted = true, trusted = isTrusted),
+                    ),
+                )
             }
             own.forEach { (policy, _) -> add(Evidence("Root access", "Droynis", table.source, note = "this app; not counted" + (note(policy)?.let { ", $it" } ?: ""))) }
+        }
+        if (others.isEmpty() && trusted.isNotEmpty()) {
+            val names = trusted.map { (policy, apps) -> describe(policy.uid, apps, withPackage = false) }
+            return Outcome.pass(onlyTrusted("can get root", names, others = "Droynis".takeIf { own.isNotEmpty() }), evidence)
         }
         if (others.isEmpty()) {
             return Outcome.pass(if (own.isEmpty()) "No app has root access" else "Only Droynis has root access", evidence)

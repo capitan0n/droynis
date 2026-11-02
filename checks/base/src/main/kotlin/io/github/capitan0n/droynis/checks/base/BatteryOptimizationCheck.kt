@@ -60,10 +60,15 @@ class BatteryOptimizationCheck(
             )
         }
         val inventory = apps.value.associateBy { it.packageName }
-        val holders = user.filter { it.packageName in exempt.value }
+        val unrestricted = user.filter { it.packageName in exempt.value }
             .map { Holder(AppRef(it.packageName, packages.label(it.packageName)), originOf(it.packageName, inventory)) }
             .sortedBy { it.app.label.lowercase() }
-        val evidence = listOf(inspected) + holders.map { it.evidence("Unrestricted battery use", exempt.source) }
+        val (trusted, holders) = context.splitTrusted(unrestricted) { it.app.packageName }
+        val evidence = listOf(inspected) +
+            unrestricted.map { it.evidence("Unrestricted battery use", exempt.source, trusted = it in trusted) }
+        if (holders.isEmpty() && trusted.isNotEmpty()) {
+            return Outcome.pass(onlyTrusted("skip battery optimization", trusted.labels()), evidence)
+        }
         if (holders.isEmpty()) return Outcome.pass(NONE, evidence)
 
         // Information only: a sideloaded app is named, but never raises the severity.

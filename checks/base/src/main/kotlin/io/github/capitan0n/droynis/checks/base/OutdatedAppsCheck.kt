@@ -35,24 +35,33 @@ class OutdatedAppsCheck(private val packages: PackageInventory) : Check {
 
     override suspend fun run(context: ScanContext): Outcome {
         val apps = packages.installedApps()
-        val old = (apps as? Reading.Value)?.value
+        val outdated = (apps as? Reading.Value)?.value
             ?.filter { !it.isSystem && it.targetSdk < MIN_TARGET_SDK }
             .orEmpty()
+        val (trusted, old) = context.splitTrusted(outdated) { it.packageName }
         val evidence = buildList {
             add(apps.toEvidence("User apps inspected") { list -> list.count { !it.isSystem }.toString() })
-            old.forEach {
+            outdated.forEach {
+                val isTrusted = it in trusted
                 add(
                     Evidence(
                         "Targets API ${it.targetSdk}",
                         "${packages.label(it.packageName)} (${it.packageName})",
                         apps.source,
+                        note = withTrustNote(null, isTrusted),
                         packageName = it.packageName,
+                        trust = trustOf(counted = true, trusted = isTrusted),
                     ),
                 )
             }
         }
         return apps.evaluate("Installed apps", evidence) {
-            if (old.isEmpty()) {
+            if (old.isEmpty() && trusted.isNotEmpty()) {
+                Outcome.pass(
+                    onlyTrusted("are built for Android 8.1 or older", trusted.map { packages.label(it.packageName) }),
+                    evidence,
+                )
+            } else if (old.isEmpty()) {
                 Outcome.pass("Every installed app targets Android 9 or newer", evidence)
             } else {
                 val names = old.map { packages.label(it.packageName) }.joinNames()

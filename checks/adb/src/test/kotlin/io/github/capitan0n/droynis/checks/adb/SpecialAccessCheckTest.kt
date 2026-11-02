@@ -11,6 +11,7 @@ import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import io.github.capitan0n.droynis.core.Tier
+import io.github.capitan0n.droynis.core.Trust
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
@@ -118,6 +119,33 @@ class SpecialAccessCheckTest {
         assertEquals(Status.FAIL, outcome.status)
         assertEquals("1 app can draw over other apps: Bubbles", outcome.summary)
         assertEquals("Bubbles (org.example.bubbles)", outcome.evidence.single { it.label == "Display over other apps" }.value)
+    }
+
+    @Test
+    fun `a trusted app is listed but not counted`() = runTest {
+        val dump = dump(
+            app("u0a130", "org.example.bubbles", "SYSTEM_ALERT_WINDOW", "allow"),
+            app("u0a132", "org.example.files", "SYSTEM_ALERT_WINDOW", "allow"),
+        )
+        val trustBubbles = context.copy(trustedApps = setOf("org.example.bubbles"))
+
+        val one = check(Access.OVERLAY, dump).run(trustBubbles)
+        assertEquals(Status.FAIL, one.status)
+        assertEquals("1 app can draw over other apps: Files", one.summary)
+        val bubbles = one.evidence.single { it.packageName == "org.example.bubbles" }
+        assertEquals(Trust.TRUSTED, bubbles.trust)
+        assertEquals("trusted by you, not counted", bubbles.note)
+        assertEquals(Trust.COUNTED, one.evidence.single { it.packageName == "org.example.files" }.trust)
+
+        val both = check(Access.OVERLAY, dump).run(
+            trustBubbles.copy(trustedApps = trustBubbles.trustedApps + "org.example.files"),
+        )
+        assertEquals(Status.PASS, both.status)
+        assertEquals("Only apps you trust can draw over other apps: Bubbles and Files", both.summary)
+
+        // Trust covers every access the app holds.
+        val files = check(Access.ALL_FILES, dump(app("u0a130", "org.example.bubbles", "MANAGE_EXTERNAL_STORAGE", "allow")))
+        assertEquals(Status.PASS, files.run(trustBubbles).status)
     }
 
     @Test

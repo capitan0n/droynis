@@ -109,6 +109,8 @@ object CatalogDoc {
         appendLine()
         appendLine("Severity sets a failed check's weight in the score: $weights.")
         appendLine("Any critical failure caps the score at ${HardeningIndex.CRITICAL_CAP}, and muted checks don't count.")
+        appendLine("You can trust an app that needs a lot of access, such as a watch app: every check that lists apps")
+        appendLine("still lists it, but none counts it.")
         appendLine()
         appendLine("| Tier | Checks |")
         appendLine("|---|---|")

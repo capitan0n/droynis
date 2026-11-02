@@ -36,14 +36,22 @@ fun originOf(packageName: String, apps: Map<String, InstalledApp>?): AppOrigin {
 
 /** An app that holds a powerful access, and where it came from. */
 internal data class Holder(val app: AppRef, val origin: AppOrigin) {
-    fun evidence(label: String, source: Source, counted: Boolean = true) = Evidence(
+    /** [trusted]: the user trusts this app, so it is listed but not counted. */
+    fun evidence(label: String, source: Source, counted: Boolean = true, trusted: Boolean = false) = Evidence(
         label,
         "${app.label} (${app.packageName})",
         source,
-        note = origin.note + if (counted) "" else "; not counted",
+        note = origin.note + when {
+            trusted -> "; $TRUSTED_NOTE"
+            counted -> ""
+            else -> "; not counted"
+        },
         packageName = app.packageName,
+        trust = trustOf(counted, trusted),
     )
 }
+
+internal fun List<Holder>.labels(): List<String> = map { it.app.label }
 
 internal fun holders(apps: List<AppRef>, inventory: Map<String, InstalledApp>?): List<Holder> =
     apps.map { Holder(it, originOf(it.packageName, inventory)) }

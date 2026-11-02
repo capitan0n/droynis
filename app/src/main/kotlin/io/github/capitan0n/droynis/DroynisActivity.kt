@@ -95,6 +95,10 @@ class DroynisActivity : ComponentActivity(), AppActions {
 
     override fun unmuteAll() = viewModel.unmuteAll()
 
+    override fun setTrusted(packageName: String, trusted: Boolean) = viewModel.setTrusted(packageName, trusted)
+
+    override fun untrustAll() = viewModel.untrustAll()
+
     override fun setHidePersonal(hide: Boolean) = viewModel.setHidePersonal(hide)
 
     override fun requestShizuku() = viewModel.requestShizuku()

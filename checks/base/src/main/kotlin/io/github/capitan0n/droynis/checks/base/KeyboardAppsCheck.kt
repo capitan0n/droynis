@@ -33,11 +33,18 @@ class KeyboardAppsCheck(private val inputMethods: InputMethodProbe) : Check {
 
     override suspend fun run(context: ScanContext): Outcome {
         val keyboards = inputMethods.enabledKeyboards()
-        val evidence = keyboardEvidence(keyboards)
+        val evidence = keyboardEvidence(keyboards, context)
         return keyboards.evaluate("Enabled keyboards", evidence) { all ->
-            val thirdParty = all.filterNot { it.isSystem }.map { it.app }.distinctBy { it.packageName }
+            val (trusted, thirdParty) = context.splitTrusted(
+                all.filterNot { it.isSystem }.map { it.app }.distinctBy { it.packageName },
+            ) { it.packageName }
             when {
                 all.isEmpty() -> Outcome.unknown("The system reported no enabled keyboard", evidence)
+                thirdParty.isEmpty() && trusted.isNotEmpty() -> Outcome.pass(
+                    "Only built-in keyboards and keyboards you trust are enabled: " +
+                        all.map { it.app.label }.distinct().joinNames(),
+                    evidence,
+                )
                 thirdParty.isEmpty() -> Outcome.pass(
                     "Only built-in keyboards are enabled: ${all.map { it.app.label }.distinct().joinNames()}",
                     evidence,
@@ -51,10 +58,19 @@ class KeyboardAppsCheck(private val inputMethods: InputMethodProbe) : Check {
         }
     }
 
-    private fun keyboardEvidence(keyboards: Reading<List<Keyboard>>): List<Evidence> = when (keyboards) {
+    private fun keyboardEvidence(keyboards: Reading<List<Keyboard>>, context: ScanContext): List<Evidence> = when (keyboards) {
         is Reading.Value -> keyboards.value.map {
             val origin = if (it.isSystem) "built-in" else "third-party"
-            Evidence("Keyboard", "${it.app.label} (${it.app.packageName}), $origin", keyboards.source, packageName = it.app.packageName)
+            // Built-in keyboards never count, so only third-party ones can be trusted.
+            val trusted = !it.isSystem && context.trusts(it.app.packageName)
+            Evidence(
+                "Keyboard",
+                "${it.app.label} (${it.app.packageName}), $origin",
+                keyboards.source,
+                note = withTrustNote(null, trusted),
+                packageName = it.app.packageName,
+                trust = trustOf(counted = !it.isSystem, trusted = trusted),
+            )
         }.ifEmpty { listOf(Evidence("Keyboard", "none", keyboards.source)) }
         else -> listOf(keyboards.toEvidence("Keyboards"))
     }

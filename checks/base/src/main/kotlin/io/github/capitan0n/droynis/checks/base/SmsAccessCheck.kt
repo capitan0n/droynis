@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
@@ -68,24 +69,54 @@ class SmsAccessCheck(
         // Preinstalled holders are only counted, so only the others need a label: loading one opens
         // that app's resources, and a phone can have dozens of preinstalled holders.
         val origins = unexplained.mapValues { (pkg, _) -> originOf(pkg, inventory) }
-        val counted = unexplained.filterKeys { origins.getValue(it) != AppOrigin.PREINSTALLED }
+        val countable = unexplained.filterKeys { origins.getValue(it) != AppOrigin.PREINSTALLED }
             .map { (pkg, held) -> Holder(AppRef(pkg, packages.label(pkg)), origins.getValue(pkg)) to held }
-        val preinstalled = unexplained.size - counted.size
+        val preinstalled = unexplained.size - countable.size
+        val (trusted, counted) = context.splitTrusted(countable) { it.first.app.packageName }
+
+        // The role rows name the default apps. One that also counts (another permission, or installed
+        // from outside an app store) gets the same Trust button as its row below; one that doesn't
+        // says why, so a missing button isn't a mystery.
+        fun roleRow(row: Evidence, role: String): Evidence {
+            val pkg = row.packageName ?: return row
+            val isTrusted = trusted.any { it.first.app.packageName == pkg }
+            val isCounted = counted.any { it.first.app.packageName == pkg }
+            return when {
+                isTrusted -> row.copy(note = TRUSTED_NOTE, trust = Trust.TRUSTED)
+                isCounted -> row.copy(note = "also listed below, where it counts", trust = Trust.COUNTED)
+                // It holds more than its role needs, but came with the phone.
+                pkg in unexplained -> row.copy(note = "came with the phone; not counted", trust = Trust.NOT_COUNTED)
+                else -> row.copy(note = "allowed for your $role app; not counted", trust = Trust.NOT_COUNTED)
+            }
+        }
 
         val evidence = buildList {
-            addAll(defaultsEvidence)
-            counted.forEach { (holder, held) ->
+            add(roleRow(defaultsEvidence[0], "SMS"))
+            add(roleRow(defaultsEvidence[1], "phone"))
+            countable.forEach { (holder, held) ->
+                val isTrusted = trusted.any { it.first == holder }
                 add(
                     Evidence(
                         "Can read your ${describe(held)}",
                         "${holder.app.label} (${holder.app.packageName})",
                         granted.source,
-                        note = holder.origin.note + roleNote(holder.app.packageName, smsApp, phoneApp),
+                        note = withTrustNote(holder.origin.note + roleNote(holder.app.packageName, smsApp, phoneApp), isTrusted),
                         packageName = holder.app.packageName,
+                        trust = trustOf(counted = true, trusted = isTrusted),
                     ),
                 )
             }
             if (preinstalled > 0) add(Evidence("Apps that came with the phone and can read them", preinstalled.toString(), granted.source))
+        }
+        if (counted.isEmpty() && trusted.isNotEmpty()) {
+            return Outcome.pass(
+                onlyTrusted(
+                    "can read SMS or the call log",
+                    trusted.map { it.first.app.label },
+                    others = "your SMS and phone apps, apps that came with the phone",
+                ),
+                evidence,
+            )
         }
         if (counted.isEmpty()) {
             return Outcome.pass("Only your SMS and phone apps and apps that came with the phone can read SMS or the call log", evidence)

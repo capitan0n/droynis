@@ -10,6 +10,8 @@ N/A, never Passed.
 
 Severity sets a failed check's weight in the score: critical 10, warning 5, notice 2, info 0.
 Any critical failure caps the score at 40, and muted checks don't count.
+You can trust an app that needs a lot of access, such as a watch app: every check that lists apps
+still lists it, but none counts it.
 
 | Tier | Checks |
 |---|---|

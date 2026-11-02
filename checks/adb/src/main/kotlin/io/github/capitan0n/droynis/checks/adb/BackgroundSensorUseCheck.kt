@@ -3,6 +3,10 @@ package io.github.capitan0n.droynis.checks.adb
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.count
 import io.github.capitan0n.droynis.checks.base.joinNames
+import io.github.capitan0n.droynis.checks.base.onlyTrusted
+import io.github.capitan0n.droynis.checks.base.splitTrusted
+import io.github.capitan0n.droynis.checks.base.trustOf
+import io.github.capitan0n.droynis.checks.base.withTrustNote
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
@@ -101,18 +105,33 @@ class BackgroundSensorUseCheck(
             )
         }
 
-        val latest = userHits
+        val all = userHits
             .groupBy { it.packageName to SENSORS.getValue(it.op) }
             .map { (key, accesses) -> key to accesses.minBy { it.ago } }
             .sortedWith(compareBy({ it.first.second.ordinal }, { it.second.ago }))
-        val evidence = listOf(checked) + latest.map { (key, access) ->
+        val (trusted, latest) = context.splitTrusted(all) { it.first.first }
+        val evidence = listOf(checked) + all.map { (key, access) ->
             val (pkg, sensor) = key
+            val isTrusted = trusted.any { it.first == key }
             Evidence(
                 sensor.label,
                 "${packages.label(pkg)} ($pkg)",
                 source,
-                note = "last used ${describe(access.ago)}, ${STATE_NAMES[access.uidState] ?: "in app state \"${access.uidState}\""}",
+                note = withTrustNote(
+                    "last used ${describe(access.ago)}, ${STATE_NAMES[access.uidState] ?: "in app state \"${access.uidState}\""}",
+                    isTrusted,
+                ),
                 packageName = pkg,
+                trust = trustOf(counted = true, trusted = isTrusted),
+            )
+        }
+        if (latest.isEmpty()) {
+            return Outcome.pass(
+                onlyTrusted(
+                    "used the camera, microphone or location from the background in the last ${WINDOW.inWholeDays} days",
+                    trusted.map { packages.label(it.first.first) },
+                ),
+                evidence,
             )
         }
         val names = latest.map { packages.label(it.first.first) }.distinct()

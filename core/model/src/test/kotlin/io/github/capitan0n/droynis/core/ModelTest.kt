@@ -15,6 +15,20 @@ class ModelTest {
     }
 
     @Test
+    fun `a scan trusts apps by package`() {
+        val context = ScanContext(startedAt = java.time.ZonedDateTime.now(), sdkInt = 37, trustedApps = setOf("org.example.watch"))
+        assertEquals(true, context.trusts("org.example.watch"))
+        assertEquals(false, context.trusts("org.example.other"))
+        assertEquals(false, context.trusts(null))
+    }
+
+    @Test
+    fun `only evidence that names an app can be trusted`() {
+        assertFailsWith<IllegalArgumentException> { Evidence("Listener", "x", Source("test"), trust = Trust.TRUSTED) }
+        Evidence("Listener", "x", Source("test"), packageName = "org.example", trust = Trust.TRUSTED)
+    }
+
+    @Test
     fun `checks cannot claim a minSdk below the app's`() {
         assertFailsWith<IllegalArgumentException> { spec(minSdk = 23) }
     }
