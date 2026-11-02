@@ -106,7 +106,10 @@ class ShizukuChecksTest {
         }
         val specs = shizukuChecks(probes).map { it.spec }
 
-        assertEquals(listOf("INTG-1201", "INTG-1202", "ACCS-2201", "NETW-3201", "NETW-3202", "NETW-3203"), specs.map { it.id })
+        assertEquals(
+            listOf("INTG-1201", "INTG-1202", "ACCS-2201", "ACCS-2202", "APPS-4201", "APPS-4202", "NETW-3201", "NETW-3202", "NETW-3203"),
+            specs.map { it.id },
+        )
         assertEquals(setOf(Tier.SHIZUKU), specs.map { it.requiredTier }.toSet())
     }
 

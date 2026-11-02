@@ -12,4 +12,5 @@ fun adbChecks(probes: AdbProbes): List<Check> = listOf(
     BackgroundSensorUseCheck(probes.dumpsys, probes.packages),
 ) + SpecialAccessCheck.Access.entries.map { SpecialAccessCheck(it, probes.dumpsys, probes.packages) } +
     WifiMacCheck(probes.dumpsys) +
-    OpenWifiCheck(probes.dumpsys, probes.policy)
+    OpenWifiCheck(probes.dumpsys, probes.policy) +
+    HotspotCheck(probes.dumpsys)

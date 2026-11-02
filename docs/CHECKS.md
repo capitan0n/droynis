@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 75 checks.
+Every check Droynis runs, by privilege tier and category: 80 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -15,9 +15,9 @@ still lists it, but none counts it.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 51 |
-| [ADB](#adb-tier) | 11 |
-| [Shizuku](#shizuku-tier) | 6 |
+| [Base](#base-tier) | 52 |
+| [ADB](#adb-tier) | 12 |
+| [Shizuku](#shizuku-tier) | 9 |
 | [Root](#root-tier) | 7 |
 
 ## Base tier
@@ -65,6 +65,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4013](#apps-4013-apps-that-skip-battery-optimization) | Apps that skip battery optimization | Info | an app you installed may skip battery optimization (information only) |
 | [APPS-4014](#apps-4014-google-play-services) | Google Play services | Info | Google Play services is built into the system, with privileged access (information only) |
 | [APPS-4015](#apps-4015-app-scanning-play-protect) | App scanning (Play Protect) | Warning | the install-time app verifier (Play Protect) is turned off |
+| [APPS-4016](#apps-4016-apps-with-shizuku-access) | Apps with Shizuku access | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -396,6 +397,14 @@ Before an app is installed, Android asks the package verifier (Play Protect on p
 
 **What to do:** Turn scanning back on in Play Protect (Play Store › your profile › Play Protect › Settings › Scan apps with Play Protect), or under Settings › Security. The verifier only scans; it still lets you install an app it warns about.
 
+#### APPS-4016 Apps with Shizuku access
+
+Notice · Android 8.0 and later · fails when an app other than Droynis may use Shizuku (a warning when it came from outside an app store)
+
+Shizuku gives the apps you allow the rights of adb, or of root when Shizuku runs with root. Such an app can install apps and grant them permissions, read the system log, change hidden settings, take screenshots and tap the screen for you, without asking again. Allow only apps you trust; one installed from outside an app store is a warning. Sui, the variant for rooted phones, keeps its own list, which Droynis can't read.
+
+**What to do:** Open Shizuku, tap Application management ("Authorized … applications") and turn off the apps you no longer use or don't fully trust. Settings › Apps › the app › Permissions › Shizuku › Don't allow does the same.
+
 ### Network and radios
 
 #### NETW-3001 Private DNS
@@ -520,6 +529,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4108](#apps-4108-apps-that-can-record-the-screen-without-asking) | Apps that can record the screen without asking (Android 10+) | Warning | a user app may record or cast the screen without asking |
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
+| [NETW-3103](#netw-3103-hotspot-security) | Hotspot security (Android 14+) | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
 
 ### Access control
 
@@ -615,6 +625,14 @@ A network without a password, open, Enhanced Open or WEP, proves nothing about w
 
 **What to do:** Open Settings › Network & internet › Internet (or Wi-Fi) › Saved networks, tap each network listed and turn off "Automatically connect", or forget it. Join such networks by hand, with a VPN.
 
+#### NETW-3103 Hotspot security
+
+Notice · Android 14 and later · fails when the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected
+
+While the hotspot is on, every device that joins it uses your mobile data and shares a network with your phone. Without a password (security None, or Enhanced Open, which only encrypts the radio link) anyone in range can join. A hotspot that turns itself off once no device is connected isn't left on by accident. Android keeps these settings in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
+
+**What to do:** Open Settings › Network & internet › Hotspot & tethering › Wi-Fi hotspot. Set Security to WPA3-Personal, or WPA2/WPA3-Personal if older devices must join, with a long password, and turn on "Turn off hotspot automatically".
+
 ## Shizuku tier
 
 [Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the real USB debugging state on Android 17, the SIM PIN lock and the Allow 2G switch, and also runs every ADB-tier check.
@@ -630,6 +648,9 @@ A network without a password, open, Enhanced Open or WEP, proves nothing about w
 | [INTG-1201](#intg-1201-selinux-mode) | SELinux mode | Critical | SELinux is permissive or disabled |
 | [INTG-1202](#intg-1202-spoofed-boot-properties) | Spoofed boot properties | Warning | a security-relevant ro.boot.* property differs from the kernel command line (a props spoofer) |
 | [ACCS-2201](#accs-2201-sim-card-pin) | SIM card PIN (Android 11+) | Notice | a SIM in use has its PIN turned off |
+| [ACCS-2202](#accs-2202-device-controls-on-the-lock-screen) | Device controls on the lock screen (Android 13+) | Notice | device controls can be used without unlocking the phone |
+| [APPS-4201](#apps-4201-passkey-and-password-providers) | Passkey and password providers (Android 14+) | Notice | a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store) |
+| [APPS-4202](#apps-4202-clipboard-access-alerts) | Clipboard access alerts (Android 12+) | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | [NETW-3201](#netw-3201-always-on-vpn-lockdown) | Always-on VPN lockdown | Notice | an always-on VPN lets traffic out while it is down |
 | [NETW-3202](#netw-3202-mobile-network-encryption) | Mobile network encryption (Android 14+) | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
 | [NETW-3203](#netw-3203-mobile-network-security-alerts) | Mobile network security alerts (Android 15+) | Notice | the phone doesn't warn about signs of a fake cell tower (Network notifications are off) |
@@ -661,6 +682,32 @@ Notice · Android 11 and later · fails when a SIM in use has its PIN turned off
 Without a SIM PIN, whoever takes the SIM out of a lost or stolen phone can put it in another phone and receive your calls and texts, including the one-time codes that reset bank and email passwords. With the PIN on, the SIM stays locked after every restart until the PIN is entered. Most operators ship SIMs with a PIN, but it is easy to turn off.
 
 **What to do:** Turn on the SIM card lock (Settings › Security › SIM card lock, or Security & privacy › More security settings; the place varies by vendor) and change the PIN from the one printed on the SIM's card. Keep the PUK code somewhere safe: three wrong PINs lock the SIM until it is entered.
+
+#### ACCS-2202 Device controls on the lock screen
+
+Notice · Android 13 and later · fails when device controls can be used without unlocking the phone
+
+Device controls switch smart home devices, such as lights, plugs, heating or a lock, from the phone. With "Show device controls" and "Use device controls" ("Control from locked device" on Android 13) both on, anyone holding your locked phone can use each control whose app doesn't ask for the unlock; the app decides which ones do. Android hides these switches from apps; the shell user Shizuku runs as can read them.
+
+**What to do:** Open Settings › Display › Lock screen and turn off "Use device controls" ("Control from locked device" on Android 13), or "Show device controls".
+
+### Apps and permissions
+
+#### APPS-4201 Passkey and password providers
+
+Notice · Android 14 and later · fails when a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store)
+
+Since Android 14, password managers can serve passkeys and passwords to every app through Android's Credential Manager. A provider you turn on keeps what you save with it, and is asked each time an app or website wants you to sign in, so it also learns where you have accounts. Providers that came with the phone are listed but don't count; any other one should come from a developer you trust, and one installed from outside an app store is a warning. Android hides this list from apps; the shell user Shizuku runs as can read it.
+
+**What to do:** Open Settings › Passwords, passkeys & accounts and turn off the providers you don't use, under Preferred service and Additional services.
+
+#### APPS-4202 Clipboard access alerts
+
+Notice · Android 12 and later · fails when "Show clipboard access" is off, so apps read the clipboard silently
+
+What you copy often holds passwords, one-time codes, addresses or crypto wallet addresses. Since Android 12 a short message tells you when an app reads it, so an app that reads the clipboard without you pasting shows itself. Turning "Show clipboard access" off hides that. Android hides this switch from apps; the shell user Shizuku runs as can read it.
+
+**What to do:** Open Settings › Privacy (Settings › Security & privacy › Privacy controls on newer phones) and turn on "Show clipboard access"; searching Settings for "clipboard" finds it too.
 
 ### Network and radios
 

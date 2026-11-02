@@ -41,6 +41,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     KeyboardAppsCheck(probes.inputMethods),
     AutofillServiceCheck(probes.autofill, probes.packages),
     AssistantAppCheck(probes.settings, probes.packages),
+    ShizukuAppsCheck(probes.permissions, probes.packages),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
     PlayProtectCheck(probes.settings),

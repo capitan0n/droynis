@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 75 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 80 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -10,7 +10,7 @@ Android (API 37, October 2026) and the decisions taken so far.
 |---|---|---|---|
 | 1 | Verify boot state with on-device key attestation, like Auditor | The chain is signed in hardware, but the code that verifies it runs inside the OS being judged; a rooted OS can hook the verifier. Auditor is trustworthy because a *second* device or server verifies and pins. | Present it as posture ("self-attested"), never as proof. Allow exporting the raw chain for off-device verification. Trust both Google roots: the legacy RSA root and the ECDSA P-384 root that RKP devices use exclusively since April 2026. Reuse Auditor's (MIT) verified-boot key table and keep it current. |
 | 2 | List apps with permissions, accessibility, admins… | Since API 30 package visibility hides most apps unless the app holds `QUERY_ALL_PACKAGES`. Without it, invisible apps produce false PASSes. | Declare `QUERY_ALL_PACKAGES` (fine on F-Droid; Play restricts it). |
-| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via `dumpsys appops` (ADB tier, or Shizuku) for the app-op switches and `settings get` through Shizuku for hidden keys. Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). |
+| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via `dumpsys appops` (ADB tier, or Shizuku) for the app-op switches and `settings get` through Shizuku for hidden keys. Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). Neither do `credential_service`, `credential_service_primary`, `clipboard_show_access_notifications` and the `lockscreen_*` device control and wallet keys (Android 13 to 17), so the checks that need them are in the Shizuku tier. |
 | 4 | Probe at runtime instead of branching on Android version | Calling an API newer than the device throws `NoSuchMethodError`, and lint's `NewApi` fails the build without an `SDK_INT` guard. | Version checks decide *whether an API exists* (`CheckSpec.minSdk`, `SDK_INT` guards in adapters). Runtime probing handles *content*: missing settings, OEM differences, `SecurityException`. Every probe returns a `Reading` instead of throwing. |
 | 5 | `PACKAGE_USAGE_STATS` is an ADB grant | Settings › Usage access sets only the app-op, which is enough for `UsageStatsManager`. dumpsys services that show per-app data (`DumpUtils.checkUsageStatsPermission`, Android 17) also require the permission itself, which only `pm grant` gives. | `Grant.PACKAGE_USAGE_STATS` means the permission (ADB tier). A future `UsageStatsManager` check would add a base-tier usage-access grant. |
 | 6 | `READ_LOGS` grant survives reboots and unlocks logcat | Since Android 13 every logcat session also needs a per-session "Allow access to all device logs?" dialog, shown only while the app is in the foreground. SELinux denials are noisy on production builds. | Logcat scan is interactive only. For crash loops, evaluate `DropBoxManager` (`READ_LOGS` + usage access) instead of parsing logcat. |
@@ -125,6 +125,18 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   foreground location permission, from the same `GET_PERMISSIONS` read as the SMS checks. Apps that
   target Android 9 or older get the background permission with the foreground one and are seen the
   same way. Preinstalled holders are counted, not named.
+- **Shizuku access** (APPS-4016): apps granted `moe.shizuku.manager.permission.API_V23`, from the same
+  `GET_PERMISSIONS` read as the SMS checks. The Shizuku app defines it as a dangerous permission and
+  the Shizuku library adds it to every client's manifest. Shizuku's server grants it when the user
+  allows an app for good, revokes it when they turn the app off, and on each start reads its own list
+  back from it (`ShizukuService.dispatchPermissionConfirmationResult` and `updateFlagsForUid`,
+  `ShizukuConfigManager`, Shizuku 13), so the granted flag is the stored answer and no privilege is
+  needed. Every holder counts, whatever its origin: someone allowed it. Droynis is left out (its own
+  shell is the Shizuku tier) and named when connected. Not seen: "Allow this time", which lasts only
+  while that app runs; an app that doesn't declare the permission (Shizuku sends its binder only to
+  apps that do); and Sui, which keeps its own list and defines no permission. The Shizuku app's list was
+  rejected as a source: `getFlagsForUid` answers only the Shizuku app itself, and its file
+  (`/data/user_de/0/com.android.shell/shizuku.json`) needs a new shell command for the same answer.
 - **Battery optimization** (APPS-4013): `PowerManager.isIgnoringBatteryOptimizations(pkg)` needs no
   permission and answers for any package; DeviceIdleController answers false for packages hidden from
   the caller (`filterAppAccess`), which `QUERY_ALL_PACKAGES` rules out. It covers the vendor's
@@ -212,6 +224,43 @@ holds every permission adb can grant, so `Capabilities.has` lets SHIZUKU cover t
 grants, and `dumpsys` falls back to the shell when the app itself lacks DUMP and
 PACKAGE_USAGE_STATS. A scan connects the shell first (up to 10 s), and the app scans again when
 Shizuku starts or allows Droynis.
+
+### Hidden settings through Shizuku
+
+Three Shizuku-tier checks read Settings keys that are hidden and not `@Readable` (row 3), with
+`settings get secure` as the shell user, or through root:
+
+- **Device controls on the lock screen** (ACCS-2202, Android 13+): SystemUI reads
+  `lockscreen_show_controls` and `lockscreen_allow_trivial_controls` with a default of 0
+  (`ControlsSettingsRepositoryImpl`, Android 17). Without the first, the controls and the lock
+  screen's Home shortcut open only after unlocking (`ControlsComponent.getVisibility`). With both on,
+  a control acts without the unlock unless its app marks it as needing authentication
+  (`ControlActionCoordinatorImpl.bouncerOrRun`): that is the FAIL. "Show wallet"
+  (`lockscreen_show_wallet`, default 0 in `QuickAccessWalletClientImpl`) only shows the cards;
+  whether one pays while locked is up to the wallet app and Secure NFC (NETW-3011), so it is
+  evidence only. Settings calls the second switch "Control from locked device" in Android 13 and
+  "Use device controls" from Android 14.
+- **Passkey and password providers** (APPS-4201, Android 14+): `credential_service` holds every
+  enabled Credential Manager provider, the set `CredentialManagerService` asks on each request
+  (`getEnabledProvidersForUser`), as flattened component names separated by ':';
+  `credential_service_primary` the preferred ones, which only come first in the picker. A preferred
+  provider missing from the enabled list is listed all the same. Unset and empty both mean none to
+  the service. No public API lists other apps' providers: `getCredentialProviderServices` is hidden
+  and `isEnabledCredentialProviderService` answers only for the caller's own package. Providers built
+  into the system (Google Password Manager in Play services) are listed, not counted,
+  like the autofill service; installed ones count, sideloaded ones raise it to WARNING.
+- **Clipboard access alerts** (APPS-4202, Android 12+): `ClipboardService` shows "<app> pasted from
+  your clipboard" unless `clipboard_show_access_notifications` is 0; the keyboard, the app the clip
+  came from and a few system services never trigger it. Unset falls back to the DeviceConfig flag
+  `clipboard/show_access_notifications`, true in AOSP, in both ClipboardService and Settings, so
+  unset is a PASS (the evidence says "on by default"). A vendor that flips the flag remotely would
+  make that a false PASS; apps can't read DeviceConfig, and the shell service runs no `device_config`.
+
+Not a check: Enhanced PIN privacy (Android 13+), which hides the PIN pad's tap animations. It lives in
+LockSettings (`pin_enhanced_privacy`), not the Settings provider, and its reads need
+`ACCESS_KEYGUARD_SECURE_STORAGE`. Its default also changed: off up to Android 16, while Android 17
+takes it from a device resource behind a flag. Neither the shell nor an unset value would give a
+trustworthy answer.
 
 ### Root
 
@@ -335,6 +384,24 @@ reads as on, the network is listed but not counted. Network names, identities an
 lines the parser skips, or in fields that must appear exactly once, and a name with a line break
 breaks its own header; any of these makes the result UNKNOWN, never a PASS. Names are `personal`.
 
+### Hotspot
+
+NETW-3103 (ADB tier, DUMP only, Android 14+) reads the saved hotspot settings from `dumpsys wifi`:
+`WifiServiceImpl.dump` prints `WifiApConfigStore config: ` followed by `SoftApConfiguration.toString()`,
+one field per line, then an empty line. Checked against Android 14, 15, 16 and 17; Android 11 to 13
+don't print the saved settings there, hence `minSdk` 34. Four
+fields are kept: the security type, whether a password is set (the dump prints `<non-empty>`, never
+the password), "Turn off hotspot automatically" and its delay. Open (0), Enhanced Open (5) and its
+transition mode (4) let anyone in range join: a FAIL raised to WARNING. Auto-off disabled alone is a
+NOTICE FAIL. WPA2-Personal passes, since it still needs the password and older devices need it. A
+security type without the matching password state, which `SoftApConfiguration.Builder` refuses, or an
+unknown type, is UNKNOWN. The hotspot's name is the only free text, on the first line and at most 32
+bytes: a name with a line break can add one field line, which then appears twice, or end the block
+early, which leaves a field missing; a second `WifiApConfigStore config:` line, for example from a
+nearby network's name elsewhere in the dump, makes it ambiguous. All of these are UNKNOWN, never a
+PASS. Neither the name nor any address is stored. The judgement is of the saved settings, whether or
+not the hotspot is on now.
+
 ### Smart Lock
 
 ACCS-2101 (ADB tier, DUMP only) reads `dumpsys trust`: for the current user, whether a trust agent
@@ -419,8 +486,8 @@ counting it.
 - It is never silent: ⋮ › Trusted apps lists every trusted app with the checks that list it, JSON
   reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
   name them in the header.
-- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4101 to 4108, APPS-4301 and
-  NETW-3301.
+- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4101 to 4108, APPS-4201,
+  APPS-4301 and NETW-3301.
 - Limit: trust follows the package name, not the signing key. An app reinstalled under the same
   name by someone else keeps its trust; Android refuses such an update while the original is
   installed, but not after an uninstall.

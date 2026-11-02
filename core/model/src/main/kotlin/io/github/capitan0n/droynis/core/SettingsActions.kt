@@ -17,6 +17,13 @@ object SettingsActions {
      */
     const val PRIVACY = "android.settings.PRIVACY_SETTINGS"
 
+    /**
+     * Hidden from the public SDK (`Settings.ACTION_PRIVACY_CONTROLS`): Privacy controls, with the
+     * camera and microphone switches and "Show clipboard access" (Android 13+). The AOSP Settings app
+     * exports it.
+     */
+    const val PRIVACY_CONTROLS = "android.settings.PRIVACY_CONTROLS"
+
     /** `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS` */
     const val DEVELOPER_OPTIONS = "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"
 
@@ -25,6 +32,15 @@ object SettingsActions {
 
     /** `Settings.ACTION_WIFI_SETTINGS` */
     const val WIFI = "android.settings.WIFI_SETTINGS"
+
+    /**
+     * Hidden from the public SDK (`Settings.ACTION_WIFI_TETHER_SETTING`): the Wi-Fi hotspot screen,
+     * with its security, password and "Turn off hotspot automatically". The AOSP Settings app exports it.
+     */
+    const val WIFI_HOTSPOT = "com.android.settings.WIFI_TETHER_SETTINGS"
+
+    /** System API (`Settings.ACTION_TETHER_SETTINGS`): Hotspot & tethering. The AOSP Settings app exports it. */
+    const val TETHERING = "android.settings.TETHER_SETTINGS"
 
     /** `Settings.ACTION_DATA_ROAMING_SETTINGS`: the Mobile network page, with network mode and Allow 2G. */
     const val MOBILE_NETWORK = "android.settings.DATA_ROAMING_SETTINGS"
@@ -52,6 +68,13 @@ object SettingsActions {
 
     /** `Settings.ACTION_DISPLAY_SETTINGS`: screen timeout. */
     const val DISPLAY = "android.settings.DISPLAY_SETTINGS"
+
+    /**
+     * Hidden from the public SDK (`Settings.ACTION_LOCKSCREEN_SETTINGS`): Lock screen, with "Show
+     * wallet", "Show device controls" and the switch that lets them work while locked (Android 13+).
+     * The AOSP Settings app exports it.
+     */
+    const val LOCK_SCREEN = "android.settings.LOCK_SCREEN_SETTINGS"
 
     /** `Settings.ACTION_ACCESSIBILITY_SETTINGS` */
     const val ACCESSIBILITY = "android.settings.ACCESSIBILITY_SETTINGS"
