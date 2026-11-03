@@ -24,8 +24,10 @@ class OemUnlockingCheck(private val properties: SystemProperties) : Check {
             "phone can be reset and resold, and it is the first step to installing a modified system.",
         remediation = Remediation(
             text = "Turn off OEM unlocking in Developer options. The switch is greyed out while the bootloader " +
-                "is unlocked or when the carrier does not allow unlocking.",
+                "is unlocked or when the carrier does not allow unlocking. If Developer options are off, turn them on " +
+                "first: in About phone, tap Build number seven times.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "oem_unlock_enable",
         ),
         failsWhen = "the OEM unlocking switch is on",
     )

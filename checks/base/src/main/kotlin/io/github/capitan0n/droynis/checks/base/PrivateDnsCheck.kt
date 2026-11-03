@@ -28,6 +28,7 @@ class PrivateDnsCheck(private val network: NetworkProbe) : Check {
                 "\"Private DNS provider hostname\" and enter a privacy-respecting resolver such as " +
                 "dns.quad9.net.",
             settingsActions = listOf(SettingsActions.NETWORK),
+            highlightKey = "private_dns_settings",
         ),
         minSdk = 28,
         failsWhen = "DNS isn't encrypted and no VPN is active",

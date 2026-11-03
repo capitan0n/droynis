@@ -147,8 +147,11 @@ interface AppActions {
     /** Turns the root tier off: Droynis runs su no more. */
     fun disableRoot()
 
-    /** Opens the first Settings screen in [actions] that this phone has. */
-    fun openSettings(actions: List<String>)
+    /**
+     * Opens the first Settings screen in [actions] that this phone has, scrolled to the switch named
+     * [highlightKey] where Settings supports it ([io.github.capitan0n.droynis.core.Remediation.highlightKey]).
+     */
+    fun openSettings(actions: List<String>, highlightKey: String? = null)
 
     /**
      * Opens one app's own Settings screen: the first of [actions] this phone has for [packageName]'s

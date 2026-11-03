@@ -23,7 +23,7 @@ class ScanningCheck(private val settings: SystemSettings) : Check {
         remediation = Remediation(
             text = "Turn off Wi-Fi scanning and Bluetooth scanning under Settings › Location › Location " +
                 "services (on older Android: Location › Scanning).",
-            settingsActions = listOf(SettingsActions.LOCATION),
+            settingsActions = listOf(SettingsActions.LOCATION_SCANNING, SettingsActions.LOCATION),
         ),
         failsWhen = "Wi-Fi or Bluetooth scanning is on",
     )

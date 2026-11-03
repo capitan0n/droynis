@@ -44,6 +44,7 @@ class LockScreenControlsCheck(private val settings: SystemSettings) : Check {
             text = "Open Settings › Display › Lock screen and turn off \"Use device controls\" (\"Control from " +
                 "locked device\" on Android 13), or \"Show device controls\".",
             settingsActions = listOf(SettingsActions.LOCK_SCREEN, SettingsActions.DISPLAY, SettingsActions.SECURITY),
+            highlightKey = "lockscreen_trivial_controls_switch",
         ),
         // "Control from locked device" arrived in Android 13.
         minSdk = 33,

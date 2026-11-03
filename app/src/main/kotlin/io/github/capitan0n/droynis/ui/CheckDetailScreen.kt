@@ -64,11 +64,13 @@ import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.report.verdict
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CheckDetailScreen(
     spec: CheckSpec,
     finding: Finding?,
-    onOpenSettings: (List<String>) -> Unit,
+    /** Opens the check's Settings screen, with the switch to highlight there. */
+    onOpenSettings: (actions: List<String>, highlightKey: String?) -> Unit,
     /** Opens one app's own screen: the check's per-app actions, then App info. */
     onOpenAppSettings: (actions: List<String>, packageName: String) -> Unit,
     onCopy: (label: String, text: String) -> Unit,
@@ -122,9 +124,13 @@ fun CheckDetailScreen(
             }
             if (spec.remediation.settingsActions.isNotEmpty() || command != null) {
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Wraps the second button to its own line on narrow screens or with large text.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     if (spec.remediation.settingsActions.isNotEmpty()) {
-                        Button(onClick = { onOpenSettings(spec.remediation.settingsActions) }) {
+                        Button(onClick = { onOpenSettings(spec.remediation.settingsActions, spec.remediation.highlightKey) }) {
                             Icon(
                                 Icons.AutoMirrored.Rounded.OpenInNew,
                                 contentDescription = null,

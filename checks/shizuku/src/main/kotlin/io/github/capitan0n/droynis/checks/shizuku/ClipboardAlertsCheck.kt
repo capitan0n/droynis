@@ -41,6 +41,7 @@ class ClipboardAlertsCheck(private val settings: SystemSettings) : Check {
             text = "Open Settings › Privacy (Settings › Security & privacy › Privacy controls on newer phones) " +
                 "and turn on \"Show clipboard access\"; searching Settings for \"clipboard\" finds it too.",
             settingsActions = listOf(SettingsActions.PRIVACY_CONTROLS, SettingsActions.PRIVACY),
+            highlightKey = "show_clip_access_notification",
         ),
         minSdk = 31,
         requires = setOf(Grant.SHIZUKU),

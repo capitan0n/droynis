@@ -13,4 +13,5 @@ fun adbChecks(probes: AdbProbes): List<Check> = listOf(
 ) + SpecialAccessCheck.Access.entries.map { SpecialAccessCheck(it, probes.dumpsys, probes.packages) } +
     WifiMacCheck(probes.dumpsys) +
     OpenWifiCheck(probes.dumpsys, probes.policy) +
+    HiddenWifiCheck(probes.dumpsys) +
     HotspotCheck(probes.dumpsys)

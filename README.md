@@ -11,7 +11,7 @@ never changes anything itself.
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
 > but it can't tell you whether that app is malware.
 
-- 80 checks: device integrity, access control, apps and permissions, network and radios. Every
+- 81 checks: device integrity, access control, apps and permissions, network and radios. Every
   check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
@@ -62,7 +62,7 @@ On first install, check that the signing certificate matches the SHA-256 in the 
 | Tier | Setup | Adds |
 |---|---|---|
 | Base | none | 52 checks through public Android APIs |
-| ADB | two grants from a computer, once | 12 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically, hotspot security |
+| ADB | two grants from a computer, once | 13 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically, hidden Wi-Fi networks, hotspot security |
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, device controls on the lock screen, passkey and password providers, clipboard access alerts, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
 | Root | opt-in switch in the app | trusted computers, apps with root, root modules, root boot scripts others can change, programs staged in shared temp, root access over ADB, apps listening on the network; runs the ADB and Shizuku checks |
 

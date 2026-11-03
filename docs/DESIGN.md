@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 80 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 81 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -163,8 +163,19 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   be listed, a mount with no other sign is UNKNOWN. KernelSU's overlayfs over all of /system leaves
   no mount on the directory; there only the first two signs work.
 - **Settings links**: each check opens its screen with plain intent actions, tried in order, then
-  the main Settings screen; an action that opens the wrong screen on older releases is skipped there
-  (`SettingsActions.minSdk`: Privacy opens Backup before Android 10). Evidence that names an app
+  the main Settings screen (`SettingsActions.route`); an action that opens the wrong screen on older
+  releases is skipped there (`SettingsActions.minSdk`: Privacy opens Backup before Android 10, and
+  Passwords & accounts holds the autofill picker only from Android 12), as is one a newer release
+  moved away from (`maxSdk`: Languages & input up to Android 11). Two screens have no action, so
+  they are AOSP's explicit activities (`package/.Class`): Device admin apps, through the alias
+  Settings keeps for old shortcuts, and Languages & input. Face Unlock's screen closes at once
+  without face hardware, so it is tried only on phones that report the feature. Developer options
+  close at once while they are off ("Please enable developer options first"), so with them off the
+  UI opens About phone with Build number highlighted, and a toast says to tap it seven times.
+  A check can name the switch to change (`Remediation.highlightKey`, AOSP's preference key, such as
+  `oem_unlock_enable`); the UI sends it as `:settings:fragment_args_key`, also inside
+  `:settings:show_fragment_args`, and AOSP's Settings scrolls to that row and highlights it. Other
+  Settings apps, and screens without that key, ignore it. Evidence that names an app
   carries its package, and the UI offers a button that opens the check's per-app screen with a
   `package:` URI (All files access, Install unknown apps, Usage access, Modify system settings, Media
   management), else the app's App info. Android's Permission manager (`MANAGE_PERMISSION_APPS`)
@@ -383,6 +394,17 @@ Android 17 prints `mAllowedAutoJoinInAdvancedProtection`; when it is false and A
 reads as on, the network is listed but not counted. Network names, identities and proxies sit on
 lines the parser skips, or in fields that must appear exactly once, and a name with a line break
 breaks its own header; any of these makes the result UNKNOWN, never a PASS. Names are `personal`.
+
+### Hidden Wi-Fi networks
+
+NETW-3104 (ADB tier, DUMP only, Android 12+) uses the same parser: the `HIDDEN:` field
+(`hiddenSSID`) on each saved network's header line. A hidden network sends no name in its beacons,
+so Android sends probe requests that name it, which anyone nearby can log; any hidden saved network,
+suggestions and app requests aside, is a NOTICE FAIL, with whether it joins automatically as a note.
+The header holds free text (the name, a Passpoint provider name and FQDN) before `HIDDEN:` and only
+numbers and switches after it, so the field is read from its last match on the line: a crafted name
+can't fake or mask it. A header without the field leaves that network unknown, and the result
+UNKNOWN unless another network is hidden. Names are `personal`.
 
 ### Hotspot
 

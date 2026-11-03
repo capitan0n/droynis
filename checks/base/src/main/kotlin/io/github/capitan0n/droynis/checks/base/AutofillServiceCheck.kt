@@ -33,9 +33,10 @@ class AutofillServiceCheck(
             "other one should come from a developer you trust, and one installed from outside an app " +
             "store is a warning.",
         remediation = Remediation(
-            text = "Open Settings › Passwords, passkeys & accounts (on older phones Settings › System › " +
-                "Languages & input › Autofill service) and pick a password manager you trust, or None.",
-            settingsActions = listOf(SettingsActions.ACCOUNTS),
+            text = "Open Settings › Passwords, passkeys & accounts (on Android 11 and older Settings › System › " +
+                "Languages & input › Advanced › Autofill service) and pick a password manager you trust, or None.",
+            settingsActions = listOf(SettingsActions.LANGUAGE_AND_INPUT, SettingsActions.ACCOUNTS),
+            highlightKey = "default_autofill",
         ),
         minSdk = 28,
         // Two calls that AutofillManager lets wait up to 5 seconds each.

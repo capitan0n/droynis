@@ -26,6 +26,7 @@ class SecureNfcCheck(private val radios: RadioProbe) : Check {
             text = "Open Settings › Connected devices › Connection preferences › NFC and turn on \"Require " +
                 "device unlock for NFC\" (\"Secure NFC\" on older Android). If you don't use NFC, turn it off.",
             settingsActions = listOf(SettingsActions.NFC),
+            highlightKey = "nfc_secure_settings",
         ),
         // NfcAdapter.isSecureNfcSupported() and isSecureNfcEnabled() arrived in Android 10.
         minSdk = 29,

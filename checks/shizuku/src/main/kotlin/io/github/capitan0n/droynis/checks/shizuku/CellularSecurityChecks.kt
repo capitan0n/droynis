@@ -44,6 +44,7 @@ class CellularEncryptionCheck(private val cellular: CellularProbe) : Check {
                 "Android 14 (the place varies by vendor). If calls or data stop working where you live, turn it off " +
                 "again. Turning off Allow 2G (NETW-3010) blocks the most common way to force a weak connection too.",
             settingsActions = listOf(SettingsActions.CELLULAR_NETWORK_SECURITY, SettingsActions.MOBILE_NETWORK),
+            highlightKey = "require_cellular_encryption",
         ),
         minSdk = 34,
         requires = setOf(Grant.SHIZUKU),
@@ -93,6 +94,7 @@ class CellularAlertsCheck(private val cellular: CellularProbe) : Check {
             text = "Turn on Network notifications: Settings › Security & privacy › More security & privacy › Mobile " +
                 "network security (the place varies by vendor).",
             settingsActions = listOf(SettingsActions.CELLULAR_NETWORK_SECURITY, SettingsActions.SECURITY),
+            highlightKey = "cellular_security_notifications",
         ),
         minSdk = 35,
         requires = setOf(Grant.SHIZUKU),

@@ -31,7 +31,7 @@ class DeviceAdminsCheck(
         remediation = Remediation(
             text = "Review them under Settings › Security › Device admin apps (the location varies by " +
                 "vendor) and deactivate the ones you do not need.",
-            settingsActions = listOf(SettingsActions.SECURITY),
+            settingsActions = listOf(SettingsActions.DEVICE_ADMINS, SettingsActions.SECURITY),
         ),
         failsWhen = "a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store)",
     )

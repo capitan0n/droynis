@@ -256,13 +256,17 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Turns the root tier off: Droynis runs su no more. */
+    /**
+     * Turns the root tier off: Droynis runs su no more. Scans again, so the root checks show as N/A
+     * instead of keeping the results root read, on screen and in reports.
+     */
     fun disableRoot() {
         prefs.edit().putBoolean(KEY_ROOT, false).apply()
         viewModelScope.launch {
             withContext(Dispatchers.IO) { platform.root.disable() }
             refreshRoot()
             message(R.string.root_turned_off)
+            scan()
         }
     }
 

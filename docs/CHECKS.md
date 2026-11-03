@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 80 checks.
+Every check Droynis runs, by privilege tier and category: 81 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -16,7 +16,7 @@ still lists it, but none counts it.
 | Tier | Checks |
 |---|---|
 | [Base](#base-tier) | 52 |
-| [ADB](#adb-tier) | 12 |
+| [ADB](#adb-tier) | 13 |
 | [Shizuku](#shizuku-tier) | 9 |
 | [Root](#root-tier) | 7 |
 
@@ -127,7 +127,7 @@ Notice · Android 8.0 and later · fails when the OEM unlocking switch is on
 
 While OEM unlocking is allowed, the bootloader can be unlocked from a computer in minutes. Unlocking wipes your data, but it also defeats Factory Reset Protection, so a stolen phone can be reset and resold, and it is the first step to installing a modified system.
 
-**What to do:** Turn off OEM unlocking in Developer options. The switch is greyed out while the bootloader is unlocked or when the carrier does not allow unlocking.
+**What to do:** Turn off OEM unlocking in Developer options. The switch is greyed out while the bootloader is unlocked or when the carrier does not allow unlocking. If Developer options are off, turn them on first: in About phone, tap Build number seven times.
 
 #### INTG-1050 Root access
 
@@ -355,7 +355,7 @@ Notice · Android 9 and later · fails when an autofill service from an app you 
 
 The autofill service fills in passwords, addresses and card numbers for you, so it sees the forms you fill in, in every app. Password managers use it; a malicious one reads what you type into login forms. Autofill that came with the phone is part of the system; any other one should come from a developer you trust, and one installed from outside an app store is a warning.
 
-**What to do:** Open Settings › Passwords, passkeys & accounts (on older phones Settings › System › Languages & input › Autofill service) and pick a password manager you trust, or None.
+**What to do:** Open Settings › Passwords, passkeys & accounts (on Android 11 and older Settings › System › Languages & input › Advanced › Autofill service) and pick a password manager you trust, or None.
 
 #### APPS-4011 Digital assistant app
 
@@ -530,6 +530,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 | [NETW-3103](#netw-3103-hotspot-security) | Hotspot security (Android 14+) | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
+| [NETW-3104](#netw-3104-hidden-wi-fi-networks) | Hidden Wi-Fi networks (Android 12+) | Notice | a saved Wi-Fi network is hidden, so the phone calls out its name when it looks for Wi-Fi |
 
 ### Access control
 
@@ -632,6 +633,14 @@ Notice · Android 14 and later · fails when the hotspot has no password (a warn
 While the hotspot is on, every device that joins it uses your mobile data and shares a network with your phone. Without a password (security None, or Enhanced Open, which only encrypts the radio link) anyone in range can join. A hotspot that turns itself off once no device is connected isn't left on by accident. Android keeps these settings in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
 
 **What to do:** Open Settings › Network & internet › Hotspot & tethering › Wi-Fi hotspot. Set Security to WPA3-Personal, or WPA2/WPA3-Personal if older devices must join, with a long password, and turn on "Turn off hotspot automatically".
+
+#### NETW-3104 Hidden Wi-Fi networks
+
+Notice · Android 12 and later · fails when a saved Wi-Fi network is hidden, so the phone calls out its name when it looks for Wi-Fi
+
+A hidden network doesn't announce its name, so a phone that saved one calls out that name when it looks for Wi-Fi, wherever it is. Anyone nearby can log the name to recognize and follow the phone or learn where you live or work, and can set up an access point with the same name to lure the phone in. Hiding a network adds no security: its name still shows in the traffic of every device that uses it. Android keeps the saved networks in its Wi-Fi service, which only the ADB, Shizuku or root tier can read.
+
+**What to do:** On the router, make the network visible again (turn off "Hide SSID" or "Hidden network"). Then forget the network on the phone and join it again, so Android stops calling out its name: Settings › Network & internet › Internet (or Wi-Fi) › Saved networks. Forget hidden networks you no longer use.
 
 ## Shizuku tier
 
@@ -787,7 +796,7 @@ Notice · Android 8.0 and later · fails when a computer is trusted for USB debu
 
 Every computer you once allowed for USB debugging keeps its key on the phone, and gets adb again without asking whenever debugging is on, even after you turn it off and back on. Android 11 and later forget a computer after 7 days without a connection, unless that timeout is turned off. Only root can read the list.
 
-**What to do:** In Developer options tap "Revoke USB debugging authorizations". Your own computer asks again the next time you connect it.
+**What to do:** In Developer options tap "Revoke USB debugging authorizations". Your own computer asks again the next time you connect it. If Developer options are off, turn them on first: in About phone, tap Build number seven times.
 
 ### Apps and permissions
 

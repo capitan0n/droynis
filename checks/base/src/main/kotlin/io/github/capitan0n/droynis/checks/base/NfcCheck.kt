@@ -24,6 +24,7 @@ class NfcCheck(private val radios: RadioProbe) : Check {
         remediation = Remediation(
             text = "Turn NFC off if you do not use contactless payments, transit cards or NFC tags.",
             settingsActions = listOf(SettingsActions.NFC),
+            highlightKey = "toggle_nfc",
         ),
         failsWhen = "NFC is on",
     )

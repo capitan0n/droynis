@@ -3,12 +3,15 @@ package io.github.capitan0n.droynis
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PersistableBundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -20,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.capitan0n.droynis.core.SettingsActions
+import io.github.capitan0n.droynis.core.SettingsTarget
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import io.github.capitan0n.droynis.ui.AppActions
 import io.github.capitan0n.droynis.ui.DroynisApp
@@ -120,10 +124,27 @@ class DroynisActivity : ComponentActivity(), AppActions {
         }
     }
 
-    /** Droynis never changes a setting itself; it opens the screen where the user can. */
-    override fun openSettings(actions: List<String>) {
-        for (action in actions + SettingsActions.SETTINGS) {
-            if (opensHere(action) && tryStart(Intent(action))) return
+    /**
+     * Droynis never changes a setting itself; it opens the screen where the user can, scrolled to the
+     * switch named by [highlightKey] where the Settings app supports that.
+     */
+    override fun openSettings(actions: List<String>, highlightKey: String?) {
+        val route = SettingsActions.route(
+            actions = actions,
+            sdkInt = Build.VERSION.SDK_INT,
+            highlightKey = highlightKey,
+            developerOptionsOn = developerOptionsOn(),
+            hasFeature = { packageManager.hasSystemFeature(it) },
+        )
+        for (target in route.targets) {
+            val intent = settingsIntent(target) ?: continue
+            if (tryStart(intent)) {
+                // A toast, not a snackbar: it shows over About phone, where the user needs it.
+                if (route.developerOptionsOff && target.target == SettingsActions.DEVICE_INFO) {
+                    Toast.makeText(this, R.string.developer_options_off, Toast.LENGTH_LONG).show()
+                }
+                return
+            }
         }
         viewModel.message(R.string.settings_not_opened)
     }
@@ -131,13 +152,43 @@ class DroynisActivity : ComponentActivity(), AppActions {
     override fun openAppSettings(actions: List<String>, packageName: String) {
         val app = Uri.fromParts("package", packageName, null)
         for (action in actions + SettingsActions.APP_DETAILS) {
-            if (opensHere(action) && tryStart(Intent(action, app))) return
+            if (SettingsActions.opensOn(action, Build.VERSION.SDK_INT) && tryStart(Intent(action, app))) return
         }
         viewModel.message(R.string.settings_not_opened)
     }
 
-    /** Some actions open a different screen on older releases, such as Backup for Privacy on Android 9. */
-    private fun opensHere(action: String) = Build.VERSION.SDK_INT >= SettingsActions.minSdk(action)
+    /**
+     * An action, or an explicit Settings activity, with the switch to highlight. AOSP reads the key from
+     * the screen's arguments, and recent releases from the intent too; other Settings apps ignore both.
+     */
+    private fun settingsIntent(target: SettingsTarget): Intent? {
+        val intent = if (target.isComponent) {
+            val component = ComponentName.unflattenFromString(target.target) ?: return null
+            Intent(Intent.ACTION_MAIN).setComponent(component)
+        } else {
+            Intent(target.target)
+        }
+        target.highlightKey?.let { key ->
+            intent.putExtra(SettingsActions.EXTRA_FRAGMENT_ARG_KEY, key)
+            intent.putExtra(
+                SettingsActions.EXTRA_SHOW_FRAGMENT_ARGUMENTS,
+                Bundle().apply { putString(SettingsActions.EXTRA_FRAGMENT_ARG_KEY, key) },
+            )
+        }
+        return intent
+    }
+
+    /**
+     * Read when the user taps, as Settings reads it: unset means off, except on engineering builds.
+     * Null where the setting can't be read, so Developer options open as usual.
+     */
+    private fun developerOptionsOn(): Boolean? =
+        try {
+            val default = if (Build.TYPE == "eng") 1 else 0
+            Settings.Global.getInt(contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, default) != 0
+        } catch (e: SecurityException) {
+            null
+        }
 
     private fun tryStart(intent: Intent): Boolean =
         try {

@@ -298,6 +298,8 @@
     <string name="report_subject">Droynis security report</string>
     <string name="copied">Copied</string>
     <string name="settings_not_opened">This phone has no matching settings screen</string>
+    <!-- A toast over About phone, opened because Developer options are off. -->
+    <string name="developer_options_off">Developer options are off. Tap Build number 7 times to turn them on, then go back to Droynis.</string>
 
     <!-- Help -->
     <string name="help_legend">Reading the results</string>

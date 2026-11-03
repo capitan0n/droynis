@@ -66,16 +66,25 @@ enum class Severity { INFO, NOTICE, WARNING, CRITICAL }
 /**
  * What the user can do about a FAIL. Droynis never applies a fix itself.
  *
- * @property settingsActions intent actions to try in order; the UI opens the first one the device
- *   can handle and falls back to the main Settings screen.
+ * @property settingsActions intent actions, or explicit Settings activities ([SettingsActions.isComponent]),
+ *   to try in order; the UI opens the first one the device can handle and falls back to the main
+ *   Settings screen ([SettingsActions.route]).
  * @property command an optional copy-paste command (for example adb), explained by [text].
  * @property appSettingsActions intent actions that open one app's switch when given a `package:` URI,
  *   for evidence that names an app ([Evidence.packageName]). The UI tries them in order, then the
  *   app's App info screen ([SettingsActions.APP_DETAILS]), which every app gets.
+ * @property highlightKey the key of the switch to change, as AOSP's Settings app names it on the
+ *   screens in [settingsActions]: Settings scrolls to it and highlights it. A screen without that key,
+ *   or a Settings app that doesn't highlight, just opens as usual.
  */
 data class Remediation(
     val text: String,
     val settingsActions: List<String> = emptyList(),
     val command: String? = null,
     val appSettingsActions: List<String> = emptyList(),
-)
+    val highlightKey: String? = null,
+) {
+    init {
+        require(highlightKey == null || settingsActions.isNotEmpty()) { "A highlight key needs a Settings screen to show it on" }
+    }
+}
