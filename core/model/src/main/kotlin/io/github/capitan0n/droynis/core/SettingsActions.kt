@@ -200,6 +200,9 @@ object SettingsActions {
      */
     const val TRUSTED_CREDENTIALS_USER = "com.android.settings.TRUSTED_CREDENTIALS_USER"
 
+    /** `Settings.ACTION_INTERNAL_STORAGE_SETTINGS`: Storage, with what takes up space. */
+    const val INTERNAL_STORAGE = "android.settings.INTERNAL_STORAGE_SETTINGS"
+
     /** `Settings.ACTION_DEVICE_INFO_SETTINGS`: About phone. */
     const val DEVICE_INFO = "android.settings.DEVICE_INFO_SETTINGS"
 

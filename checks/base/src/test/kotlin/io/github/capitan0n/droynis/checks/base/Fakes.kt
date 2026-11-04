@@ -149,6 +149,13 @@ class FakeUptime(private val sinceBoot: Reading<Duration> = value(5.hours)) : Up
     override fun sinceBoot() = sinceBoot
 }
 
+/** By default a 128 GB phone with 64 GB free. */
+class FakeStorage(
+    private val space: Reading<StorageSpace> = value(StorageSpace(totalBytes = 128_000_000_000, freeBytes = 64_000_000_000)),
+) : StorageProbe {
+    override fun internal() = space
+}
+
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
     override fun enabledKeyboards() = keyboards
 }
@@ -204,6 +211,7 @@ class FakeProbes(
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
     override val cellular: CellularProbe = FakeCellular(),
     override val uptime: UptimeProbe = FakeUptime(),
+    override val storage: StorageProbe = FakeStorage(),
     override val battery: BatteryProbe = FakeBattery(),
     override val usb: UsbProbe = FakeUsb(),
     override val biometrics: BiometricProbe = FakeBiometrics(),

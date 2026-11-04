@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 81 checks.
+Every check Droynis runs, by privilege tier and category: 82 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -15,7 +15,7 @@ still lists it, but none counts it.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 52 |
+| [Base](#base-tier) | 53 |
 | [ADB](#adb-tier) | 13 |
 | [Shizuku](#shizuku-tier) | 9 |
 | [Root](#root-tier) | 7 |
@@ -36,6 +36,7 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [INTG-1060](#intg-1060-android-build) | Android build | Warning | it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 (critical when ro.adb.secure=0 lets adb in without authorization) |
 | [INTG-1070](#intg-1070-webview-updates) | WebView updates | Warning | WebView hasn't been updated for more than 60 days, or its Chromium version is older than that |
 | [INTG-1080](#intg-1080-time-since-restart) | Time since restart | Notice | the phone hasn't restarted for more than 7 days |
+| [INTG-1090](#intg-1090-storage-space) | Storage space | Notice | more than 80% of the internal storage is in use |
 | [ACCS-2001](#accs-2001-secure-lock-screen) | Secure lock screen | Critical | no PIN, pattern or password is set |
 | [ACCS-2002](#accs-2002-screen-timeout) | Screen timeout | Notice | the screen stays on for more than 2 minutes |
 | [ACCS-2003](#accs-2003-password-visibility) | Password visibility | Notice | typed password characters are shown |
@@ -160,6 +161,14 @@ Notice · Android 8.0 and later · fails when the phone hasn't restarted for mor
 After a restart, Android keeps the keys to your files out of memory until you first unlock the phone: the state phone-cracking tools find hardest. From then on the keys stay in memory, even while the screen is locked, until the next restart. A restart also removes spyware that lives only in memory, as many zero-click exploits do, and finishes updates that wait for one. The NSA's mobile device guidance advises restarting once a week.
 
 **What to do:** Restart the phone: hold the power button (with volume up on some phones) and tap Restart. Once a week is enough. GrapheneOS can also restart by itself after the phone stays locked for a while (Auto reboot).
+
+#### INTG-1090 Storage space
+
+Notice · Android 8.0 and later · fails when more than 80% of the internal storage is in use
+
+System updates are downloaded and unpacked on the phone before they install, and need free space for that. On a nearly full phone, security updates, app updates and WebView updates fail or wait until space is freed, so known flaws stay open for longer.
+
+**What to do:** Open Settings › Storage and free up space: uninstall apps you don't use, delete downloads you no longer need, and move photos and videos to a computer or your own server. Then install pending system updates.
 
 ### Access control
 

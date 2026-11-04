@@ -196,6 +196,18 @@ interface UptimeProbe {
     fun sinceBoot(): Reading<Duration>
 }
 
+/** The phone's internal storage, in bytes. */
+data class StorageSpace(val totalBytes: Long, val freeBytes: Long)
+
+interface StorageProbe {
+    /**
+     * `StorageStatsManager` for the internal volume: its size, rounded up to the size it was sold
+     * as (128 GB…), and the free space, counting caches Android can clear. Settings › Storage
+     * shows the same two numbers.
+     */
+    fun internal(): Reading<StorageSpace>
+}
+
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */
 data class Keyboard(val app: AppRef, val isSystem: Boolean)
 
@@ -395,6 +407,7 @@ interface BaseProbes {
     val defaultApps: DefaultAppsProbe
     val cellular: CellularProbe
     val uptime: UptimeProbe
+    val storage: StorageProbe
     val battery: BatteryProbe
     val usb: UsbProbe
     val biometrics: BiometricProbe

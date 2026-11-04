@@ -14,6 +14,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     AndroidBuildCheck(probes.build, probes.properties),
     WebViewCheck(probes.webView),
     RestartCheck(probes.uptime),
+    StorageSpaceCheck(probes.storage),
     AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
     // Access control
     LockScreenCheck(probes.keyguard),

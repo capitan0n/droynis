@@ -24,6 +24,7 @@ import io.github.capitan0n.droynis.checks.base.PackageDetailsProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.checks.base.UptimeProbe
@@ -76,6 +77,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
     override val cellular: CellularProbe = AndroidCellular(app, shells)
     override val uptime: UptimeProbe = AndroidUptime
+    override val storage: StorageProbe = AndroidStorage(app)
     override val battery: BatteryProbe = AndroidBattery(app)
     override val usb: UsbProbe = AndroidUsb(app)
     override val biometrics: BiometricProbe = AndroidBiometrics(app)

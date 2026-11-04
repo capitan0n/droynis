@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 81 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 82 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -78,6 +78,11 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **Restart** (INTG-1080): `SystemClock.elapsedRealtime()`, the time since boot with deep sleep,
   needs no permission. More than 7 days is a FAIL (NSA mobile device guidance: restart weekly). It
   says nothing about whether a staged update waits for a restart; no public API tells.
+- **Storage space** (INTG-1090): `StorageStatsManager.getTotalBytes()` and `getFreeBytes()` for the
+  internal volume need no permission (only per-app stats do), and give the numbers Settings ›
+  Storage shows: the size rounded up to the size sold, and free space counting caches Android can
+  clear. More than 80% in use is a FAIL, since system, app and WebView updates need room to
+  download and unpack. The percent shown is rounded up, so it reads above 80 exactly when it fails.
 - **Secure NFC** (NETW-3011, Android 10+): `NfcAdapter.isSecureNfcSupported()` and
   `isSecureNfcEnabled()` are public and NfcService checks no permission (Android 16). NFC off is a
   PASS whatever the switch; a phone without the option is N/A. Both calls return false when the NFC
