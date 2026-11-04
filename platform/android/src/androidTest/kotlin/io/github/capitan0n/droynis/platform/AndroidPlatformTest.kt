@@ -110,6 +110,32 @@ class AndroidPlatformTest {
     }
 
     @Test
+    fun footprintsListOnlyUserAppsAndDrawTheirIcons() {
+        val footprints = platform.footprints.userApps()
+        assertValue(footprints)
+        val apps = platform.packages.installedApps() as Reading.Value
+        val system = apps.value.filter { it.isSystem }.mapTo(HashSet()) { it.packageName }
+        for (app in (footprints as Reading.Value).value) {
+            assertFalse("${app.packageName} is a system app", app.packageName in system)
+            for (entry in app.launcherEntries) {
+                // Enabled entries get their icon drawn; disabled ones never do.
+                if (!entry.enabled) assertEquals(null, entry.iconCoverage)
+                entry.iconCoverage?.let { assertTrue("${app.packageName}: $it", it in 0.0..1.0) }
+            }
+        }
+    }
+
+    @Test
+    fun usageHistoryAnswersWithOrWithoutAccess() {
+        val access = platform.usageHistory.hasAccess()
+        assertValue(access)
+        // Without access Android returns an empty history; the probe must not throw either way.
+        val shown = platform.usageHistory.screensShown(setOf("com.android.settings"), java.time.Instant.now().minusSeconds(3600))
+        assertValue(shown)
+        assertTrue("only asked packages may come back", (shown as Reading.Value).value.keys.all { it == "com.android.settings" })
+    }
+
+    @Test
     fun withoutAdbGrantsDumpsysIsRefusedRatherThanParsed() {
         // A test install has no adb grants unless someone gave them by hand.
         if (platform.detectGrants().isNotEmpty()) return

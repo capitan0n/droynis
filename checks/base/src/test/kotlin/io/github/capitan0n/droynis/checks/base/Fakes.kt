@@ -216,6 +216,8 @@ class FakeProbes(
     override val usb: UsbProbe = FakeUsb(),
     override val biometrics: BiometricProbe = FakeBiometrics(),
     override val packageDetails: PackageDetailsProbe = FakePackageDetails(),
+    override val footprints: AppFootprintProbe = FakeFootprints(),
+    override val usageHistory: UsageHistoryProbe = FakeUsageHistory(),
 ) : BaseProbes
 
 /** [exempt] lists the allowlisted packages; [asked] records which packages a check asked about. */
@@ -273,4 +275,26 @@ fun biometrics(
 /** Packages missing from [packages] aren't installed. */
 class FakePackageDetails(private val packages: Map<String, Reading<PackageDetails?>> = emptyMap()) : PackageDetailsProbe {
     override fun details(packageName: String) = packages[packageName] ?: value(null)
+}
+
+class FakeFootprints(private val apps: Reading<List<AppFootprint>> = value(emptyList())) : AppFootprintProbe {
+    override fun userApps() = apps
+}
+
+/** By default Droynis has no usage access. [asked] records the packages and start time a check asked about. */
+class FakeUsageHistory(
+    private val access: Reading<Boolean> = value(false),
+    private val screens: Reading<Map<String, ScreenUse>> = value(emptyMap()),
+) : UsageHistoryProbe {
+    val asked = mutableListOf<Pair<Set<String>, Instant>>()
+
+    override fun hasAccess() = access
+
+    override fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> {
+        asked += packages to since
+        return when (screens) {
+            is Reading.Value -> Reading.Value(screens.value.filterKeys { it in packages }, screens.source)
+            else -> screens
+        }
+    }
 }

@@ -48,6 +48,10 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     PlayProtectCheck(probes.settings),
     OutdatedAppsCheck(probes.packages),
     PlayServicesCheck(probes.packageDetails),
+    // Suspicious apps
+    HiddenAppsCheck(probes.footprints, probes.packages),
+    HiddenAutostartCheck(probes.footprints, probes.packages, probes.battery),
+    HiddenScreensCheck(probes.footprints, probes.packages, probes.usageHistory),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),

@@ -16,7 +16,10 @@ interface IShellService {
     /** `getenforce`: Enforcing, Permissive or Disabled. */
     String selinuxMode() = 2;
 
-    /** `dumpsys <service>` as a stream: its output can be larger than one binder call carries. */
+    /**
+     * `dumpsys <service>` as a stream: its output can be larger than one binder call carries.
+     * [service] names one of a fixed list of commands, such as "appops" or "activity services".
+     */
     ParcelFileDescriptor dumpsys(String service) = 3;
 
     /** The SIM lock and allowed network types of each active SIM, in TelephonyDump's format. */

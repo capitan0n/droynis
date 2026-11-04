@@ -84,10 +84,12 @@
     <string name="category_integrity">Device integrity</string>
     <string name="category_access">Access control</string>
     <string name="category_apps">Apps and permissions</string>
+    <string name="category_suspicious">Suspicious apps</string>
     <string name="category_network">Network and radios</string>
     <string name="category_short_integrity">Integrity</string>
     <string name="category_short_access">Access</string>
     <string name="category_short_apps">Apps</string>
+    <string name="category_short_suspicious">Suspicious</string>
     <string name="category_short_network">Network</string>
 
     <!-- Dashboard -->
@@ -406,7 +408,7 @@
     <string name="help_privacy_4">Reports leave out hardware identifiers, phone numbers and account names.</string>
     <string name="help_faq">Questions and answers</string>
     <string name="faq_q1">Does a score of 100 mean my phone is safe?</string>
-    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see. It cannot find malware, spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
+    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see, and signs that an installed app hides from you, such as a blank name or a turned-off icon. It does not scan apps for malicious code, and cannot find spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
     <string name="faq_q2">Why are some checks Unknown?</string>
     <string name="faq_a2">Android hides some settings from apps, and some vendors change or remove them. Droynis then says it does not know instead of guessing. Android 17, for example, can report USB debugging and developer options as off to every app.</string>
     <string name="faq_q3">Why does Droynis need to see all installed apps?</string>

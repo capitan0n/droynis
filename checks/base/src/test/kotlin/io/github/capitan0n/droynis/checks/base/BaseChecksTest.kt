@@ -37,7 +37,13 @@ class BaseChecksTest {
 
     @Test
     fun `id prefixes match their category`() {
-        val prefixes = mapOf("INTG" to "DEVICE_INTEGRITY", "ACCS" to "ACCESS_CONTROL", "APPS" to "APPS", "NETW" to "NETWORK")
+        val prefixes = mapOf(
+            "INTG" to "DEVICE_INTEGRITY",
+            "ACCS" to "ACCESS_CONTROL",
+            "APPS" to "APPS",
+            "SUSP" to "SUSPICIOUS_APPS",
+            "NETW" to "NETWORK",
+        )
         for (spec in specs) {
             assertEquals(prefixes[spec.id.take(4)], spec.category.name, spec.id)
         }

@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 82 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 86 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -227,7 +227,7 @@ Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from
 in a separate process as the shell user (root if Shizuku was started with root), and hands its
 binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
 (table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, `dumpsys` for an
-allowlist of services (`appops`, `trust`, `wifi`), and `telephony()`, which runs `TelephonyReader`: a fixed
+allowlist of commands (`appops`, `trust`, `wifi`, and `activity services`, mapped to fixed arguments), and `telephony()`, which runs `TelephonyReader`: a fixed
 set of telephony getters (below). Commands run without a shell, with absolute paths, a
 timeout and an output cap; `dumpsys` streams through a pipe because its output can exceed one
 binder call.
@@ -437,6 +437,67 @@ Either one on is a FAIL, because the phone may stay unlocked without the PIN. Th
 the user's name and each agent's own message (for example the name of a trusted place or device);
 Droynis reads neither into the report. Only the per-user part is read, up to the event log.
 
+### Suspicious apps
+
+A fifth category (`SUSP-5xxx`) for signs that an installed app is adware or stalkerware, rather than
+for settings. The signs are heuristics, so every finding names the signs it saw. Only user apps are
+looked at: system apps without an icon are the norm. Droynis still scans no code and knows no
+malware list; the README and Help say so.
+
+- **Footprint** (`AppFootprintProbe`, base tier, cached per scan): `queryIntentActivities(MAIN,
+  LAUNCHER)` with `MATCH_DISABLED_COMPONENTS` lists every app drawer entry an app declares (aliases
+  included), the same query without it the entries shown now, and `getComponentEnabledSetting`
+  tells an entry the app turned off at runtime (`DISABLED`, `DISABLED_USER`, `DISABLED_UNTIL_USED`)
+  from one off in its manifest. Each enabled entry's icon (`ResolveInfo.loadIcon`; an adaptive icon
+  draws with its mask) is drawn at 48 px: when less than 2% of the pixels are more than about 10%
+  opaque, it is transparent. A label is blank when every code point is whitespace, a control or
+  format character (U+200B–U+200D, U+2060, U+FEFF, U+00AD…), a non-spacing mark, or a Hangul filler
+  or the blank Braille pattern (U+115F, U+1160, U+3164, U+FFA0, U+2800); an unassigned code point
+  counts as visible, since the JDK's Unicode tables can be older than the phone's fonts. Boot
+  receivers come from `queryBroadcastReceivers` for BOOT_COMPLETED and LOCKED_BOOT_COMPLETED and
+  count only with RECEIVE_BOOT_COMPLETED requested; requested permissions from
+  `getInstalledPackages(GET_PERMISSIONS)`.
+- **Android 10 placeholder**: `LauncherApps` adds a synthetic entry that opens App info for most user
+  apps without an enabled launcher activity (not for apps that request no permissions). A turned-off
+  icon is still a sign, but hiding apps moved to blank names and transparent icons because of it.
+- **Concern**: an app is out of sight when it hides (a sign above) or has no launcher entry at all,
+  as add-ons, plugins and some keyboards legitimately do. Hiding and coming from outside an app
+  store (`AppOrigin`) each raise the concern one step: an add-on from a store is a notice, listed
+  but not counted; a sideloaded one, or a hiding one from a store, a warning; a hiding sideloaded
+  app critical, which is each check's escalation.
+- **Trust** (see Trusted apps): a trusted app is listed with its signs but not counted, and when
+  only trusted apps are left the check passes and names them. Add-ons the concern leaves uncounted
+  are marked NOT_COUNTED.
+- **SUSP-5001** counts every hiding app. **SUSP-5002** counts out-of-sight apps that declare starting
+  at boot, FOREGROUND_SERVICE, SYSTEM_ALERT_WINDOW, USE_FULL_SCREEN_INTENT or
+  REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: declarations, not behaviour. Only for those apps is
+  `isIgnoringBatteryOptimizations` asked, to say whether Android already exempts them.
+- **SUSP-5003** (base tier, usage access): `UsageStatsManager.queryEvents` over 7 days, counting
+  `ACTIVITY_RESUMED` (1; `MOVE_TO_FOREGROUND` before Android 10) per out-of-sight app. Without access
+  UsageStatsService returns an empty list, not an error, so the probe first reads Droynis' own
+  `GET_USAGE_STATS` app-op (allowed, or default with the permission from `pm grant`); without it the
+  check is N/A and says how to turn usage access on. This is the base-tier usage access row 5
+  foresaw, handled inside the check rather than as a `Grant`, so the Settings switch alone is
+  enough. The call runs in Droynis' own process, so Shizuku and root don't stand in for it. Only the
+  out-of-sight packages leave the probe; the rest of the usage history is never kept.
+- **SUSP-5101** (ADB tier, Android 10+): `dumpsys activity services`, which ActivityManagerService
+  answers with DUMP and PACKAGE_USAGE_STATS. Its `services` command prints every active
+  ServiceRecord in full; only `* ServiceRecord{hash uN pkg/cls[ c:caller]}` lines and their
+  `isForeground=` and `startRequested=` lines are read (ServiceRecord prints both only when set or
+  set before, so missing means false). Pending, restarting and destroyed records (`* Restarting
+  ServiceRecord…`) and connection records are skipped; a record line in another shape fails the
+  parse. Services that are only bound, like a keyboard's, are left out; started or foreground ones of
+  the current user count. From the app-ops history APPS-4101 also reads: `START_FOREGROUND`
+  (ActiveServices starts the op for every foreground service) and `SYSTEM_ALERT_WINDOW` (WindowManager
+  starts it while an overlay window shows) in the last 7 days. A pass needs both reads; with one
+  missing, nothing found is UNKNOWN, not a pass.
+- **Not covered**: ad SDKs inside apps with a normal icon, apps posing as a system app by name and
+  icon, and known-bad lists (no network; an offline indicator list such as AssoEchap's
+  stalkerware-indicators would have to be imported).
+- **Not yet checked on a device**: how launchers other than Launcher3 show a blank label, whether
+  OEM icon theming (MIUI, One UI) fills in a transparent icon before `loadIcon` returns it (which would
+  only hide a sign, never invent one), and the exact `dumpsys activity services` text on OEM builds.
+
 Check logic never imports `android.*`, so every check is unit-tested on the plain JVM with fakes
 (no Robolectric). The cost: a check that needs a new framework call also needs a probe method in
 `platform-android`. The JVM modules compile against the JDK, so they could use a `java.*` API
@@ -514,7 +575,7 @@ counting it.
   reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
   name them in the header.
 - Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4101 to 4108, APPS-4201,
-  APPS-4301 and NETW-3301.
+  APPS-4301, NETW-3301, SUSP-5001 to 5003 and SUSP-5101.
 - Limit: trust follows the package name, not the signing key. An app reinstalled under the same
   name by someone else keeps its trust; Android refuses such an update while the original is
   installed, but not after an uninstall.
@@ -601,7 +662,7 @@ directories, and compares the APKs (baseline profiles are the usual suspect if t
 Material 3 with a teal brand scheme by default, large rounded cards and a bottom navigation bar:
 Dashboard, Checks, Tools, Help. Status colors never change with the theme or accent and always
 come with a glyph and a label: green ✓ passed, yellow – needs attention, red ✗
-critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, green) are
+critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, purple, green) are
 used for category icons only, so they never read as a status. The score ring is colored by the
 result (red whenever a critical failure caps it) on a faded track of the same hue.
 

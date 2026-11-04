@@ -9,10 +9,11 @@ never changes anything itself.
 > **Not an antivirus or malware scanner.** Droynis doesn't scan apps or files for malicious code and
 > doesn't remove anything. It audits how the phone is set up: what is locked, patched, exposed and
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
+> and signs that adware leaves, such as an app that hides from the app drawer and runs on its own,
 > but it can't tell you whether that app is malware.
 
-- 82 checks: device integrity, access control, apps and permissions, network and radios. Every
-  check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
+- 86 checks: device integrity, access control, apps and permissions, suspicious apps, network and
+  radios. Every check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
 - A check passes only on a value it actually read. When Android won't say, the result is Unknown,

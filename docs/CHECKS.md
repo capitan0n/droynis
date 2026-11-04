@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by privilege tier and category: 82 checks.
+Every check Droynis runs, by privilege tier and category: 86 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -15,8 +15,8 @@ still lists it, but none counts it.
 
 | Tier | Checks |
 |---|---|
-| [Base](#base-tier) | 53 |
-| [ADB](#adb-tier) | 13 |
+| [Base](#base-tier) | 56 |
+| [ADB](#adb-tier) | 14 |
 | [Shizuku](#shizuku-tier) | 9 |
 | [Root](#root-tier) | 7 |
 
@@ -67,6 +67,9 @@ Public Android APIs only. These checks run on every phone, with no setup and no 
 | [APPS-4014](#apps-4014-google-play-services) | Google Play services | Info | Google Play services is built into the system, with privileged access (information only) |
 | [APPS-4015](#apps-4015-app-scanning-play-protect) | App scanning (Play Protect) | Warning | the install-time app verifier (Play Protect) is turned off |
 | [APPS-4016](#apps-4016-apps-with-shizuku-access) | Apps with Shizuku access | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store) |
+| [SUSP-5001](#susp-5001-apps-hiding-from-the-app-drawer) | Apps hiding from the app drawer | Warning | an installed app turned its app drawer icon off, or shows a blank name or a transparent icon (critical when it came from outside an app store) |
+| [SUSP-5002](#susp-5002-hidden-apps-set-up-to-run-in-the-background) | Hidden apps set up to run in the background | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, declares it starts at boot, runs foreground services, draws over other apps, shows full-screen pop-ups or skips battery limits (critical when it hides and came from outside an app store) |
+| [SUSP-5003](#susp-5003-hidden-apps-showing-screens) | Hidden apps showing screens | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, brought its own screen to the front in the last 7 days (critical when it hides and came from outside an app store) |
 | [NETW-3001](#netw-3001-private-dns) | Private DNS (Android 9+) | Warning | DNS isn't encrypted and no VPN is active |
 | [NETW-3002](#netw-3002-vpn) | VPN | Info | no VPN is active |
 | [NETW-3003](#netw-3003-user-ca-certificates) | User CA certificates | Warning | a user-installed CA certificate can intercept TLS |
@@ -414,6 +417,32 @@ Shizuku gives the apps you allow the rights of adb, or of root when Shizuku runs
 
 **What to do:** Open Shizuku, tap Application management ("Authorized … applications") and turn off the apps you no longer use or don't fully trust. Settings › Apps › the app › Permissions › Shizuku › Don't allow does the same.
 
+### Suspicious apps
+
+#### SUSP-5001 Apps hiding from the app drawer
+
+Warning · Android 8.0 and later · fails when an installed app turned its app drawer icon off, or shows a blank name or a transparent icon (critical when it came from outside an app store)
+
+Adware and stalkerware hide after their first start, so you can't find them to remove them: they turn their app drawer icon off, or keep it but give it a blank name and a transparent icon. Since Android 10 an app that turns its icon off usually still gets a placeholder that opens App info, which is why hiding apps now use the blank name and transparent icon. A few legitimate apps hide too, such as anti-theft apps, so check whether you installed each one on purpose.
+
+**What to do:** Open each app listed (the button next to it opens its App info) and uninstall it unless you know why it hides. If Uninstall is greyed out, the app is a device admin: remove it under Security › Device admin apps first. An app with a blank name is listed here by its package name.
+
+#### SUSP-5002 Hidden apps set up to run in the background
+
+Warning · Android 8.0 and later · fails when an app that hides from the app drawer, or one without an icon from outside an app store, declares it starts at boot, runs foreground services, draws over other apps, shows full-screen pop-ups or skips battery limits (critical when it hides and came from outside an app store)
+
+An app you can't open from the app drawer has little reason to start by itself, yet adware does: it starts with the phone, keeps a service running and pops up over other apps. Droynis lists apps without a visible app drawer icon that declare one of these: starting when the phone starts, foreground services, drawing over other apps, full-screen pop-ups, or skipping battery limits. Add-ons such as plugins often have no icon of their own; from an app store they are listed, not counted.
+
+**What to do:** Uninstall apps listed here that you don't recognize. For an add-on you use, check that the app it belongs to is one you trust.
+
+#### SUSP-5003 Hidden apps showing screens
+
+Warning · Android 8.0 and later · fails when an app that hides from the app drawer, or one without an icon from outside an app store, brought its own screen to the front in the last 7 days (critical when it hides and came from outside an app store)
+
+An app without a visible app drawer icon has no screen you open yourself, so when it shows one anyway, it usually opened it by itself: that is how adware shows full-screen ads over other apps. Droynis reads Android's usage history for the last 7 days and lists hidden apps that brought a screen of their own to the front. It needs usage access: give it to Droynis in Settings › Apps › Special app access › Usage access, or with the ADB tier.
+
+**What to do:** Uninstall apps listed here unless you opened them yourself, for example a plugin's settings from the app it belongs to. Droynis only reads the history while it scans; to stop that, turn Usage access off for it again.
+
 ### Network and radios
 
 #### NETW-3001 Private DNS
@@ -536,6 +565,7 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
 | [APPS-4108](#apps-4108-apps-that-can-record-the-screen-without-asking) | Apps that can record the screen without asking (Android 10+) | Warning | a user app may record or cast the screen without asking |
+| [SUSP-5101](#susp-5101-hidden-apps-running-in-the-background) | Hidden apps running in the background (Android 10+) | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 | [NETW-3103](#netw-3103-hotspot-security) | Hotspot security (Android 14+) | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
@@ -616,6 +646,16 @@ Warning · Android 10 and later · fails when a user app may record or cast the 
 Android asks each time an app wants to record or cast the screen. An app whose PROJECT_MEDIA app-op is set to allow skips that question, and can capture everything on the screen, passwords and messages included, whenever it likes. Settings has no switch for this: it is set from a computer with adb, the way stalkerware and remote-access tools are often set up on someone else's phone. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
 
 **What to do:** Uninstall apps listed that you don't recognize. For an app you keep, take the access back from a computer with adb: put the app's package name, shown in the evidence, in the command below. The app then asks again before each recording.
+
+### Suspicious apps
+
+#### SUSP-5101 Hidden apps running in the background
+
+Warning · Android 10 and later · fails when an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store)
+
+Lists apps without a visible app drawer icon that run a service they started themselves right now, or that started a foreground service or drew over other apps in the last 7 days. Adware keeps running this way to show ads. SUSP-5002 sees only what apps declare; this check sees what they do. Services that Android or another app only binds to, such as a keyboard's, are left out. Android shows running services and the app-ops history only to the ADB or Shizuku tier.
+
+**What to do:** Uninstall apps listed here that you don't recognize. Force stop in the app's App info ends it until it starts itself again.
 
 ### Network and radios
 

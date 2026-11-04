@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.adb
 
+import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.core.Reading
@@ -23,4 +24,7 @@ interface AdbProbes {
 
     /** Advanced Protection changes which saved networks Android 17 joins by itself. */
     val policy: DevicePolicy
+
+    /** Which apps have no visible app drawer icon, for SUSP-5101. */
+    val footprints: AppFootprintProbe
 }

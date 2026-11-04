@@ -14,4 +14,5 @@ fun adbChecks(probes: AdbProbes): List<Check> = listOf(
     WifiMacCheck(probes.dumpsys) +
     OpenWifiCheck(probes.dumpsys, probes.policy) +
     HiddenWifiCheck(probes.dumpsys) +
-    HotspotCheck(probes.dumpsys)
+    HotspotCheck(probes.dumpsys) +
+    HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages)

@@ -31,7 +31,11 @@
         android:name="android.permission.DUMP"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- dumpsys appops also asks for this permission itself; the Usage access switch is not enough. -->
+    <!--
+        dumpsys appops also asks for this permission itself; the Usage access switch is not enough.
+        Declaring it also lists Droynis under Settings › Usage access, whose switch alone is enough
+        for SUSP-5003 to read the usage history.
+    -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />

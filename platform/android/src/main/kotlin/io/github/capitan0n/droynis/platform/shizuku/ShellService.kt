@@ -49,8 +49,8 @@ class ShellService : IShellService.Stub() {
     }
 
     override fun dumpsys(service: String?): ParcelFileDescriptor {
-        require(service != null && service in DUMPSYS_SERVICES) { "dumpsys service not allowed" }
-        val process = start(listOf(DUMPSYS, service), DUMPSYS_TIMEOUT_SECONDS)
+        val arguments = service?.let { DUMPSYS_COMMANDS[it] } ?: throw IllegalArgumentException("dumpsys service not allowed")
+        val process = start(listOf(DUMPSYS) + arguments, DUMPSYS_TIMEOUT_SECONDS)
         val (read, write) = try {
             ParcelFileDescriptor.createPipe()
         } catch (e: IOException) {
@@ -137,7 +137,13 @@ class ShellService : IShellService.Stub() {
         /** Settings keys are lower case with digits and underscores; a few use dots or dashes. */
         val KEY = Regex("[a-z0-9_.-]{1,100}")
 
-        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi")
+        /** Each allowed command and the fixed arguments it runs with; nothing from the caller is passed on. */
+        val DUMPSYS_COMMANDS = mapOf(
+            "appops" to listOf("appops"),
+            "trust" to listOf("trust"),
+            "wifi" to listOf("wifi"),
+            "activity services" to listOf("activity", "services"),
+        )
 
         const val COMMAND_TIMEOUT_SECONDS = 10L
         const val DUMPSYS_TIMEOUT_SECONDS = 30L

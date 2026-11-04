@@ -57,6 +57,13 @@ enum class Category(val label: String) {
     DEVICE_INTEGRITY("Device integrity"),
     ACCESS_CONTROL("Access control"),
     APPS("Apps and permissions"),
+
+    /**
+     * Signs that an installed app is adware, stalkerware or other malware: it hides from the app
+     * drawer and runs or shows screens on its own. Heuristics, unlike the settings the other
+     * categories read, so findings name the signs they saw.
+     */
+    SUSPICIOUS_APPS("Suspicious apps"),
     NETWORK("Network and radios"),
 }
 
