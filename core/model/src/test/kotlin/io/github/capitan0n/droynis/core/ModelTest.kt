@@ -15,6 +15,13 @@ class ModelTest {
     }
 
     @Test
+    fun `a moved check's old id leads to its new one`() {
+        assertEquals("SUSP-5102", CheckSpec.currentId("APPS-4101"))
+        assertEquals("SUSP-5103", CheckSpec.currentId("APPS-4108"))
+        assertEquals("APPS-4102", CheckSpec.currentId("APPS-4102"))
+    }
+
+    @Test
     fun `a scan trusts apps by package`() {
         val context = ScanContext(startedAt = java.time.ZonedDateTime.now(), sdkInt = 37, trustedApps = setOf("org.example.watch"))
         assertEquals(true, context.trusts("org.example.watch"))

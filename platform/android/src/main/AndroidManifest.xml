@@ -26,7 +26,7 @@
         `pm revoke` takes them back. Without them the ADB-tier checks show as N/A.
     -->
 
-    <!-- Lets dumpsys answer us; APPS-4101 reads `dumpsys appops`. -->
+    <!-- Lets dumpsys answer us; SUSP-5102 and the special access checks read `dumpsys appops`. -->
     <uses-permission
         android:name="android.permission.DUMP"
         tools:ignore="ProtectedPermissions" />

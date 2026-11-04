@@ -557,15 +557,15 @@ Then tap Scan again. The grants stay until `adb shell pm revoke …` or an unins
 | ID | Check | Severity | Fails when |
 |---|---|---|---|
 | [ACCS-2101](#accs-2101-smart-lock-and-extend-unlock) | Smart Lock and Extend Unlock | Notice | a trust agent such as Smart Lock can keep the phone unlocked |
-| [APPS-4101](#apps-4101-background-camera-microphone-and-location-use) | Background camera, microphone and location use (Android 10+) | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
 | [APPS-4102](#apps-4102-apps-that-can-draw-over-other-apps) | Apps that can draw over other apps (Android 10+) | Notice | a user app may display over other apps |
 | [APPS-4103](#apps-4103-apps-with-access-to-all-files) | Apps with access to all files (Android 11+) | Notice | a user app has all files access |
 | [APPS-4104](#apps-4104-apps-that-can-install-other-apps) | Apps that can install other apps (Android 10+) | Notice | a user app other than a known app store may install apps |
 | [APPS-4105](#apps-4105-apps-with-usage-access) | Apps with usage access (Android 10+) | Notice | a user app has usage access |
 | [APPS-4106](#apps-4106-apps-that-can-change-system-settings) | Apps that can change system settings (Android 10+) | Info | a user app may change system settings (information only) |
 | [APPS-4107](#apps-4107-apps-that-can-manage-your-media) | Apps that can manage your media (Android 12+) | Info | a user app may change or delete media without asking (information only) |
-| [APPS-4108](#apps-4108-apps-that-can-record-the-screen-without-asking) | Apps that can record the screen without asking (Android 10+) | Warning | a user app may record or cast the screen without asking |
 | [SUSP-5101](#susp-5101-hidden-apps-running-in-the-background) | Hidden apps running in the background (Android 10+) | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
+| [SUSP-5102](#susp-5102-background-camera-microphone-and-location-use) | Background camera, microphone and location use (Android 10+) | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
+| [SUSP-5103](#susp-5103-apps-that-can-record-the-screen-without-asking) | Apps that can record the screen without asking (Android 10+) | Warning | a user app may record or cast the screen without asking |
 | [NETW-3101](#netw-3101-wi-fi-mac-randomization) | Wi-Fi MAC randomization (Android 10+) | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | [NETW-3102](#netw-3102-open-wi-fi-networks-that-join-automatically) | Open Wi-Fi networks that join automatically (Android 12+) | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 | [NETW-3103](#netw-3103-hotspot-security) | Hotspot security (Android 14+) | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
@@ -582,14 +582,6 @@ Smart Lock (Extend Unlock on newer phones) keeps the phone unlocked near a trust
 **What to do:** Open Settings › Security › Smart Lock or Extend Unlock (the location varies by vendor) and remove trusted devices, trusted places and on-body detection you don't need.
 
 ### Apps and permissions
-
-#### APPS-4101 Background camera, microphone and location use
-
-Notice · Android 10 and later · fails when a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone)
-
-Lists user-installed apps that used the camera, the microphone or your location while you were not using them, in the last 7 days. Spyware works this way; so do fitness, navigation and smart-home apps, so check that each one is expected. Android keeps this record in its app-ops service, which only the ADB or Shizuku tier can read.
-
-**What to do:** For each app listed, open Settings › Apps › the app › Permissions. Set Location to "Allow only while using the app" or "Don't allow", and remove Camera and Microphone from apps that don't need them. Uninstall apps you don't recognize.
 
 #### APPS-4102 Apps that can draw over other apps
 
@@ -639,14 +631,6 @@ Info · Android 12 and later · fails when a user app may change or delete media
 
 **What to do:** Open Settings › Apps › Special app access › Media management apps and turn it off for apps that don't organize your media.
 
-#### APPS-4108 Apps that can record the screen without asking
-
-Warning · Android 10 and later · fails when a user app may record or cast the screen without asking
-
-Android asks each time an app wants to record or cast the screen. An app whose PROJECT_MEDIA app-op is set to allow skips that question, and can capture everything on the screen, passwords and messages included, whenever it likes. Settings has no switch for this: it is set from a computer with adb, the way stalkerware and remote-access tools are often set up on someone else's phone. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
-
-**What to do:** Uninstall apps listed that you don't recognize. For an app you keep, take the access back from a computer with adb: put the app's package name, shown in the evidence, in the command below. The app then asks again before each recording.
-
 ### Suspicious apps
 
 #### SUSP-5101 Hidden apps running in the background
@@ -656,6 +640,22 @@ Warning · Android 10 and later · fails when an app that hides from the app dra
 Lists apps without a visible app drawer icon that run a service they started themselves right now, or that started a foreground service or drew over other apps in the last 7 days. Adware keeps running this way to show ads. SUSP-5002 sees only what apps declare; this check sees what they do. Services that Android or another app only binds to, such as a keyboard's, are left out. Android shows running services and the app-ops history only to the ADB or Shizuku tier.
 
 **What to do:** Uninstall apps listed here that you don't recognize. Force stop in the app's App info ends it until it starts itself again.
+
+#### SUSP-5102 Background camera, microphone and location use
+
+Notice · Android 10 and later · fails when a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone)
+
+Lists user-installed apps that used the camera, the microphone or your location while you were not using them, in the last 7 days. Spyware works this way; so do fitness, navigation and smart-home apps, so check that each one is expected. Android keeps this record in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** For each app listed, open Settings › Apps › the app › Permissions. Set Location to "Allow only while using the app" or "Don't allow", and remove Camera and Microphone from apps that don't need them. Uninstall apps you don't recognize.
+
+#### SUSP-5103 Apps that can record the screen without asking
+
+Warning · Android 10 and later · fails when a user app may record or cast the screen without asking
+
+Android asks each time an app wants to record or cast the screen. An app whose PROJECT_MEDIA app-op is set to allow skips that question, and can capture everything on the screen, passwords and messages included, whenever it likes. Settings has no switch for this: it is set from a computer with adb, the way stalkerware and remote-access tools are often set up on someone else's phone. Android keeps this in its app-ops service, which only the ADB or Shizuku tier can read.
+
+**What to do:** Uninstall apps listed that you don't recognize. For an app you keep, take the access back from a computer with adb: put the app's package name, shown in the evidence, in the command below. The app then asks again before each recording.
 
 ### Network and radios
 

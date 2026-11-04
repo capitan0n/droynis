@@ -14,7 +14,7 @@ Android (API 37, October 2026) and the decisions taken so far.
 | 4 | Probe at runtime instead of branching on Android version | Calling an API newer than the device throws `NoSuchMethodError`, and lint's `NewApi` fails the build without an `SDK_INT` guard. | Version checks decide *whether an API exists* (`CheckSpec.minSdk`, `SDK_INT` guards in adapters). Runtime probing handles *content*: missing settings, OEM differences, `SecurityException`. Every probe returns a `Reading` instead of throwing. |
 | 5 | `PACKAGE_USAGE_STATS` is an ADB grant | Settings › Usage access sets only the app-op, which is enough for `UsageStatsManager`. dumpsys services that show per-app data (`DumpUtils.checkUsageStatsPermission`, Android 17) also require the permission itself, which only `pm grant` gives. | `Grant.PACKAGE_USAGE_STATS` means the permission (ADB tier). A future `UsageStatsManager` check would add a base-tier usage-access grant. |
 | 6 | `READ_LOGS` grant survives reboots and unlocks logcat | Since Android 13 every logcat session also needs a per-session "Allow access to all device logs?" dialog, shown only while the app is in the foreground. SELinux denials are noisy on production builds. | Logcat scan is interactive only. For crash loops, evaluate `DropBoxManager` (`READ_LOGS` + usage access) instead of parsing logcat. |
-| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. `dumpsys appops` (APPS-4101) was checked against AppOpsService in Android 17: it needs DUMP and the `PACKAGE_USAGE_STATS` permission; `VpnManagerService` prints no lockdown state; the adb service is not visible to apps. |
+| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. `dumpsys appops` (SUSP-5102, formerly APPS-4101) was checked against AppOpsService in Android 17: it needs DUMP and the `PACKAGE_USAGE_STATS` permission; `VpnManagerService` prints no lockdown state; the adb service is not visible to apps. |
 | 8 | Shizuku, and "no non-SDK interfaces" | Typical Shizuku code wraps hidden AIDL interfaces (`IAppOpsService`…), which is non-SDK by definition. `Shizuku.newProcess` is private since Shizuku-API 13.1.5. | Use a Shizuku `UserService` (our code running as shell, UID 2000) that runs a fixed allowlist of read-only commands and returns text over our own AIDL. |
 | 9 | A crashing or hanging check yields UNKNOWN | Coroutine timeouts only fire at suspension points; a blocking binder call cannot be interrupted. Native crashes and OOM kill the process. | Implemented: each check runs detached and races a timeout, so a hang costs one thread, not the scan. A separate scanner process is not worth it for v1. |
 | 10 | Network off by default, revocation list opt-in | `INTERNET` is granted at install. Once declared, "off by default" cannot be verified from the manifest. | Ship without `INTERNET` (CI fails the build otherwise). Import the revocation list JSON through the Storage Access Framework, or provide a separate online flavor. |
@@ -147,7 +147,7 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   the caller (`filterAppAccess`), which `QUERY_ALL_PACKAGES` rules out. It covers the vendor's
   allowlist and the user's "Unrestricted" choice alike, so only user apps are asked about, one binder
   call each. INFO: messengers, sync and automation apps need it, so it never escalates.
-- **Screen capture without asking** (APPS-4108, ADB tier): `MediaProjectionManagerService.hasProjectionPermission`
+- **Screen capture without asking** (SUSP-5103, formerly APPS-4108, ADB tier): `MediaProjectionManagerService.hasProjectionPermission`
   is true when the PROJECT_MEDIA app-op (default `ignore`) is `allow`, and SystemUI's
   `MediaProjectionPermissionActivity` then hands the app a projection without the consent dialog.
   SystemUI always creates projections with `permanentGrant = false` (the "Don't show again" box is
@@ -487,10 +487,16 @@ malware list; the README and Help say so.
   set before, so missing means false). Pending, restarting and destroyed records (`* Restarting
   ServiceRecord…`) and connection records are skipped; a record line in another shape fails the
   parse. Services that are only bound, like a keyboard's, are left out; started or foreground ones of
-  the current user count. From the app-ops history APPS-4101 also reads: `START_FOREGROUND`
+  the current user count. From the app-ops history SUSP-5102 also reads: `START_FOREGROUND`
   (ActiveServices starts the op for every foreground service) and `SYSTEM_ALERT_WINDOW` (WindowManager
   starts it while an overlay window shows) in the last 7 days. A pass needs both reads; with one
   missing, nothing found is UNKNOWN, not a pass.
+- **Moved here**: APPS-4101 (background camera, microphone and location use) became SUSP-5102, and
+  APPS-4108 (screen capture without asking) SUSP-5103: both report what apps did or what only adb
+  can set up, not access granted in Settings. Their logic is unchanged. The old ids are retired,
+  never reused (`CheckSpec.RENAMED`, checked by CatalogDocTest); a mute on an old id moves to the
+  new one when the app reads its mutes. Reports and diffs across the change see the new ids. The
+  other special access switches (APPS-4102 to 4107) stay in Apps and permissions.
 - **Not covered**: ad SDKs inside apps with a normal icon, apps posing as a system app by name and
   icon, and known-bad lists (no network; an offline indicator list such as AssoEchap's
   stalkerware-indicators would have to be imported).
@@ -574,8 +580,8 @@ counting it.
 - It is never silent: ⋮ › Trusted apps lists every trusted app with the checks that list it, JSON
   reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
   name them in the header.
-- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4101 to 4108, APPS-4201,
-  APPS-4301, NETW-3301, SUSP-5001 to 5003 and SUSP-5101.
+- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4102 to 4107, APPS-4201,
+  APPS-4301, NETW-3301, SUSP-5001 to 5003 and SUSP-5101 to 5103.
 - Limit: trust follows the package name, not the signing key. An app reinstalled under the same
   name by someone else keeps its trust; Android refuses such an update while the original is
   installed, but not after an uninstall.

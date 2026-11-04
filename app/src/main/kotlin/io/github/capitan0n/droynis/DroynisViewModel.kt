@@ -477,10 +477,17 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         _messages.tryEmit(getApplication<Application>().getString(resId))
     }
 
-    /** Ids of checks that no longer exist are dropped, so a removed check can't stay muted. */
+    /**
+     * Ids of checks that no longer exist are dropped, so a removed check can't stay muted. A check
+     * that moved to another category stays muted under its new id ([CheckSpec.RENAMED]), which is
+     * saved so the old id doesn't linger.
+     */
     private fun readMuted(): Set<String> {
         val known = catalog.mapTo(HashSet()) { it.id }
-        return prefs.getStringSet(KEY_MUTED, null).orEmpty().filterTo(HashSet()) { it in known }
+        val stored = prefs.getStringSet(KEY_MUTED, null).orEmpty()
+        val muted = stored.map { CheckSpec.currentId(it) }.filterTo(HashSet()) { it in known }
+        if (stored.any { it in CheckSpec.RENAMED }) prefs.edit().putStringSet(KEY_MUTED, muted).apply()
+        return muted
     }
 
     /** A copy: Android's returned set must not be changed. */

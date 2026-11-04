@@ -51,6 +51,11 @@ class SpecialAccessCheck(
         val expected: Set<String> = emptySet(),
         /** INFO for switches worth knowing about that can't hurt much: listed, but not in the score. */
         val severity: Severity = Severity.NOTICE,
+        /**
+         * Apps and permissions for switches the user sets in Settings; Suspicious apps for access
+         * that only adb can give, which on a user app is a sign of stalkerware.
+         */
+        val category: Category = Category.APPS,
     ) {
         OVERLAY(
             id = "APPS-4102",
@@ -164,7 +169,8 @@ class SpecialAccessCheck(
             severity = Severity.INFO,
         ),
         SCREEN_CAPTURE(
-            id = "APPS-4108",
+            // APPS-4108 until it moved to Suspicious apps.
+            id = "SUSP-5103",
             op = "PROJECT_MEDIA",
             label = "Screen capture without asking",
             title = "Apps that can record the screen without asking",
@@ -183,12 +189,13 @@ class SpecialAccessCheck(
             minSdk = 29,
             failsWhen = "a user app may record or cast the screen without asking",
             severity = Severity.WARNING,
+            category = Category.SUSPICIOUS_APPS,
         ),
     }
 
     override val spec = CheckSpec(
         id = access.id,
-        category = Category.APPS,
+        category = access.category,
         title = access.title,
         severity = access.severity,
         explanation = access.explanation + " Android keeps this in its app-ops service, which only " +

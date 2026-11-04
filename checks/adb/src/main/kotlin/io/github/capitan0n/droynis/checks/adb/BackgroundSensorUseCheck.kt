@@ -31,8 +31,9 @@ class BackgroundSensorUseCheck(
 ) : Check {
 
     override val spec = CheckSpec(
-        id = "APPS-4101",
-        category = Category.APPS,
+        // APPS-4101 until it moved to Suspicious apps: it reports what apps did, not what they may do.
+        id = "SUSP-5102",
+        category = Category.SUSPICIOUS_APPS,
         title = "Background camera, microphone and location use",
         severity = Severity.NOTICE,
         explanation = "Lists user-installed apps that used the camera, the microphone or your location " +

@@ -41,6 +41,21 @@ class CatalogDocTest {
     }
 
     @Test
+    fun `a moved check's old id is retired and its new id exists`() {
+        val ids = allSpecs().map { it.id }.toSet()
+        for ((old, new) in CheckSpec.RENAMED) {
+            assertTrue(old !in ids, "$old was retired and must not be reused")
+            assertTrue(new in ids, "$old moved to $new, which no check has")
+        }
+    }
+
+    @Test
+    fun `the adb registry is grouped by category`() {
+        val order = adbChecks(unused<AdbProbes>()).map { it.spec.category.ordinal }
+        assertEquals(order.sorted(), order)
+    }
+
+    @Test
     fun `anchors follow GitHub's heading slugs`() {
         assertEquals(
             "apps-4101-background-camera-microphone-and-location-use",

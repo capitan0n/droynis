@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.checks.adb
 
 import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
@@ -45,6 +46,9 @@ class BackgroundSensorUseCheckTest {
         val spec = check(dump()).spec
         assertEquals(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS), spec.requires)
         assertEquals(Tier.ADB, spec.requiredTier)
+        // Formerly APPS-4101: it reports what apps did, so it belongs to Suspicious apps.
+        assertEquals("SUSP-5102", spec.id)
+        assertEquals(Category.SUSPICIOUS_APPS, spec.category)
     }
 
     @Test

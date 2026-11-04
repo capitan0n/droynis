@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.checks.adb
 import io.github.capitan0n.droynis.checks.adb.SpecialAccessCheck.Access
 import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
@@ -52,8 +53,11 @@ class SpecialAccessCheckTest {
     fun `every access is an adb-tier app check with its own settings screen`() {
         val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4108).map { "APPS-$it" }, specs.values.map { it.id })
+        assertEquals((4102..4107).map { "APPS-$it" } + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
+        // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
+        assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
+        assertTrue(specs.filterKeys { it != Access.SCREEN_CAPTURE }.values.all { it.category == Category.APPS })
         // Each Settings switch has its own screen; screen capture has no switch, only an adb command.
         val switches = specs.filterKeys { it != Access.SCREEN_CAPTURE }.values
         assertEquals(switches.size, switches.map { it.remediation.settingsActions.single() }.toSet().size)
