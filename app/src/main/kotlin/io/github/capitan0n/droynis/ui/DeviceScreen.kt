@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
 import androidx.compose.material.icons.rounded.Accessibility
@@ -24,8 +23,6 @@ import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DataObject
-import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.DeveloperMode
 import androidx.compose.material.icons.rounded.DisplaySettings
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -46,27 +43,19 @@ import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.VpnKey
 import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -82,13 +71,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.DroynisViewModel
 import io.github.capitan0n.droynis.R
-import io.github.capitan0n.droynis.ReportFormat
 import io.github.capitan0n.droynis.UiState
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
 import io.github.capitan0n.droynis.checks.base.Transport
@@ -100,8 +87,9 @@ import io.github.capitan0n.droynis.platform.PermissionUsage
 import io.github.capitan0n.droynis.platform.SensitivePermission
 import io.github.capitan0n.droynis.report.Verdict
 
+/** Facts about the phone: its network, app permissions, Settings shortcuts and build. */
 @Composable
-fun ToolsScreen(state: UiState, actions: AppActions) {
+fun DeviceScreen(state: UiState, actions: AppActions) {
     // Network state changes often; re-read it whenever the tab is opened.
     LaunchedEffect(Unit) { actions.refreshTools() }
 
@@ -114,7 +102,6 @@ fun ToolsScreen(state: UiState, actions: AppActions) {
         item { PermissionsCard(state.permissions) { actions.openSettings(listOf(SettingsActions.PRIVACY, SettingsActions.APPS)) } }
         item { ShortcutsCard { actions.openSettings(it) } }
         item { DeviceInfoCard(state, actions::copy) }
-        item { ReportCard(reportReady = state.result != null, hidePersonal = state.hidePersonal, actions = actions) }
     }
 }
 
@@ -490,71 +477,5 @@ private fun DeviceInfoCard(state: UiState, onCopy: (String, String) -> Unit) {
         InfoRow(stringResource(R.string.device_build), device.buildId, monospace = true)
         InfoRow(stringResource(R.string.device_build_type), "${device.buildType}, ${device.buildTags}", monospace = true)
         device.kernel?.let { InfoRow(stringResource(R.string.device_kernel), it, monospace = true) }
-    }
-}
-
-@Composable
-private fun ReportCard(reportReady: Boolean, hidePersonal: Boolean, actions: AppActions) {
-    SectionCard(
-        title = stringResource(R.string.tools_report),
-        icon = Icons.Rounded.Description,
-        accent = MaterialTheme.colorScheme.tertiary,
-    ) {
-        Text(stringResource(R.string.report_body), style = MaterialTheme.typography.bodyMedium)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(R.string.report_no_ids),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(10.dp))
-        // The same switch as in the ⋮ menu: shown here, so it is clear what the buttons below export.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .toggleable(value = hidePersonal, role = Role.Switch, onValueChange = actions::setHidePersonal),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.menu_hide_personal), style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    stringResource(if (hidePersonal) R.string.personal_hidden else R.string.personal_included),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(checked = hidePersonal, onCheckedChange = null)
-        }
-        Spacer(Modifier.height(14.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { actions.saveReport(ReportFormat.MARKDOWN) }, enabled = reportReady) {
-                Icon(Icons.Rounded.Save, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.report_save))
-            }
-            Button(onClick = { actions.saveReport(ReportFormat.JSON) }, enabled = reportReady) {
-                Icon(Icons.Rounded.DataObject, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.report_save_json))
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = actions::shareReport, enabled = reportReady) {
-                Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.report_share))
-            }
-            OutlinedButton(onClick = actions::copyReport, enabled = reportReady) {
-                Text(stringResource(R.string.report_copy))
-            }
-        }
-        if (!reportReady) {
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-            Text(stringResource(R.string.report_not_ready), style = MaterialTheme.typography.bodySmall)
-        }
     }
 }

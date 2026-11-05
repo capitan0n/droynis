@@ -1,10 +1,12 @@
 package io.github.capitan0n.droynis
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
 import android.os.Build
@@ -25,6 +27,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.SettingsTarget
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
+import io.github.capitan0n.droynis.schedule.ScanInterval
+import io.github.capitan0n.droynis.schedule.ScanNotifier
 import io.github.capitan0n.droynis.ui.AppActions
 import io.github.capitan0n.droynis.ui.DroynisApp
 import io.github.capitan0n.droynis.ui.theme.DroynisTheme
@@ -38,6 +42,13 @@ class DroynisActivity : ComponentActivity(), AppActions {
     // The Storage Access Framework picks the file, so Droynis needs no storage permission.
     private val createMarkdown = createDocument(ReportFormat.MARKDOWN)
     private val createJson = createDocument(ReportFormat.JSON)
+
+    // Android 13+ asks the user before an app may notify; only the scheduled scan's switch asks.
+    private val requestNotifications =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) viewModel.setNotify(true) else viewModel.message(R.string.schedule_notifications_denied)
+            viewModel.refreshSchedule()
+        }
 
     private fun createDocument(format: ReportFormat) =
         registerForActivityResult(ActivityResultContracts.CreateDocument(format.mimeType)) { uri ->
@@ -83,6 +94,18 @@ class DroynisActivity : ComponentActivity(), AppActions {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // The user may have allowed or blocked notifications in Settings meanwhile.
+        viewModel.refreshSchedule()
+    }
+
+    /** Opened from a scheduled scan's notification: scan again, so the app shows what it says. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.getBooleanExtra(ScanNotifier.EXTRA_RESCAN, false)) viewModel.scan()
     }
 
     override fun scan() = viewModel.scan()
@@ -247,6 +270,29 @@ class DroynisActivity : ComponentActivity(), AppActions {
         } catch (e: ActivityNotFoundException) {
             copyText(url, url, R.string.no_app_for_link, explain = true)
         }
+    }
+
+    override fun setSchedule(interval: ScanInterval) = viewModel.setSchedule(interval)
+
+    /** Turning notifications on asks for the permission first, on Android 13+ when not yet granted. */
+    override fun setNotify(on: Boolean) {
+        if (on &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            viewModel.setNotify(on)
+        }
+    }
+
+    override fun setVerbose(verbose: Boolean) = viewModel.setVerbose(verbose)
+
+    override fun runScheduledScan() = viewModel.runScheduledScan()
+
+    override fun openNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        if (!tryStart(intent)) openAppSettings(emptyList(), packageName)
     }
 
     override fun sendFeedback() {
