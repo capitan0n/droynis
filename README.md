@@ -9,10 +9,11 @@ never changes anything itself.
 > **Not an antivirus or malware scanner.** Droynis doesn't scan apps or files for malicious code and
 > doesn't remove anything. It audits how the phone is set up: what is locked, patched, exposed and
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
+> and signs that adware leaves, such as an app that hides from the app drawer and runs on its own,
 > but it can't tell you whether that app is malware.
 
-- 75 checks: device integrity, access control, apps and permissions, network and radios. Every
-  check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
+- 90 checks: device integrity, access control, apps and permissions, suspicious apps, network and
+  radios. Every check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
 - A check passes only on a value it actually read. When Android won't say, the result is Unknown,
@@ -61,9 +62,9 @@ On first install, check that the signing certificate matches the SHA-256 in the 
 
 | Tier | Setup | Adds |
 |---|---|---|
-| Base | none | 51 checks through public Android APIs |
-| ADB | two grants from a computer, once | 11 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically |
-| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
+| Base | none | 53 checks through public Android APIs |
+| ADB | two grants from a computer, once | 13 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically, hidden Wi-Fi networks, hotspot security |
+| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, device controls on the lock screen, passkey and password providers, clipboard access alerts, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
 | Root | opt-in switch in the app | trusted computers, apps with root, root modules, root boot scripts others can change, programs staged in shared temp, root access over ADB, apps listening on the network; runs the ADB and Shizuku checks |
 
 In the app, **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku
@@ -93,6 +94,11 @@ The grants survive reboots and stay until you uninstall the app or run the same 
 The score is passed weight ÷ scored weight × 100 (critical 10, warning 5, notice 2, info 0); a
 critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute what you can't fix,
 such as a patch level only the maker can update; the Muted filter has Unmute all.
+
+Some apps need a lot of access to do their job, such as a watch app that reads notifications and
+SMS. Instead of muting whole checks, open one that lists the app and tap **Trust** under it: the app
+stays listed in every check but no longer counts in any of them. **⋮ › Trusted apps** shows where
+each one is listed and removes them, and reports name every trusted app.
 
 ⋮ › Save the report as Markdown or JSON, or share it; Tools › Report can also copy it.
 **Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private

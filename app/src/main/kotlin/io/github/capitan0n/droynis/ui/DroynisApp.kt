@@ -42,6 +42,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
@@ -125,6 +126,12 @@ interface AppActions {
     /** Unmutes every muted check. */
     fun unmuteAll()
 
+    /** Trusts [packageName], or stops: every check still lists the app, but none counts it. */
+    fun setTrusted(packageName: String, trusted: Boolean)
+
+    /** Stops trusting every app. */
+    fun untrustAll()
+
     /** Whether reports leave out IP addresses, DNS and proxy servers and trusted computers. */
     fun setHidePersonal(hide: Boolean)
 
@@ -140,8 +147,11 @@ interface AppActions {
     /** Turns the root tier off: Droynis runs su no more. */
     fun disableRoot()
 
-    /** Opens the first Settings screen in [actions] that this phone has. */
-    fun openSettings(actions: List<String>)
+    /**
+     * Opens the first Settings screen in [actions] that this phone has, scrolled to the switch named
+     * [highlightKey] where Settings supports it ([io.github.capitan0n.droynis.core.Remediation.highlightKey]).
+     */
+    fun openSettings(actions: List<String>, highlightKey: String? = null)
 
     /**
      * Opens one app's own Settings screen: the first of [actions] this phone has for [packageName]'s
@@ -193,6 +203,9 @@ private object AboutPage
 /** The check catalog, shown full screen over the tabs. */
 private object CatalogPage
 
+/** The apps the user trusts, shown full screen over the tabs. */
+private object TrustedPage
+
 /** Tags of the scrolling lists and the check search, for UI tests. */
 const val CHECKS_LIST_TAG = "checks_list"
 const val CATALOG_LIST_TAG = "catalog_list"
@@ -221,6 +234,7 @@ fun DroynisApp(
     var tier by rememberSaveable { mutableStateOf<Tier?>(null) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
     var showCatalog by rememberSaveable { mutableStateOf(false) }
+    var showTrusted by rememberSaveable { mutableStateOf(false) }
     // Kept while the catalog is closed, so it fades out and reopens on the same tab.
     var catalogTier by rememberSaveable { mutableStateOf(Tier.BASE) }
     var showTheme by rememberSaveable { mutableStateOf(false) }
@@ -229,9 +243,10 @@ fun DroynisApp(
     val tabStates = rememberSaveableStateHolder()
 
     LaunchedEffect(messages) { messages.collect { snackbar.showSnackbar(it) } }
-    // Back closes the topmost page: About, then a check, then the catalog, then a tab.
-    BackHandler(enabled = openCheckId == null && !showCatalog && tab != Tab.DASHBOARD) { tab = Tab.DASHBOARD }
+    // Back closes the topmost page: About, then a check, then the catalog or trusted apps, then a tab.
+    BackHandler(enabled = openCheckId == null && !showCatalog && !showTrusted && tab != Tab.DASHBOARD) { tab = Tab.DASHBOARD }
     BackHandler(enabled = openCheckId == null && showCatalog) { showCatalog = false }
+    BackHandler(enabled = openCheckId == null && showTrusted) { showTrusted = false }
     BackHandler(enabled = openCheckId != null) { openCheckId = null }
     BackHandler(enabled = showAbout) { showAbout = false }
 
@@ -260,17 +275,27 @@ fun DroynisApp(
                     },
                     scrollBehavior = scrollBehavior,
                 )
-            } else if (openSpec != null || showCatalog) {
+            } else if (openSpec != null || showCatalog || showTrusted) {
                 TopAppBar(
                     title = {
                         Text(
-                            stringResource(openSpec?.category?.labelRes ?: R.string.catalog_title),
+                            stringResource(
+                                openSpec?.category?.labelRes ?: if (showTrusted) R.string.trusted_title else R.string.catalog_title,
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                     },
                     navigationIcon = {
-                        IconButton(onClick = { if (openSpec != null) openCheckId = null else showCatalog = false }) {
+                        IconButton(
+                            onClick = {
+                                when {
+                                    openSpec != null -> openCheckId = null
+                                    showTrusted -> showTrusted = false
+                                    else -> showCatalog = false
+                                }
+                            },
+                        ) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.navigate_back))
                         }
                     },
@@ -288,12 +313,13 @@ fun DroynisApp(
                     onAppIcon = { showAppIcon = true },
                     onAbout = { showAbout = true },
                     onCatalog = { showCatalog = true },
+                    onTrusted = { showTrusted = true },
                     scrollBehavior = scrollBehavior,
                 )
             }
         },
         bottomBar = {
-            if (openSpec == null && !showAbout && !showCatalog) {
+            if (openSpec == null && !showAbout && !showCatalog && !showTrusted) {
                 NavigationBar {
                     for (item in Tab.entries) {
                         NavigationBarItem(
@@ -319,6 +345,7 @@ fun DroynisApp(
             val screen: Any = when {
                 showAbout -> AboutPage
                 openSpec != null -> openSpec
+                showTrusted -> TrustedPage
                 showCatalog -> CatalogPage
                 else -> tab
             }
@@ -342,6 +369,15 @@ fun DroynisApp(
                         actions = actions,
                         onOpenCheck = { openCheckId = it },
                     )
+                    TrustedPage -> TrustedAppsScreen(
+                        trusted = state.trusted,
+                        labels = state.trustedLabels,
+                        findings = state.findings,
+                        catalog = catalog,
+                        onUntrust = { actions.setTrusted(it, false) },
+                        onUntrustAll = actions::untrustAll,
+                        onOpenCheck = { openCheckId = it },
+                    )
                     is CheckSpec -> CheckDetailScreen(
                         spec = target,
                         finding = state.findings[target.id],
@@ -350,6 +386,8 @@ fun DroynisApp(
                         onCopy = actions::copy,
                         muted = target.id in state.muted,
                         onMute = { actions.setMuted(target.id, it) },
+                        trusted = state.trusted,
+                        onTrust = actions::setTrusted,
                         onSetUpTier = if (Capabilities(state.grants).missingFor(target).isEmpty()) {
                             null
                         } else {
@@ -432,6 +470,7 @@ private fun MainTopBar(
     onAppIcon: () -> Unit,
     onAbout: () -> Unit,
     onCatalog: () -> Unit,
+    onTrusted: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -489,6 +528,10 @@ private fun MainTopBar(
                     MenuItem(R.string.catalog_title, Icons.AutoMirrored.Rounded.ListAlt) {
                         menuOpen = false
                         onCatalog()
+                    }
+                    MenuItem(R.string.trusted_title, Icons.Rounded.VerifiedUser) {
+                        menuOpen = false
+                        onTrusted()
                     }
                     MenuItem(R.string.menu_theme, Icons.Rounded.Palette) {
                         menuOpen = false

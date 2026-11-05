@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 75 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 90 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -10,11 +10,11 @@ Android (API 37, October 2026) and the decisions taken so far.
 |---|---|---|---|
 | 1 | Verify boot state with on-device key attestation, like Auditor | The chain is signed in hardware, but the code that verifies it runs inside the OS being judged; a rooted OS can hook the verifier. Auditor is trustworthy because a *second* device or server verifies and pins. | Present it as posture ("self-attested"), never as proof. Allow exporting the raw chain for off-device verification. Trust both Google roots: the legacy RSA root and the ECDSA P-384 root that RKP devices use exclusively since April 2026. Reuse Auditor's (MIT) verified-boot key table and keep it current. |
 | 2 | List apps with permissions, accessibility, admins… | Since API 30 package visibility hides most apps unless the app holds `QUERY_ALL_PACKAGES`. Without it, invisible apps produce false PASSes. | Declare `QUERY_ALL_PACKAGES` (fine on F-Droid; Play restricts it). |
-| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via `dumpsys appops` (ADB tier, or Shizuku) for the app-op switches and `settings get` through Shizuku for hidden keys. Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). |
+| 3 | Base tier reports overlay, usage access, install-unknown, all-files, notification listener, VPN for every app | No uniform public API. These are app-ops or Settings keys of *other* apps: reading a foreign app-op mode via `AppOpsManager.unsafeCheckOpNoThrow` is version-dependent and visibility-filtered, some op strings are hidden (`android:request_install_packages`, `android:manage_external_storage`), and notification listeners / always-on VPN live in hidden `Settings.Secure` keys that apps targeting API 31+ may read only if the platform marks them `@Readable` (otherwise `SecurityException`). Which app owns the active VPN is shown only to that app. | Best effort in base tier, UNKNOWN on any failure. Authoritative via `dumpsys appops` (ADB tier, or Shizuku) for the app-op switches and `settings get` through Shizuku for hidden keys. Public and reliable: accessibility (`ENABLED_ACCESSIBILITY_SERVICES`), device admins (`getActiveAdmins`), default SMS/dialer, runtime permissions, debuggable/targetSdk, installer. Checked against the Android 16 and 17 framework: `enabled_notification_listeners` and both `lock_screen_*` notification keys carry `@Readable` and are used; `always_on_vpn_app` does not, `enabled_input_methods` only up to target API 33 (keyboards come from `InputMethodManager` instead). Neither do `credential_service`, `credential_service_primary`, `clipboard_show_access_notifications` and the `lockscreen_*` device control and wallet keys (Android 13 to 17), so the checks that need them are in the Shizuku tier. |
 | 4 | Probe at runtime instead of branching on Android version | Calling an API newer than the device throws `NoSuchMethodError`, and lint's `NewApi` fails the build without an `SDK_INT` guard. | Version checks decide *whether an API exists* (`CheckSpec.minSdk`, `SDK_INT` guards in adapters). Runtime probing handles *content*: missing settings, OEM differences, `SecurityException`. Every probe returns a `Reading` instead of throwing. |
 | 5 | `PACKAGE_USAGE_STATS` is an ADB grant | Settings › Usage access sets only the app-op, which is enough for `UsageStatsManager`. dumpsys services that show per-app data (`DumpUtils.checkUsageStatsPermission`, Android 17) also require the permission itself, which only `pm grant` gives. | `Grant.PACKAGE_USAGE_STATS` means the permission (ADB tier). A future `UsageStatsManager` check would add a base-tier usage-access grant. |
 | 6 | `READ_LOGS` grant survives reboots and unlocks logcat | Since Android 13 every logcat session also needs a per-session "Allow access to all device logs?" dialog, shown only while the app is in the foreground. SELinux denials are noisy on production builds. | Logcat scan is interactive only. For crash loops, evaluate `DropBoxManager` (`READ_LOGS` + usage access) instead of parsing logcat. |
-| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. `dumpsys appops` (APPS-4101) was checked against AppOpsService in Android 17: it needs DUMP and the `PACKAGE_USAGE_STATS` permission; `VpnManagerService` prints no lockdown state; the adb service is not visible to apps. |
+| 7 | `DUMP` unlocks live dumpsys | It does, but SELinux still blocks `untrusted_app` from some services, and dumpsys output is unversioned, OEM-specific text that can include account names. | Parse narrowly, store only parsed fields as evidence, UNKNOWN on parse failure. `dumpsys appops` (SUSP-5102, formerly APPS-4101) was checked against AppOpsService in Android 17: it needs DUMP and the `PACKAGE_USAGE_STATS` permission; `VpnManagerService` prints no lockdown state; the adb service is not visible to apps. |
 | 8 | Shizuku, and "no non-SDK interfaces" | Typical Shizuku code wraps hidden AIDL interfaces (`IAppOpsService`…), which is non-SDK by definition. `Shizuku.newProcess` is private since Shizuku-API 13.1.5. | Use a Shizuku `UserService` (our code running as shell, UID 2000) that runs a fixed allowlist of read-only commands and returns text over our own AIDL. |
 | 9 | A crashing or hanging check yields UNKNOWN | Coroutine timeouts only fire at suspension points; a blocking binder call cannot be interrupted. Native crashes and OOM kill the process. | Implemented: each check runs detached and races a timeout, so a hang costs one thread, not the scan. A separate scanner process is not worth it for v1. |
 | 10 | Network off by default, revocation list opt-in | `INTERNET` is granted at install. Once declared, "off by default" cannot be verified from the manifest. | Ship without `INTERNET` (CI fails the build otherwise). Import the revocation list JSON through the Storage Access Framework, or provide a separate online flavor. |
@@ -78,6 +78,11 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
 - **Restart** (INTG-1080): `SystemClock.elapsedRealtime()`, the time since boot with deep sleep,
   needs no permission. More than 7 days is a FAIL (NSA mobile device guidance: restart weekly). It
   says nothing about whether a staged update waits for a restart; no public API tells.
+- **Storage space** (INTG-1090): `StorageStatsManager.getTotalBytes()` and `getFreeBytes()` for the
+  internal volume need no permission (only per-app stats do), and give the numbers Settings ›
+  Storage shows: the size rounded up to the size sold, and free space counting caches Android can
+  clear. More than 80% in use is a FAIL, since system, app and WebView updates need room to
+  download and unpack. The percent shown is rounded up, so it reads above 80 exactly when it fails.
 - **Secure NFC** (NETW-3011, Android 10+): `NfcAdapter.isSecureNfcSupported()` and
   `isSecureNfcEnabled()` are public and NfcService checks no permission (Android 16). NFC off is a
   PASS whatever the switch; a phone without the option is N/A. Both calls return false when the NFC
@@ -125,12 +130,24 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   foreground location permission, from the same `GET_PERMISSIONS` read as the SMS checks. Apps that
   target Android 9 or older get the background permission with the foreground one and are seen the
   same way. Preinstalled holders are counted, not named.
+- **Shizuku access** (APPS-4016): apps granted `moe.shizuku.manager.permission.API_V23`, from the same
+  `GET_PERMISSIONS` read as the SMS checks. The Shizuku app defines it as a dangerous permission and
+  the Shizuku library adds it to every client's manifest. Shizuku's server grants it when the user
+  allows an app for good, revokes it when they turn the app off, and on each start reads its own list
+  back from it (`ShizukuService.dispatchPermissionConfirmationResult` and `updateFlagsForUid`,
+  `ShizukuConfigManager`, Shizuku 13), so the granted flag is the stored answer and no privilege is
+  needed. Every holder counts, whatever its origin: someone allowed it. Droynis is left out (its own
+  shell is the Shizuku tier) and named when connected. Not seen: "Allow this time", which lasts only
+  while that app runs; an app that doesn't declare the permission (Shizuku sends its binder only to
+  apps that do); and Sui, which keeps its own list and defines no permission. The Shizuku app's list was
+  rejected as a source: `getFlagsForUid` answers only the Shizuku app itself, and its file
+  (`/data/user_de/0/com.android.shell/shizuku.json`) needs a new shell command for the same answer.
 - **Battery optimization** (APPS-4013): `PowerManager.isIgnoringBatteryOptimizations(pkg)` needs no
   permission and answers for any package; DeviceIdleController answers false for packages hidden from
   the caller (`filterAppAccess`), which `QUERY_ALL_PACKAGES` rules out. It covers the vendor's
   allowlist and the user's "Unrestricted" choice alike, so only user apps are asked about, one binder
   call each. INFO: messengers, sync and automation apps need it, so it never escalates.
-- **Screen capture without asking** (APPS-4108, ADB tier): `MediaProjectionManagerService.hasProjectionPermission`
+- **Screen capture without asking** (SUSP-5103, formerly APPS-4108, ADB tier): `MediaProjectionManagerService.hasProjectionPermission`
   is true when the PROJECT_MEDIA app-op (default `ignore`) is `allow`, and SystemUI's
   `MediaProjectionPermissionActivity` then hands the app a projection without the consent dialog.
   SystemUI always creates projections with `permanentGrant = false` (the "Don't show again" box is
@@ -151,8 +168,19 @@ AOSP/ATD emulator images do not exist for every API level; Google APIs images ar
   be listed, a mount with no other sign is UNKNOWN. KernelSU's overlayfs over all of /system leaves
   no mount on the directory; there only the first two signs work.
 - **Settings links**: each check opens its screen with plain intent actions, tried in order, then
-  the main Settings screen; an action that opens the wrong screen on older releases is skipped there
-  (`SettingsActions.minSdk`: Privacy opens Backup before Android 10). Evidence that names an app
+  the main Settings screen (`SettingsActions.route`); an action that opens the wrong screen on older
+  releases is skipped there (`SettingsActions.minSdk`: Privacy opens Backup before Android 10, and
+  Passwords & accounts holds the autofill picker only from Android 12), as is one a newer release
+  moved away from (`maxSdk`: Languages & input up to Android 11). Two screens have no action, so
+  they are AOSP's explicit activities (`package/.Class`): Device admin apps, through the alias
+  Settings keeps for old shortcuts, and Languages & input. Face Unlock's screen closes at once
+  without face hardware, so it is tried only on phones that report the feature. Developer options
+  close at once while they are off ("Please enable developer options first"), so with them off the
+  UI opens About phone with Build number highlighted, and a toast says to tap it seven times.
+  A check can name the switch to change (`Remediation.highlightKey`, AOSP's preference key, such as
+  `oem_unlock_enable`); the UI sends it as `:settings:fragment_args_key`, also inside
+  `:settings:show_fragment_args`, and AOSP's Settings scrolls to that row and highlights it. Other
+  Settings apps, and screens without that key, ignore it. Evidence that names an app
   carries its package, and the UI offers a button that opens the check's per-app screen with a
   `package:` URI (All files access, Install unknown apps, Usage access, Modify system settings, Media
   management), else the app's App info. Android's Permission manager (`MANAGE_PERMISSION_APPS`)
@@ -199,7 +227,7 @@ Droynis never sends Shizuku a command. Shizuku runs `ShellService`, a class from
 in a separate process as the shell user (root if Shizuku was started with root), and hands its
 binder to the app. Its AIDL interface (`IShellService`) has one method per read: `settings get`
 (table from a fixed set, key matched against `[a-z0-9_.-]`), `getenforce`, `dumpsys` for an
-allowlist of services (`appops`, `trust`, `wifi`), and `telephony()`, which runs `TelephonyReader`: a fixed
+allowlist of commands (`appops`, `trust`, `wifi`, and `activity services`, mapped to fixed arguments), and `telephony()`, which runs `TelephonyReader`: a fixed
 set of telephony getters (below). Commands run without a shell, with absolute paths, a
 timeout and an output cap; `dumpsys` streams through a pipe because its output can exceed one
 binder call.
@@ -212,6 +240,43 @@ holds every permission adb can grant, so `Capabilities.has` lets SHIZUKU cover t
 grants, and `dumpsys` falls back to the shell when the app itself lacks DUMP and
 PACKAGE_USAGE_STATS. A scan connects the shell first (up to 10 s), and the app scans again when
 Shizuku starts or allows Droynis.
+
+### Hidden settings through Shizuku
+
+Three Shizuku-tier checks read Settings keys that are hidden and not `@Readable` (row 3), with
+`settings get secure` as the shell user, or through root:
+
+- **Device controls on the lock screen** (ACCS-2202, Android 13+): SystemUI reads
+  `lockscreen_show_controls` and `lockscreen_allow_trivial_controls` with a default of 0
+  (`ControlsSettingsRepositoryImpl`, Android 17). Without the first, the controls and the lock
+  screen's Home shortcut open only after unlocking (`ControlsComponent.getVisibility`). With both on,
+  a control acts without the unlock unless its app marks it as needing authentication
+  (`ControlActionCoordinatorImpl.bouncerOrRun`): that is the FAIL. "Show wallet"
+  (`lockscreen_show_wallet`, default 0 in `QuickAccessWalletClientImpl`) only shows the cards;
+  whether one pays while locked is up to the wallet app and Secure NFC (NETW-3011), so it is
+  evidence only. Settings calls the second switch "Control from locked device" in Android 13 and
+  "Use device controls" from Android 14.
+- **Passkey and password providers** (APPS-4201, Android 14+): `credential_service` holds every
+  enabled Credential Manager provider, the set `CredentialManagerService` asks on each request
+  (`getEnabledProvidersForUser`), as flattened component names separated by ':';
+  `credential_service_primary` the preferred ones, which only come first in the picker. A preferred
+  provider missing from the enabled list is listed all the same. Unset and empty both mean none to
+  the service. No public API lists other apps' providers: `getCredentialProviderServices` is hidden
+  and `isEnabledCredentialProviderService` answers only for the caller's own package. Providers built
+  into the system (Google Password Manager in Play services) are listed, not counted,
+  like the autofill service; installed ones count, sideloaded ones raise it to WARNING.
+- **Clipboard access alerts** (APPS-4202, Android 12+): `ClipboardService` shows "<app> pasted from
+  your clipboard" unless `clipboard_show_access_notifications` is 0; the keyboard, the app the clip
+  came from and a few system services never trigger it. Unset falls back to the DeviceConfig flag
+  `clipboard/show_access_notifications`, true in AOSP, in both ClipboardService and Settings, so
+  unset is a PASS (the evidence says "on by default"). A vendor that flips the flag remotely would
+  make that a false PASS; apps can't read DeviceConfig, and the shell service runs no `device_config`.
+
+Not a check: Enhanced PIN privacy (Android 13+), which hides the PIN pad's tap animations. It lives in
+LockSettings (`pin_enhanced_privacy`), not the Settings provider, and its reads need
+`ACCESS_KEYGUARD_SECURE_STORAGE`. Its default also changed: off up to Android 16, while Android 17
+takes it from a device resource behind a flag. Neither the shell nor an unset value would give a
+trustworthy answer.
 
 ### Root
 
@@ -335,6 +400,35 @@ reads as on, the network is listed but not counted. Network names, identities an
 lines the parser skips, or in fields that must appear exactly once, and a name with a line break
 breaks its own header; any of these makes the result UNKNOWN, never a PASS. Names are `personal`.
 
+### Hidden Wi-Fi networks
+
+NETW-3104 (ADB tier, DUMP only, Android 12+) uses the same parser: the `HIDDEN:` field
+(`hiddenSSID`) on each saved network's header line. A hidden network sends no name in its beacons,
+so Android sends probe requests that name it, which anyone nearby can log; any hidden saved network,
+suggestions and app requests aside, is a NOTICE FAIL, with whether it joins automatically as a note.
+The header holds free text (the name, a Passpoint provider name and FQDN) before `HIDDEN:` and only
+numbers and switches after it, so the field is read from its last match on the line: a crafted name
+can't fake or mask it. A header without the field leaves that network unknown, and the result
+UNKNOWN unless another network is hidden. Names are `personal`.
+
+### Hotspot
+
+NETW-3103 (ADB tier, DUMP only, Android 14+) reads the saved hotspot settings from `dumpsys wifi`:
+`WifiServiceImpl.dump` prints `WifiApConfigStore config: ` followed by `SoftApConfiguration.toString()`,
+one field per line, then an empty line. Checked against Android 14, 15, 16 and 17; Android 11 to 13
+don't print the saved settings there, hence `minSdk` 34. Four
+fields are kept: the security type, whether a password is set (the dump prints `<non-empty>`, never
+the password), "Turn off hotspot automatically" and its delay. Open (0), Enhanced Open (5) and its
+transition mode (4) let anyone in range join: a FAIL raised to WARNING. Auto-off disabled alone is a
+NOTICE FAIL. WPA2-Personal passes, since it still needs the password and older devices need it. A
+security type without the matching password state, which `SoftApConfiguration.Builder` refuses, or an
+unknown type, is UNKNOWN. The hotspot's name is the only free text, on the first line and at most 32
+bytes: a name with a line break can add one field line, which then appears twice, or end the block
+early, which leaves a field missing; a second `WifiApConfigStore config:` line, for example from a
+nearby network's name elsewhere in the dump, makes it ambiguous. All of these are UNKNOWN, never a
+PASS. Neither the name nor any address is stored. The judgement is of the saved settings, whether or
+not the hotspot is on now.
+
 ### Smart Lock
 
 ACCS-2101 (ADB tier, DUMP only) reads `dumpsys trust`: for the current user, whether a trust agent
@@ -342,6 +436,105 @@ manages trust (`trustManaged`) or Extend Unlock (active unlock) runs, and which 
 Either one on is a FAIL, because the phone may stay unlocked without the PIN. The dump also holds
 the user's name and each agent's own message (for example the name of a trusted place or device);
 Droynis reads neither into the report. Only the per-user part is read, up to the event log.
+
+### Suspicious apps
+
+A fifth category (`SUSP-5xxx`) for signs that an installed app is adware or stalkerware, rather than
+for settings. The signs are heuristics, so every finding names the signs it saw. Only user apps are
+looked at: system apps without an icon are the norm. Droynis still scans no code and knows no
+malware list; the README and Help say so.
+
+- **Footprint** (`AppFootprintProbe`, base tier, cached per scan): `queryIntentActivities(MAIN,
+  LAUNCHER)` with `MATCH_DISABLED_COMPONENTS` lists every app drawer entry an app declares (aliases
+  included), the same query without it the entries shown now, and `getComponentEnabledSetting`
+  tells an entry the app turned off at runtime (`DISABLED`, `DISABLED_USER`, `DISABLED_UNTIL_USED`)
+  from one off in its manifest. Each enabled entry's icon (`ResolveInfo.loadIcon`; an adaptive icon
+  draws with its mask) is drawn at 48 px: when less than 2% of the pixels are more than about 10%
+  opaque, it is transparent. A label is blank when every code point is whitespace, a control or
+  format character (U+200B–U+200D, U+2060, U+FEFF, U+00AD…), a non-spacing mark, or a Hangul filler
+  or the blank Braille pattern (U+115F, U+1160, U+3164, U+FFA0, U+2800); an unassigned code point
+  counts as visible, since the JDK's Unicode tables can be older than the phone's fonts. Boot
+  receivers come from `queryBroadcastReceivers` for BOOT_COMPLETED and LOCKED_BOOT_COMPLETED and
+  count only with RECEIVE_BOOT_COMPLETED requested; requested permissions and signing certificates
+  from one `getInstalledPackages(GET_PERMISSIONS | GET_SIGNING_CERTIFICATES)` (GET_SIGNATURES on
+  Android 8), each certificate's subject kept in RFC 2253 form; declared accessibility services from
+  `queryIntentServices` for `android.accessibilityservice.AccessibilityService`, counted only with
+  BIND_ACCESSIBILITY_SERVICE, the permission without which Android never binds one.
+- **Android 10 placeholder**: `LauncherApps` adds a synthetic entry that opens App info for most user
+  apps without an enabled launcher activity (not for apps that request no permissions). A turned-off
+  icon is still a sign, but hiding apps moved to blank names and transparent icons because of it.
+- **Concern**: an app is out of sight when it hides (a sign above) or has no launcher entry at all,
+  as add-ons, plugins and some keyboards legitimately do. Hiding and coming from outside an app
+  store (`AppOrigin`) each raise the concern one step: an add-on from a store is a notice, listed
+  but not counted; a sideloaded one, or a hiding one from a store, a warning; a hiding sideloaded
+  app critical, which is each check's escalation.
+- **Trust** (see Trusted apps): a trusted app is listed with its signs but not counted, and when
+  only trusted apps are left the check passes and names them. Add-ons the concern leaves uncounted
+  are marked NOT_COUNTED.
+- **SUSP-5001** counts every hiding app. It is critical when a counted one came from outside an app
+  store, or holds accessibility (an enabled service), device admin (an active admin) or
+  notification access (`enabled_notification_listeners`), the access stalkerware and banking
+  trojans are set up with; those three are read only when something hides, and an unreadable one
+  never escalates. **SUSP-5002** counts out-of-sight apps that declare starting
+  at boot, FOREGROUND_SERVICE, SYSTEM_ALERT_WINDOW, USE_FULL_SCREEN_INTENT or
+  REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: declarations, not behaviour. Only for those apps is
+  `isIgnoringBatteryOptimizations` asked, to say whether Android already exempts them.
+- **SUSP-5003** (base tier, usage access): `UsageStatsManager.queryEvents` over 7 days, counting
+  `ACTIVITY_RESUMED` (1; `MOVE_TO_FOREGROUND` before Android 10) per out-of-sight app. Without access
+  UsageStatsService returns an empty list, not an error, so the probe first reads Droynis' own
+  `GET_USAGE_STATS` app-op (allowed, or default with the permission from `pm grant`); without it the
+  check is N/A and says how to turn usage access on. This is the base-tier usage access row 5
+  foresaw, handled inside the check rather than as a `Grant`, so the Settings switch alone is
+  enough. The call runs in Droynis' own process, so Shizuku and root don't stand in for it. Only the
+  out-of-sight packages leave the probe; the rest of the usage history is never kept.
+- **SUSP-5101** (ADB tier, Android 10+): `dumpsys activity services`, which ActivityManagerService
+  answers with DUMP and PACKAGE_USAGE_STATS. Its `services` command prints every active
+  ServiceRecord in full; only `* ServiceRecord{hash uN pkg/cls[ c:caller]}` lines and their
+  `isForeground=` and `startRequested=` lines are read (ServiceRecord prints both only when set or
+  set before, so missing means false). Pending, restarting and destroyed records (`* Restarting
+  ServiceRecord…`) and connection records are skipped; a record line in another shape fails the
+  parse. Services that are only bound, like a keyboard's, are left out; started or foreground ones of
+  the current user count. From the app-ops history SUSP-5102 also reads: `START_FOREGROUND`
+  (ActiveServices starts the op for every foreground service) and `SYSTEM_ALERT_WINDOW` (WindowManager
+  starts it while an overlay window shows) in the last 7 days. A pass needs both reads; with one
+  missing, nothing found is UNKNOWN, not a pass.
+- **SUSP-5004** (base): apps whose installer of record (`getInstallSourceInfo().installingPackageName`,
+  the same field APPS-4004 reads) is another app the user installed: not the app itself
+  (self-updates such as Signal's or Telegram's website builds), not a known store or the /e/OS
+  preinstaller, not a system app (the package installer, the shell for adb, a vendor's store), and
+  not an installer tool for APKs the user picks (SAI, App Manager, InstallerX, APKMirror
+  Installer). An installer missing from the app list counts, noted as gone: a dropper can remove
+  itself once its payload is in. Trusting the installer stops counting what it installed, so an
+  unlisted store needs one tap. Uses only the app list; `initiatingPackageName` (Android 11) was
+  left out, since file managers would count for every APK opened from them.
+- **SUSP-5005** (base): an accessibility service declared, READ_SMS or RECEIVE_SMS and
+  SYSTEM_ALERT_WINDOW requested, the three a banking trojan needs together. Visible apps count too.
+  Critical when it came from outside an app store or its accessibility service is on. Automation
+  apps (Tasker, MacroDroid) match; trust is the way out.
+- **SUSP-5006** (base): a signing certificate whose subject is the debug keystore's
+  (`CN=Android Debug, O=Android, C=US`) or AOSP's public test keys' (`CN=Android, OU=Android,
+  O=Android, L=Mountain View, ST=California, C=US`, emailAddress ignored). Stores never ship
+  either. A notice for a debuggable app (a developer's own build), a warning for a test key or for a
+  debug key on an app that isn't debuggable, which is what re-signing a release APK gives. A
+  certificate can claim any subject, so a match only ever fails, never passes, an app.
+- **SUSP-5104** (ADB tier): the app-ops history SUSP-5102 reads, for `READ_SMS`, `RECEIVE_SMS`
+  (noted when an SMS is delivered), `READ_CALL_LOG` and `READ_CONTACTS` outside the foreground
+  states, in the last 7 days. The default SMS app is left out for SMS and contacts, the default
+  phone app for the call log and contacts, unless it came from outside an app store; a warning when
+  a counted app did.
+- **Moved here**: APPS-4101 (background camera, microphone and location use) became SUSP-5102, and
+  APPS-4108 (screen capture without asking) SUSP-5103: both report what apps did or what only adb
+  can set up, not access granted in Settings. Their logic is unchanged. The old ids are retired,
+  never reused (`CheckSpec.RENAMED`, checked by CatalogDocTest); a mute on an old id moves to the
+  new one when the app reads its mutes. Reports and diffs across the change see the new ids. The
+  other special access switches (APPS-4102 to 4107) stay in Apps and permissions.
+- **Not covered**: ad SDKs inside apps with a normal icon, apps posing as a system app by name and
+  icon, and known-bad lists (no network; an offline indicator list such as AssoEchap's
+  stalkerware-indicators would have to be imported).
+- **Not yet checked on a device**: how launchers other than Launcher3 show a blank label, whether
+  OEM icon theming (MIUI, One UI) fills in a transparent icon before `loadIcon` returns it (which would
+  only hide a sign, never invent one), the exact `dumpsys activity services` text on OEM builds, and
+  which ops OEM builds note for SMS delivered to a non-default app (SUSP-5104).
 
 Check logic never imports `android.*`, so every check is unit-tested on the plain JVM with fakes
 (no Robolectric). The cost: a check that needs a new framework call also needs a probe method in
@@ -393,6 +586,38 @@ Muted ids are stored on the device (`SharedPreferences`) and the index is recomp
 without a new scan. Ids that no longer exist are dropped when read. The Checks tab's Muted filter offers
 Unmute all, after a confirmation, since re-muting means opening each check again.
 
+### Trusted apps
+
+Muting a whole check is too blunt for apps that need a lot of access on purpose: a watch app
+(Gadgetbridge, a vendor's companion app) reads notifications and SMS, sends SMS, keeps location
+all the time and skips battery optimization. The user can trust such an app once, by package name
+(stored in `SharedPreferences` under `trusted_apps`), and every check that lists apps stops
+counting it.
+
+- Trust is per app, not per check: one tap covers everything a watch app does. The cost is that
+  a trusted app gaining more access later (an accessibility service, screen capture) is listed
+  but not counted either, so the UI and the FAQ say to trust only apps you know.
+- Checks apply it themselves, through `ScanContext.trustedApps`: a trusted app is left out of the
+  count, the summary and the sideloaded escalation, but stays in the evidence with the note
+  "trusted by you, not counted". A check whose remaining apps are all trusted passes, and says so
+  ("Only apps you trust can read your notifications: Gadgetbridge"). Doing it in the check, not
+  in the report layer, keeps summaries and escalations right.
+- Evidence marks every app a check lists (`Evidence.trust`): COUNTED and TRUSTED rows get Trust or
+  Stop trusting; NOT_COUNTED rows (apps that came with the phone, app stores, the default SMS or
+  phone app using its role, Droynis itself) show a "Not counted" label instead, since trusting them
+  would change nothing. A row with no button and no label looked like a bug. Shared uids and adb's
+  shell name no single app and carry no mark.
+- Changing trust runs again only the checks whose last result lists that app (a full scan if one
+  is running), so the score follows at once without rescanning everything.
+- It is never silent: ⋮ › Trusted apps lists every trusted app with the checks that list it, JSON
+  reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
+  name them in the header.
+- Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4102 to 4107, APPS-4201,
+  APPS-4301, NETW-3301, SUSP-5001 to 5006 and SUSP-5101 to 5104.
+- Limit: trust follows the package name, not the signing key. An app reinstalled under the same
+  name by someone else keeps its trust; Android refuses such an update while the original is
+  installed, but not after an uninstall.
+
 ### Why the critical cap stays
 
 A weighted average lets many small passes hide one critical gap: 29 passes and no screen lock would
@@ -405,8 +630,8 @@ kept, shown next to a capped score and written to both reports.
 
 Markdown is for people. JSON (`JsonReport`, `"schema": "droynis-report"`, `schemaVersion` 1) is for
 diffing and tools: findings in catalog order, stable keys, two-space indentation, `null` for
-values that could not be read. Fields added since (`scan.grants`, `score.muted`, `muted` per
-finding) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
+values that could not be read. Fields added since (`scan.grants`, `scan.trustedApps`,
+`score.muted`, `muted` per finding, `trust` per evidence: COUNTED, TRUSTED or NOT_COUNTED) are additive, so the schema version stays 1; `verdicts` and `score` leave muted checks
 out. Both contain only scan results and the device facts passed in.
 
 Reports are made to be shared, so by default they leave out personal details (`PersonalDetails`):
@@ -475,7 +700,7 @@ directories, and compares the APKs (baseline profiles are the usual suspect if t
 Material 3 with a teal brand scheme by default, large rounded cards and a bottom navigation bar:
 Dashboard, Checks, Tools, Help. Status colors never change with the theme or accent and always
 come with a glyph and a label: green ✓ passed, yellow – needs attention, red ✗
-critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, green) are
+critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, purple, green) are
 used for category icons only, so they never read as a status. The score ring is colored by the
 result (red whenever a critical failure caps it) on a faded track of the same hue.
 

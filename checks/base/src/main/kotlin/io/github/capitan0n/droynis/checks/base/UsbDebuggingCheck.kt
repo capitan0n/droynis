@@ -29,6 +29,7 @@ class UsbDebuggingCheck(private val settings: SystemSettings, private val usb: U
             text = "Turn off USB debugging in Developer options and tap \"Revoke USB debugging " +
                 "authorizations\". Permissions granted to Droynis with adb stay granted afterwards.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "enable_adb",
         ),
         failsWhen = "adb over USB is on",
     )

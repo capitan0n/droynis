@@ -65,17 +65,23 @@ class AssistantAppCheck(
             val pkg = component.substringBefore('/')
             val holder = Holder(AppRef(pkg, packages.label(pkg)), originOf(pkg, packages.byPackage()))
             val source = if (assist?.trim().isNullOrEmpty()) voice.source else assistant.source
+            val countable = holder.origin != AppOrigin.PREINSTALLED
+            val trusted = countable && context.trusts(pkg)
             val evidence = listOf(
                 Evidence(
                     "Digital assistant",
                     "${holder.app.label} ($component)",
                     source,
-                    note = holder.origin.note,
+                    note = withTrustNote(holder.origin.note, trusted),
                     packageName = holder.app.packageName,
+                    trust = trustOf(counted = countable, trusted = trusted),
                 ),
             ) + switches
-            if (holder.origin == AppOrigin.PREINSTALLED) {
+            if (!countable) {
                 return@evaluate Outcome.pass("${holder.app.label}, which came with the phone, is the digital assistant", evidence)
+            }
+            if (trusted) {
+                return@evaluate Outcome.pass("${holder.app.label}, which you trust, is the digital assistant", evidence)
             }
             val readsScreen = switchState((screenText as? Reading.Value)?.value) in setOf(SwitchState.ON, SwitchState.UNSET)
             Outcome.fail(

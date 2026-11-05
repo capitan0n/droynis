@@ -27,6 +27,7 @@ class LockScreenNotificationsCheck(private val settings: SystemSettings) : Check
                 SettingsActions.NOTIFICATIONS,
                 SettingsActions.SECURITY,
             ),
+            highlightKey = "lock_screen_notifications",
         ),
         failsWhen = "notification content is visible while the phone is locked",
     )

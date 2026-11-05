@@ -35,15 +35,28 @@ class DebuggableAppsCheck(private val packages: PackageInventory) : Check {
 
     override suspend fun run(context: ScanContext): Outcome {
         val apps = packages.installedApps()
-        val debuggable = (apps as? Reading.Value)?.value?.filter { it.isDebuggable }.orEmpty()
+        val all = (apps as? Reading.Value)?.value?.filter { it.isDebuggable }.orEmpty()
+        val (trusted, debuggable) = context.splitTrusted(all) { it.packageName }
         val evidence = buildList {
             add(apps.toEvidence("Apps inspected") { it.size.toString() })
-            debuggable.forEach {
-                add(Evidence("Debuggable", "${packages.label(it.packageName)} (${it.packageName})", apps.source, packageName = it.packageName))
+            all.forEach {
+                val isTrusted = it in trusted
+                add(
+                    Evidence(
+                        "Debuggable",
+                        "${packages.label(it.packageName)} (${it.packageName})",
+                        apps.source,
+                        note = withTrustNote(null, isTrusted),
+                        packageName = it.packageName,
+                        trust = trustOf(counted = true, trusted = isTrusted),
+                    ),
+                )
             }
         }
         return apps.evaluate("Installed apps", evidence) {
-            if (debuggable.isEmpty()) {
+            if (debuggable.isEmpty() && trusted.isNotEmpty()) {
+                Outcome.pass(onlyTrusted("are debuggable", trusted.map { packages.label(it.packageName) }), evidence)
+            } else if (debuggable.isEmpty()) {
                 Outcome.pass("No debuggable apps are installed", evidence)
             } else {
                 val names = debuggable.map { packages.label(it.packageName) }.joinNames()

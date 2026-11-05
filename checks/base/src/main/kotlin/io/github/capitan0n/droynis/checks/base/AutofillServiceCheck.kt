@@ -33,9 +33,10 @@ class AutofillServiceCheck(
             "other one should come from a developer you trust, and one installed from outside an app " +
             "store is a warning.",
         remediation = Remediation(
-            text = "Open Settings › Passwords, passkeys & accounts (on older phones Settings › System › " +
-                "Languages & input › Autofill service) and pick a password manager you trust, or None.",
-            settingsActions = listOf(SettingsActions.ACCOUNTS),
+            text = "Open Settings › Passwords, passkeys & accounts (on Android 11 and older Settings › System › " +
+                "Languages & input › Advanced › Autofill service) and pick a password manager you trust, or None.",
+            settingsActions = listOf(SettingsActions.LANGUAGE_AND_INPUT, SettingsActions.ACCOUNTS),
+            highlightKey = "default_autofill",
         ),
         minSdk = 28,
         // Two calls that AutofillManager lets wait up to 5 seconds each.
@@ -55,18 +56,22 @@ class AutofillServiceCheck(
                 ?: return@evaluate Outcome.pass("No autofill service is selected", listOf(read))
             val pkg = component.substringBefore('/')
             val holder = Holder(AppRef(pkg, packages.label(pkg)), originOf(pkg, packages.byPackage()))
-            val counted = holder.origin != AppOrigin.PREINSTALLED
+            val countable = holder.origin != AppOrigin.PREINSTALLED
+            val trusted = countable && context.trusts(pkg)
             val evidence = listOf(
                 Evidence(
                     "Autofill service",
                     "${holder.app.label} ($component)",
                     state.source,
-                    note = holder.origin.note,
+                    note = withTrustNote(holder.origin.note, trusted),
                     packageName = holder.app.packageName,
+                    trust = trustOf(counted = countable, trusted = trusted),
                 ),
             )
-            if (!counted) {
+            if (!countable) {
                 Outcome.pass("${holder.app.label}, which came with the phone, fills in forms", evidence)
+            } else if (trusted) {
+                Outcome.pass("${holder.app.label}, which you trust, fills in forms", evidence)
             } else {
                 Outcome.fail(
                     "${holder.app.label} fills in forms and passwords in every app" + sideloadedSuffix(listOf(holder)),

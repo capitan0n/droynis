@@ -10,6 +10,7 @@ import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.SettingsActions
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
@@ -57,16 +58,24 @@ class SmsSendingCheck(
         val others = granted.value.keys.filter { it != smsApp }.sorted()
         // Preinstalled apps are only counted, so only the others need a label: loading one opens
         // that app's resources, and a phone can have dozens of preinstalled holders.
-        val counted = others.map { it to originOf(it, inventory) }
+        val countable = others.map { it to originOf(it, inventory) }
             .filter { (_, origin) -> origin != AppOrigin.PREINSTALLED }
             .map { (pkg, origin) -> Holder(AppRef(pkg, packages.label(pkg)), origin) }
+        val (trusted, counted) = context.splitTrusted(countable) { it.app.packageName }
         val evidence = buildList {
-            add(smsEvidence)
-            counted.forEach { add(it.evidence("Can send SMS", granted.source)) }
-            val preinstalled = others.size - counted.size
+            // Your SMS app may always send SMS, so it never counts and has nothing to trust.
+            add(if (smsApp == null) smsEvidence else smsEvidence.copy(note = "allowed for your SMS app; not counted", trust = Trust.NOT_COUNTED))
+            countable.forEach { add(it.evidence("Can send SMS", granted.source, trusted = it in trusted)) }
+            val preinstalled = others.size - countable.size
             if (preinstalled > 0) {
                 add(Evidence("Apps that came with the phone and can send SMS", preinstalled.toString(), granted.source))
             }
+        }
+        if (counted.isEmpty() && trusted.isNotEmpty()) {
+            return Outcome.pass(
+                onlyTrusted("can send SMS", trusted.labels(), others = "your SMS app, apps that came with the phone"),
+                evidence,
+            )
         }
         if (counted.isEmpty()) {
             return Outcome.pass("Only your SMS app and apps that came with the phone can send SMS", evidence)

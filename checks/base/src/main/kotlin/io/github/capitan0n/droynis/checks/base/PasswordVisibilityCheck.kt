@@ -24,6 +24,7 @@ class PasswordVisibilityCheck(private val settings: SystemSettings) : Check {
             text = "Turn off \"Show passwords\" (Settings › Privacy on most phones, Settings › Security on " +
                 "older ones).",
             settingsActions = listOf(SettingsActions.PRIVACY, SettingsActions.SECURITY),
+            highlightKey = "show_password",
         ),
         failsWhen = "typed password characters are shown",
     )

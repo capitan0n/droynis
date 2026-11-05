@@ -40,6 +40,7 @@ class Cellular2gCheck(
                 "network; the place varies by vendor). Where there is no such switch, set Network mode to one " +
                 "without 2G, such as LTE/3G or 5G/LTE. Advanced Protection turns 2G off too.",
             settingsActions = listOf(SettingsActions.MOBILE_NETWORK, SettingsActions.NETWORK),
+            highlightKey = "enable_2g",
         ),
         timeout = 20.seconds,
         failsWhen = "a SIM in use may connect to 2G networks",

@@ -149,6 +149,13 @@ class FakeUptime(private val sinceBoot: Reading<Duration> = value(5.hours)) : Up
     override fun sinceBoot() = sinceBoot
 }
 
+/** By default a 128 GB phone with 64 GB free. */
+class FakeStorage(
+    private val space: Reading<StorageSpace> = value(StorageSpace(totalBytes = 128_000_000_000, freeBytes = 64_000_000_000)),
+) : StorageProbe {
+    override fun internal() = space
+}
+
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
     override fun enabledKeyboards() = keyboards
 }
@@ -204,10 +211,13 @@ class FakeProbes(
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
     override val cellular: CellularProbe = FakeCellular(),
     override val uptime: UptimeProbe = FakeUptime(),
+    override val storage: StorageProbe = FakeStorage(),
     override val battery: BatteryProbe = FakeBattery(),
     override val usb: UsbProbe = FakeUsb(),
     override val biometrics: BiometricProbe = FakeBiometrics(),
     override val packageDetails: PackageDetailsProbe = FakePackageDetails(),
+    override val footprints: AppFootprintProbe = FakeFootprints(),
+    override val usageHistory: UsageHistoryProbe = FakeUsageHistory(),
 ) : BaseProbes
 
 /** [exempt] lists the allowlisted packages; [asked] records which packages a check asked about. */
@@ -265,4 +275,26 @@ fun biometrics(
 /** Packages missing from [packages] aren't installed. */
 class FakePackageDetails(private val packages: Map<String, Reading<PackageDetails?>> = emptyMap()) : PackageDetailsProbe {
     override fun details(packageName: String) = packages[packageName] ?: value(null)
+}
+
+class FakeFootprints(private val apps: Reading<List<AppFootprint>> = value(emptyList())) : AppFootprintProbe {
+    override fun userApps() = apps
+}
+
+/** By default Droynis has no usage access. [asked] records the packages and start time a check asked about. */
+class FakeUsageHistory(
+    private val access: Reading<Boolean> = value(false),
+    private val screens: Reading<Map<String, ScreenUse>> = value(emptyMap()),
+) : UsageHistoryProbe {
+    val asked = mutableListOf<Pair<Set<String>, Instant>>()
+
+    override fun hasAccess() = access
+
+    override fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> {
+        asked += packages to since
+        return when (screens) {
+            is Reading.Value -> Reading.Value(screens.value.filterKeys { it in packages }, screens.source)
+            else -> screens
+        }
+    }
 }

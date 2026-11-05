@@ -196,6 +196,18 @@ interface UptimeProbe {
     fun sinceBoot(): Reading<Duration>
 }
 
+/** The phone's internal storage, in bytes. */
+data class StorageSpace(val totalBytes: Long, val freeBytes: Long)
+
+interface StorageProbe {
+    /**
+     * `StorageStatsManager` for the internal volume: its size, rounded up to the size it was sold
+     * as (128 GB…), and the free space, counting caches Android can clear. Settings › Storage
+     * shows the same two numbers.
+     */
+    fun internal(): Reading<StorageSpace>
+}
+
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */
 data class Keyboard(val app: AppRef, val isSystem: Boolean)
 
@@ -374,6 +386,90 @@ interface PackageDetailsProbe {
     fun details(packageName: String): Reading<PackageDetails?>
 }
 
+/** An app drawer entry: an activity or activity-alias with the MAIN action and the LAUNCHER category. */
+data class LauncherEntry(
+    /** The activity's or alias's class name. */
+    val className: String,
+    /** The label the app drawer shows, as the app set it: it can be empty or only invisible characters. */
+    val label: String,
+    /** Enabled right now, so the app drawer lists it. */
+    val enabled: Boolean,
+    /** Turned off while the app ran (`setComponentEnabledSetting`), not in its manifest. */
+    val turnedOff: Boolean = false,
+    /**
+     * Share of the icon's area, 0 to 1, that is not (nearly) transparent, as drawn at
+     * [AppFootprintProbe.ICON_SIZE] px; null when it wasn't drawn (a disabled entry, or drawing failed).
+     */
+    val iconCoverage: Double? = null,
+)
+
+/** How an installed app shows itself, and what it declares about running on its own. */
+data class AppFootprint(
+    val packageName: String,
+    /** The app's own label as Settings › Apps lists it; raw, like [LauncherEntry.label]. */
+    val appLabel: String,
+    /** Every app drawer entry it declares, disabled ones included; empty when it declares none. */
+    val launcherEntries: List<LauncherEntry>,
+    /** An enabled receiver for BOOT_COMPLETED or LOCKED_BOOT_COMPLETED, and RECEIVE_BOOT_COMPLETED requested. */
+    val startsAtBoot: Boolean,
+    /** Which of [AppFootprintProbe.WATCHED] it requests, granted or not. */
+    val requested: Set<String> = emptySet(),
+    /** Declares an accessibility service, whether or not it is turned on. */
+    val accessibilityService: Boolean = false,
+    /**
+     * Subjects of its signing certificates in RFC 2253 form, e.g. "C=US,O=Android,CN=Android Debug";
+     * empty when they can't be read.
+     */
+    val signerSubjects: List<String> = emptyList(),
+)
+
+interface AppFootprintProbe {
+    /**
+     * Every enabled app that isn't part of the system image (updates of system apps excluded too),
+     * except Droynis itself. Draws each enabled app drawer icon once, so it is cached for a scan.
+     */
+    fun userApps(): Reading<List<AppFootprint>>
+
+    companion object {
+        const val ICON_SIZE = 48
+
+        const val FOREGROUND_SERVICE = "android.permission.FOREGROUND_SERVICE"
+        const val SYSTEM_ALERT_WINDOW = "android.permission.SYSTEM_ALERT_WINDOW"
+        const val USE_FULL_SCREEN_INTENT = "android.permission.USE_FULL_SCREEN_INTENT"
+        const val REQUEST_IGNORE_BATTERY_OPTIMIZATIONS = "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        const val READ_SMS = "android.permission.READ_SMS"
+        const val RECEIVE_SMS = "android.permission.RECEIVE_SMS"
+
+        /** Permissions that let an app run or show itself without being opened, or catch SMS codes. */
+        val WATCHED = setOf(
+            FOREGROUND_SERVICE,
+            SYSTEM_ALERT_WINDOW,
+            USE_FULL_SCREEN_INTENT,
+            REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            READ_SMS,
+            RECEIVE_SMS,
+        )
+    }
+}
+
+/** How often one app brought a screen of its own to the front, and when it last did. */
+data class ScreenUse(val packageName: String, val times: Int, val lastShown: Instant)
+
+interface UsageHistoryProbe {
+    /**
+     * Droynis may read the usage history: its usage-access app-op is allowed (Settings › Usage access),
+     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb. Without it
+     * Android returns an empty history rather than an error, so ask this first.
+     */
+    fun hasAccess(): Reading<Boolean>
+
+    /**
+     * Of [packages], those that brought an activity to the front (`ACTIVITY_RESUMED`) since [since].
+     * Apps outside [packages] are never returned, so the rest of the history stays in the platform layer.
+     */
+    fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>>
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -395,8 +491,11 @@ interface BaseProbes {
     val defaultApps: DefaultAppsProbe
     val cellular: CellularProbe
     val uptime: UptimeProbe
+    val storage: StorageProbe
     val battery: BatteryProbe
     val usb: UsbProbe
     val biometrics: BiometricProbe
     val packageDetails: PackageDetailsProbe
+    val footprints: AppFootprintProbe
+    val usageHistory: UsageHistoryProbe
 }

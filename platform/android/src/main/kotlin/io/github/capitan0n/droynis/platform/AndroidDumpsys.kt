@@ -42,8 +42,8 @@ internal class RoutedDumpsys(
     private val shells: ShellRouter,
 ) : Dumpsys {
 
-    // Seven ADB-tier checks read `dumpsys appops` in the same scan: one read serves them all, so
-    // they judge the same snapshot and the phone prints a few MB once instead of seven times.
+    // Most ADB-tier checks read `dumpsys appops` in the same scan: one read serves them all, so
+    // they judge the same snapshot and the phone prints a few MB once instead of once per check.
     // One lock per command, so `dumpsys trust` never waits for a slow `dumpsys appops`.
     private val locks = ConcurrentHashMap<String, Any>()
     private val cached = ConcurrentHashMap<String, Pair<Long, Reading<String>>>()
@@ -62,8 +62,9 @@ internal class RoutedDumpsys(
 
     private fun read(service: String, vararg args: String): Reading<String> {
         val ownGrants = grants.detect().containsAll(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))
-        val shell = if (ownGrants || args.isNotEmpty()) null else shells.active()
-        return shell?.dumpsys(service) ?: AndroidDumpsys.dump(service, *args)
+        // The shells take the whole command, such as "activity services", and refuse any they don't list.
+        val shell = if (ownGrants) null else shells.active()
+        return shell?.dumpsys((listOf(service) + args).joinToString(" ")) ?: AndroidDumpsys.dump(service, *args)
     }
 
     private companion object {

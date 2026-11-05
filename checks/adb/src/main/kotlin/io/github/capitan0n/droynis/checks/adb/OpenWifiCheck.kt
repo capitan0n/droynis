@@ -43,7 +43,9 @@ import kotlin.time.Duration.Companion.seconds
  * enterprise identity, a proxy) sits on the header, `connect choice` and `linked` lines and in the
  * enterprise and IP sections; each field is taken from outside those or must appear exactly once,
  * so a crafted name can only make the parse fail. A name with a line break breaks its own header,
- * which [WifiDump] and this parser both refuse.
+ * which [WifiDump] and this parser both refuse. The one field read from the header, `HIDDEN:`, is
+ * its last match there: the free text (name, provider name, FQDN) comes before it, and only numbers
+ * and switches after it.
  */
 object SavedNetworksDump {
 
@@ -63,6 +65,8 @@ object SavedNetworksDump {
         val ephemeral: Boolean,
         /** Android 17: false keeps the network from auto-joining while Advanced Protection is on; null where not printed. */
         val autojoinWithAdvancedProtection: Boolean? = null,
+        /** A hidden network (`hiddenSSID`), which the phone has to probe for by name; null where the header doesn't say. */
+        val hidden: Boolean? = null,
     ) {
         /** No password proves who runs it: open, Enhanced Open (OWE) or WEP. */
         val insecure: Boolean get() = securityTypes.any { it in INSECURE }
@@ -81,6 +85,7 @@ object SavedNetworksDump {
     private val ENABLED = Regex("""^\s*Enabled: (true|false)$""")
     private val AUTOJOIN = Regex("""(?:^|\s)allowAutojoin=(true|false)(?=\s|$)""")
     private val AUTOJOIN_AAPM = Regex("""(?:^|\s)mAllowedAutoJoinInAdvancedProtection=(true|false)(?=\s|$)""")
+    private val HIDDEN = Regex(""" HIDDEN: (true|false) PMF: """)
     private val NOT_USER_SAVED = setOf("ephemeral", "fromWifiNetworkSuggestion", "fromWifiNetworkSpecifier")
     private val FREE_TEXT_LINE = Regex("""^\s*(?:connect choice:|linked:)""")
 
@@ -94,6 +99,7 @@ object SavedNetworksDump {
 
         val networks = mutableListOf<SavedNetwork>()
         var header: MatchResult? = null
+        var headerLine = ""
         val body = mutableListOf<String>()
         for (line in lines.subList(begin + 1, end) + null) {
             val next = line?.let { WifiDump.HEADER.find(it) }
@@ -104,12 +110,13 @@ object SavedNetworksDump {
                 continue
             }
             header?.let { head ->
-                when (val network = block(head, body)) {
+                when (val network = block(head, headerLine, body)) {
                     is Block.Done -> networks += network.network
                     is Block.Bad -> return Result.Failed(network.reason)
                 }
             }
             header = next
+            headerLine = line.orEmpty()
             body.clear()
         }
         return Result.Parsed(networks)
@@ -121,7 +128,7 @@ object SavedNetworksDump {
         data class Bad(val reason: String) : Block
     }
 
-    private fun block(head: MatchResult, body: List<String>): Block {
+    private fun block(head: MatchResult, headerLine: String, body: List<String>): Block {
         val id = head.groupValues[1].toInt()
         val ssid = WifiDump.unquote(head.groupValues[2])
         fun bad(reason: String) = Block.Bad("saved network $id $reason")
@@ -160,6 +167,7 @@ object SavedNetworksDump {
                 autojoin = autojoin.single() == "true",
                 ephemeral = flags.any { it in NOT_USER_SAVED },
                 autojoinWithAdvancedProtection = aapm.singleOrNull()?.toBooleanStrict(),
+                hidden = HIDDEN.findAll(headerLine).lastOrNull()?.groupValues?.get(1)?.toBooleanStrict(),
             ),
         )
     }
@@ -184,7 +192,7 @@ class OpenWifiCheck(
             text = "Open Settings › Network & internet › Internet (or Wi-Fi) › Saved networks, tap each network " +
                 "listed and turn off \"Automatically connect\", or forget it. Join such networks by hand, " +
                 "with a VPN.",
-            settingsActions = listOf(SettingsActions.WIFI),
+            settingsActions = listOf(SettingsActions.WIFI_SAVED_NETWORKS, SettingsActions.WIFI),
         ),
         // The per-network security parameters list in dumpsys arrived in Android 12.
         minSdk = 31,

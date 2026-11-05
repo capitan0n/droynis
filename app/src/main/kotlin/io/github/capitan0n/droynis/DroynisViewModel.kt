@@ -18,6 +18,7 @@ import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
+import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.platform.PermissionOverview
 import io.github.capitan0n.droynis.platform.root.RootState
@@ -80,6 +81,10 @@ data class UiState(
     val grants: Set<Grant> = emptySet(),
     /** Ids of checks the user muted: they still run, but the score and counts leave them out. */
     val muted: Set<String> = emptySet(),
+    /** Packages of apps the user trusts: every check still lists them, but none counts them. */
+    val trusted: Set<String> = emptySet(),
+    /** Labels of the [trusted] apps by package; the package name when the app is gone. */
+    val trustedLabels: Map<String, String> = emptyMap(),
     /** Null until first read. */
     val shizuku: ShizukuStatus? = null,
     /** Null until first read. */
@@ -106,6 +111,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         UiState(
             total = checks.size,
             muted = readMuted(),
+            trusted = readTrusted(),
             hidePersonal = prefs.getBoolean(KEY_HIDE_PERSONAL, true),
             // Build constants only, so the dashboard's device card is filled from the start.
             device = platform.build.device(),
@@ -156,6 +162,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         platform.root.enabled = prefs.getBoolean(KEY_ROOT, false)
         platform.shizuku.addListener(onShizukuChanged)
         scan()
+        refreshTrustedLabels()
         // The Tools screen's permission overview loads the label of every app, which needs the same
         // package manager and resource locks as the scan's checks: started together, it slows the
         // first scan. Read it once the first scan is done; the Tools screen also refreshes itself
@@ -184,7 +191,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val started = TimeSource.Monotonic.markNow()
             // Starting the Shizuku shell can take a few seconds, so show the scan as running first.
             _state.update { it.copy(scanning = true, findings = emptyMap()) }
-            val context = platform.newScanContext()
+            val context = platform.newScanContext().copy(trustedApps = _state.value.trusted)
             // Read after newScanContext, which connects Shizuku and opens root, and shown in one update.
             val shizuku = platform.shizuku.status()
             val root = platform.root.status()
@@ -249,13 +256,17 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Turns the root tier off: Droynis runs su no more. */
+    /**
+     * Turns the root tier off: Droynis runs su no more. Scans again, so the root checks show as N/A
+     * instead of keeping the results root read, on screen and in reports.
+     */
     fun disableRoot() {
         prefs.edit().putBoolean(KEY_ROOT, false).apply()
         viewModelScope.launch {
             withContext(Dispatchers.IO) { platform.root.disable() }
             refreshRoot()
             message(R.string.root_turned_off)
+            scan()
         }
     }
 
@@ -293,6 +304,93 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 muted = ids,
                 result = state.result?.let { it.copy(index = HardeningIndex.of(it.findings, ids)) },
             )
+        }
+    }
+
+    /**
+     * Trusts [packageName] in every check, or stops trusting it. The checks that list the app run
+     * again at once, so their results and the score follow; the rest of the scan stays as it is.
+     */
+    fun setTrusted(packageName: String, trusted: Boolean) {
+        val current = _state.value.trusted
+        if ((packageName in current) == trusted) return
+        saveTrusted(if (trusted) current + packageName else current - packageName)
+        message(if (trusted) R.string.app_trusted else R.string.app_untrusted)
+        recheck(checksListing(setOf(packageName)))
+    }
+
+    /** Stops trusting every app, and runs the checks that listed one again. */
+    fun untrustAll() {
+        val trusted = _state.value.trusted
+        if (trusted.isEmpty()) return
+        saveTrusted(emptySet())
+        message(R.string.all_untrusted)
+        recheck(checksListing(trusted))
+    }
+
+    /** Ids of the checks whose last result lists one of [packages] as an app it counts or trusts. */
+    private fun checksListing(packages: Set<String>): Set<String> =
+        _state.value.findings.values
+            .filter { finding -> finding.evidence.any { it.trust in TRUSTABLE && it.packageName in packages } }
+            .mapTo(HashSet()) { it.spec.id }
+
+    private fun saveTrusted(packages: Set<String>) {
+        prefs.edit().putStringSet(KEY_TRUSTED, packages).apply()
+        _state.update { it.copy(trusted = packages) }
+        refreshTrustedLabels()
+    }
+
+    /** Loads the label of every trusted app, off the main thread: each one opens that app's resources. */
+    private fun refreshTrustedLabels() {
+        val packages = _state.value.trusted.toList()
+        viewModelScope.launch(Dispatchers.IO) {
+            val labels = packages.associateWith { platform.packages.label(it) }
+            _state.update { it.copy(trustedLabels = labels) }
+        }
+    }
+
+    /**
+     * Runs only the checks in [checkIds] again, with the trusted apps as they are now, and puts their
+     * results into the last scan. While a full scan runs, or before the first one, it scans instead.
+     */
+    private fun recheck(checkIds: Set<String>) {
+        // A running scan started with the old trust, and may not have reached these checks yet.
+        if (_state.value.scanning || _state.value.result == null) {
+            scan()
+            return
+        }
+        val subset = checks.filter { it.spec.id in checkIds }
+        if (subset.isEmpty()) {
+            // No check lists these apps, so no result changes; reports still name the trusted apps.
+            _state.update { state ->
+                state.copy(result = state.result?.let { it.copy(context = it.context.copy(trustedApps = state.trusted)) })
+            }
+            return
+        }
+        val previous = scanJob
+        scanJob = viewModelScope.launch(Dispatchers.IO) {
+            // Let an earlier recheck close its root shell first, so it can't close this one's.
+            previous?.join()
+            val context = platform.newScanContext().copy(trustedApps = _state.value.trusted)
+            val fresh = HashMap<String, Finding>()
+            try {
+                scanner.scan(subset, context).collect { fresh[it.spec.id] = it }
+            } finally {
+                withContext(NonCancellable) { platform.scanFinished() }
+            }
+            _state.update { state ->
+                val findings = state.findings + fresh
+                val result = state.result?.let { last ->
+                    val ordered = catalog.mapNotNull { findings[it.id] }
+                    last.copy(
+                        // Reports list the trusted apps from the scan's context.
+                        context = last.context.copy(trustedApps = context.trustedApps),
+                        findings = ordered,
+                        index = HardeningIndex.of(ordered, state.muted),
+                    )
+                }
+                state.copy(findings = findings, result = result)
+            }
         }
     }
 
@@ -379,11 +477,21 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         _messages.tryEmit(getApplication<Application>().getString(resId))
     }
 
-    /** Ids of checks that no longer exist are dropped, so a removed check can't stay muted. */
+    /**
+     * Ids of checks that no longer exist are dropped, so a removed check can't stay muted. A check
+     * that moved to another category stays muted under its new id ([CheckSpec.RENAMED]), which is
+     * saved so the old id doesn't linger.
+     */
     private fun readMuted(): Set<String> {
         val known = catalog.mapTo(HashSet()) { it.id }
-        return prefs.getStringSet(KEY_MUTED, null).orEmpty().filterTo(HashSet()) { it in known }
+        val stored = prefs.getStringSet(KEY_MUTED, null).orEmpty()
+        val muted = stored.map { CheckSpec.currentId(it) }.filterTo(HashSet()) { it in known }
+        if (stored.any { it in CheckSpec.RENAMED }) prefs.edit().putStringSet(KEY_MUTED, muted).apply()
+        return muted
     }
+
+    /** A copy: Android's returned set must not be changed. */
+    private fun readTrusted(): Set<String> = prefs.getStringSet(KEY_TRUSTED, null).orEmpty().toSet()
 
     private fun readThemeMode(): ThemeMode {
         val name = prefs.getString(KEY_THEME, null)
@@ -400,6 +508,10 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         private const val KEY_THEME = "theme"
         private const val KEY_ACCENT = "accent"
         private const val KEY_MUTED = "muted_checks"
+        private const val KEY_TRUSTED = "trusted_apps"
+
+        /** Evidence whose result changes with trust; a NOT_COUNTED app never counts anyway. */
+        private val TRUSTABLE = setOf(Trust.COUNTED, Trust.TRUSTED)
         private const val KEY_HIDE_PERSONAL = "hide_personal"
         private const val KEY_ROOT = "root_tier"
         private val MIN_VISIBLE_SCAN = 700.milliseconds

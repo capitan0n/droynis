@@ -54,17 +54,22 @@ class BackgroundLocationCheck(
         val inventory = packages.byPackage()
         // Preinstalled holders are only counted, so only the others need a label.
         val origins = always.associateWith { originOf(it, inventory) }
-        val counted = always.filter { origins.getValue(it) != AppOrigin.PREINSTALLED }
+        val countable = always.filter { origins.getValue(it) != AppOrigin.PREINSTALLED }
             .map { Holder(AppRef(it, packages.label(it)), origins.getValue(it)) }
             .sortedBy { it.app.label.lowercase() }
-        val preinstalled = always.size - counted.size
+        val preinstalled = always.size - countable.size
+        val (trusted, counted) = context.splitTrusted(countable) { it.app.packageName }
 
         val evidence = buildList {
-            counted.forEach { add(it.evidence("Location all the time", granted.source)) }
+            countable.forEach { add(it.evidence("Location all the time", granted.source, trusted = it in trusted)) }
             if (preinstalled > 0) {
                 add(Evidence("Apps that came with the phone with location all the time", preinstalled.toString(), granted.source))
             }
             if (isEmpty()) add(Evidence("Location all the time", "none", granted.source))
+        }
+        if (counted.isEmpty() && trusted.isNotEmpty()) {
+            val others = "apps that came with the phone".takeIf { preinstalled > 0 }
+            return Outcome.pass(onlyTrusted("may use location all the time", trusted.labels(), others = others), evidence)
         }
         if (counted.isEmpty()) {
             val summary = if (preinstalled > 0) {

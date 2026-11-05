@@ -50,6 +50,7 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_SYNC_SETTINGS, SettingsActions.ACCOUNTS)
         assertEquals(Settings.ACTION_VOICE_INPUT_SETTINGS, SettingsActions.VOICE_INPUT)
         assertEquals(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, SettingsActions.DEFAULT_APPS)
+        assertEquals(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, SettingsActions.INTERNAL_STORAGE)
         assertEquals(Settings.ACTION_DEVICE_INFO_SETTINGS, SettingsActions.DEVICE_INFO)
         assertEquals(Settings.ACTION_SETTINGS, SettingsActions.SETTINGS)
     }

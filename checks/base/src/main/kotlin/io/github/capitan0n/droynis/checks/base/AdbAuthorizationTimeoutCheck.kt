@@ -30,6 +30,7 @@ class AdbAuthorizationTimeoutCheck(private val settings: SystemSettings) : Check
                 "timeout\". \"Revoke USB debugging authorizations\" on the same screen forgets every " +
                 "computer at once.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "adb_authorization_timeout",
         ),
         // The timeout and its setting arrived in Android 11.
         minSdk = 30,

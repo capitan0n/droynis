@@ -6,6 +6,7 @@ import android.os.Process
 import io.github.capitan0n.droynis.checks.adb.AdbProbes
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
+import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
 import io.github.capitan0n.droynis.checks.base.AutofillProbe
 import io.github.capitan0n.droynis.checks.base.BaseProbes
@@ -24,8 +25,10 @@ import io.github.capitan0n.droynis.checks.base.PackageDetailsProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
+import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
 import io.github.capitan0n.droynis.checks.base.UptimeProbe
 import io.github.capitan0n.droynis.checks.base.UsbProbe
 import io.github.capitan0n.droynis.checks.base.WebViewProbe
@@ -76,10 +79,14 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val defaultApps: DefaultAppsProbe = AndroidDefaultApps(app)
     override val cellular: CellularProbe = AndroidCellular(app, shells)
     override val uptime: UptimeProbe = AndroidUptime
+    override val storage: StorageProbe = AndroidStorage(app)
     override val battery: BatteryProbe = AndroidBattery(app)
     override val usb: UsbProbe = AndroidUsb(app)
     override val biometrics: BiometricProbe = AndroidBiometrics(app)
     override val packageDetails: PackageDetailsProbe = AndroidPackageDetails(app)
+    private val appFootprints = AndroidAppFootprint(app)
+    override val footprints: AppFootprintProbe = appFootprints
+    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells
@@ -117,6 +124,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     fun scanFinished() {
         routedDumpsys.clear()
         androidPackages.clearCache()
+        appFootprints.clearCache()
         androidPermissions.clearCache()
         devicePolicy.clearCache()
         root.close()

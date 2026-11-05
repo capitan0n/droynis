@@ -43,11 +43,16 @@ class AccessibilityServicesCheck(
             }
             // Every enabled service counts, preinstalled ones too: Android turns none on by itself.
             val enabled = holders(apps, packages.byPackage())
+            val (trusted, counted) = context.splitTrusted(enabled) { it.app.packageName }
+            val evidence = enabled.map { it.evidence("Enabled service", services.source, trusted = it in trusted) }
+            if (counted.isEmpty()) {
+                return@evaluate Outcome.pass(onlyTrusted("are enabled", trusted.labels(), subject = "accessibility services"), evidence)
+            }
             Outcome.fail(
-                "${count(enabled.size, "accessibility service")} enabled: ${enabled.map { it.app.label }.joinNames()}" +
-                    sideloadedSuffix(enabled),
-                enabled.map { it.evidence("Enabled service", services.source) },
-                escalation = sideloadedEscalation(enabled),
+                "${count(counted.size, "accessibility service")} enabled: ${counted.labels().joinNames()}" +
+                    sideloadedSuffix(counted),
+                evidence,
+                escalation = sideloadedEscalation(counted),
             )
         }
     }

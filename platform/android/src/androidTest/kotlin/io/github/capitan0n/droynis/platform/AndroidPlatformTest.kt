@@ -3,6 +3,9 @@ package io.github.capitan0n.droynis.platform
 import android.os.Build
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.capitan0n.droynis.checks.adb.AppOpsDump
+import io.github.capitan0n.droynis.checks.adb.RunningService
+import io.github.capitan0n.droynis.checks.adb.ServicesDump
 import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.baseChecks
 import io.github.capitan0n.droynis.checks.root.rootChecks
@@ -107,6 +110,55 @@ class AndroidPlatformTest {
                 (finding.summary.startsWith("Check failed") || finding.summary.startsWith("Timed out"))
             assertFalse("${finding.spec.id}: ${finding.summary}", crashed)
         }
+    }
+
+    @Test
+    fun footprintsListOnlyUserAppsAndDrawTheirIcons() {
+        val footprints = platform.footprints.userApps()
+        assertValue(footprints)
+        val apps = platform.packages.installedApps() as Reading.Value
+        val system = apps.value.filter { it.isSystem }.mapTo(HashSet()) { it.packageName }
+        for (app in (footprints as Reading.Value).value) {
+            assertFalse("${app.packageName} is a system app", app.packageName in system)
+            // Every installed app is signed, so its certificate's subject must be readable.
+            assertTrue("${app.packageName} has no signer", app.signerSubjects.isNotEmpty())
+            for (entry in app.launcherEntries) {
+                // Enabled entries get their icon drawn; disabled ones never do.
+                if (!entry.enabled) assertEquals(null, entry.iconCoverage)
+                entry.iconCoverage?.let { assertTrue("${app.packageName}: $it", it in 0.0..1.0) }
+            }
+        }
+    }
+
+    /** The parsers' patterns compile on Android's regex engine (ICU), which is stricter than the JVM's. */
+    @Test
+    fun dumpsysParsersRunOnAndroidsRegexEngine() {
+        val services = ServicesDump.parse(
+            "ACTIVITY MANAGER SERVICES (dumpsys activity services)\n" +
+                "  User 0 active services:\n" +
+                "  * ServiceRecord{a1b2c3 u0 org.example/.Svc c:org.example}\n" +
+                "    isForeground=true foregroundId=1 types=0x00000000 foregroundNoti=null\n" +
+                "    startRequested=true delayedStop=false stopIfKilled=false callStart=true lastStartId=1\n",
+        )
+        assertEquals(
+            ServicesDump.Result.Parsed(listOf(RunningService(0, "org.example", ".Svc", foreground = true, started = true))),
+            services,
+        )
+        val appOps = AppOpsDump.parse(
+            "AppOps Uid Op State\n  Uid u0a1:\n    Package org.example:\n      CAMERA (allow):\n        null=[\n" +
+                "          Access: [bg-s] 2026-10-05 12:00:00.000 (-1h2m3s4ms) duration=+5s0ms\n        ]\n",
+        )
+        assertTrue("$appOps", appOps is AppOpsDump.Result.Parsed)
+    }
+
+    @Test
+    fun usageHistoryAnswersWithOrWithoutAccess() {
+        val access = platform.usageHistory.hasAccess()
+        assertValue(access)
+        // Without access Android returns an empty history; the probe must not throw either way.
+        val shown = platform.usageHistory.screensShown(setOf("com.android.settings"), java.time.Instant.now().minusSeconds(3600))
+        assertValue(shown)
+        assertTrue("only asked packages may come back", (shown as Reading.Value).value.keys.all { it == "com.android.settings" })
     }
 
     @Test

@@ -23,6 +23,7 @@ class WirelessDebuggingCheck(private val settings: SystemSettings) : Check {
             text = "Turn off Wireless debugging in Developer options and remove paired devices you no " +
                 "longer use. Android also turns it off when you leave the Wi-Fi network.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "toggle_adb_wireless",
         ),
         minSdk = 30,
         failsWhen = "adb over Wi-Fi is on",

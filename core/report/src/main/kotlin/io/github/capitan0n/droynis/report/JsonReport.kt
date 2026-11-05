@@ -37,6 +37,8 @@ object JsonReport {
                 "sdkInt" to context.sdkInt,
                 "tier" to context.capabilities.tier.name,
                 "grants" to context.capabilities.grants.map { it.name }.sorted(),
+                // Apps the user trusts: listed in the evidence of every check, but not counted.
+                "trustedApps" to context.trustedApps.sorted(),
             ),
             "device" to facts.associateTo(linkedMapOf()) { it.key to it.value },
             "score" to linkedMapOf(
@@ -70,6 +72,7 @@ object JsonReport {
                             "grant" to it.source.grant?.name,
                             "note" to it.note,
                             "personal" to it.personal,
+                            "trust" to it.trust?.name,
                         )
                     },
                     "remediation" to finding.spec.remediation.text,

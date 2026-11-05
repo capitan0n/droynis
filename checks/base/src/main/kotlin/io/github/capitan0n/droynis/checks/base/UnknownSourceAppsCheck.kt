@@ -37,24 +37,30 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
         val apps = packages.installedApps()
         val all = (apps as? Reading.Value)?.value
         val byPackage = all?.associateBy { it.packageName }
-        val sideloaded = all
+        val outside = all
             ?.filter { originOf(it.packageName, byPackage) == AppOrigin.SIDELOADED }
             .orEmpty()
+        val (trusted, sideloaded) = context.splitTrusted(outside) { it.packageName }
         val evidence = buildList {
             add(apps.toEvidence("User apps inspected") { list -> list.count { !it.isSystem }.toString() })
-            sideloaded.forEach {
+            outside.forEach {
+                val isTrusted = it in trusted
                 add(
                     Evidence(
                         "Installed by",
                         "${packages.label(it.packageName)}: ${it.installer ?: "unknown (adb or file)"}",
                         apps.source,
+                        note = withTrustNote(null, isTrusted),
                         packageName = it.packageName,
+                        trust = trustOf(counted = true, trusted = isTrusted),
                     ),
                 )
             }
         }
         return apps.evaluate("Installed apps", evidence) {
-            if (sideloaded.isEmpty()) {
+            if (sideloaded.isEmpty() && trusted.isNotEmpty()) {
+                Outcome.pass(onlyTrusted("come from outside an app store", trusted.map { packages.label(it.packageName) }), evidence)
+            } else if (sideloaded.isEmpty()) {
                 Outcome.pass("Every app came from a known app store", evidence)
             } else {
                 val names = sideloaded.map { packages.label(it.packageName) }.joinNames()

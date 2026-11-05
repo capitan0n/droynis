@@ -14,6 +14,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     AndroidBuildCheck(probes.build, probes.properties),
     WebViewCheck(probes.webView),
     RestartCheck(probes.uptime),
+    StorageSpaceCheck(probes.storage),
     AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
     // Access control
     LockScreenCheck(probes.keyguard),
@@ -41,11 +42,19 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     KeyboardAppsCheck(probes.inputMethods),
     AutofillServiceCheck(probes.autofill, probes.packages),
     AssistantAppCheck(probes.settings, probes.packages),
+    ShizukuAppsCheck(probes.permissions, probes.packages),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
     PlayProtectCheck(probes.settings),
     OutdatedAppsCheck(probes.packages),
     PlayServicesCheck(probes.packageDetails),
+    // Suspicious apps
+    HiddenAppsCheck(probes.footprints, probes.packages, probes.accessibility, probes.policy, probes.settings),
+    HiddenAutostartCheck(probes.footprints, probes.packages, probes.battery),
+    HiddenScreensCheck(probes.footprints, probes.packages, probes.usageHistory),
+    InstalledByAppCheck(probes.packages),
+    TrojanPermissionsCheck(probes.footprints, probes.packages, probes.accessibility),
+    TestKeyAppsCheck(probes.footprints, probes.packages),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),

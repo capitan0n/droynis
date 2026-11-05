@@ -23,6 +23,7 @@ class StayAwakeCheck(private val settings: SystemSettings) : Check {
         remediation = Remediation(
             text = "Turn off \"Stay awake\" in Developer options.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "keep_screen_on",
         ),
         failsWhen = "the screen never turns off, so never locks, while charging",
     )

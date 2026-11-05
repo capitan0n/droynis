@@ -50,6 +50,19 @@ data class CheckSpec(
     companion object {
         const val MIN_SDK = 26
         private val ID_PATTERN = Regex("[A-Z]{4}-\\d{4}")
+
+        /**
+         * Checks that moved to another category and got a new id there, old id to new. Ids stored on
+         * the phone (muted checks) are read through [currentId], so a mute survives the move. An old
+         * id is never given to another check.
+         */
+        val RENAMED: Map<String, String> = mapOf(
+            "APPS-4101" to "SUSP-5102",
+            "APPS-4108" to "SUSP-5103",
+        )
+
+        /** [id], or the id its check has now when it moved. */
+        fun currentId(id: String): String = RENAMED[id] ?: id
     }
 }
 
@@ -57,6 +70,13 @@ enum class Category(val label: String) {
     DEVICE_INTEGRITY("Device integrity"),
     ACCESS_CONTROL("Access control"),
     APPS("Apps and permissions"),
+
+    /**
+     * Signs that an installed app is adware, stalkerware or other malware: it hides from the app
+     * drawer and runs or shows screens on its own. Heuristics, unlike the settings the other
+     * categories read, so findings name the signs they saw.
+     */
+    SUSPICIOUS_APPS("Suspicious apps"),
     NETWORK("Network and radios"),
 }
 
@@ -66,16 +86,25 @@ enum class Severity { INFO, NOTICE, WARNING, CRITICAL }
 /**
  * What the user can do about a FAIL. Droynis never applies a fix itself.
  *
- * @property settingsActions intent actions to try in order; the UI opens the first one the device
- *   can handle and falls back to the main Settings screen.
+ * @property settingsActions intent actions, or explicit Settings activities ([SettingsActions.isComponent]),
+ *   to try in order; the UI opens the first one the device can handle and falls back to the main
+ *   Settings screen ([SettingsActions.route]).
  * @property command an optional copy-paste command (for example adb), explained by [text].
  * @property appSettingsActions intent actions that open one app's switch when given a `package:` URI,
  *   for evidence that names an app ([Evidence.packageName]). The UI tries them in order, then the
  *   app's App info screen ([SettingsActions.APP_DETAILS]), which every app gets.
+ * @property highlightKey the key of the switch to change, as AOSP's Settings app names it on the
+ *   screens in [settingsActions]: Settings scrolls to it and highlights it. A screen without that key,
+ *   or a Settings app that doesn't highlight, just opens as usual.
  */
 data class Remediation(
     val text: String,
     val settingsActions: List<String> = emptyList(),
     val command: String? = null,
     val appSettingsActions: List<String> = emptyList(),
-)
+    val highlightKey: String? = null,
+) {
+    init {
+        require(highlightKey == null || settingsActions.isNotEmpty()) { "A highlight key needs a Settings screen to show it on" }
+    }
+}

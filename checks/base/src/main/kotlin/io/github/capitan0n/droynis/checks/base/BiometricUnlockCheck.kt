@@ -40,7 +40,7 @@ class BiometricUnlockCheck(private val keyguard: Keyguard, private val biometric
             text = "In Settings › Security (Device unlock or Biometrics on some phones), remove the weak " +
                 "face unlock or turn off its use for unlocking the phone, and keep a fingerprint or your PIN " +
                 "or password instead. If the phone has a face unlock Droynis can't see, check it there too.",
-            settingsActions = listOf(SettingsActions.SECURITY),
+            settingsActions = listOf(SettingsActions.FACE, SettingsActions.SECURITY),
         ),
         // canAuthenticate(int), which asks about one class, exists from Android 11.
         minSdk = 30,

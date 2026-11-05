@@ -121,6 +121,17 @@ class ReportTest {
     }
 
     @Test
+    fun `trusted apps are named`() {
+        val findings = listOf(finding(Status.PASS, Severity.NOTICE, id = "APPS-4005", title = "Notification access"))
+        val trusting = context.copy(trustedApps = setOf("org.example.watch", "org.example.reader"))
+
+        val markdown = MarkdownReport.render(trusting, findings, HardeningIndex.of(findings), emptyList(), "0.16.0")
+
+        assertTrue("- Apps trusted by the user, listed but not counted: org.example.reader, org.example.watch" in markdown)
+        assertTrue("trusted by the user" !in MarkdownReport.render(context, findings, HardeningIndex.of(findings), emptyList(), "0.16.0"))
+    }
+
+    @Test
     fun `the report names the tier and the grants it ran with`() {
         val base = MarkdownReport.render(context, emptyList(), HardeningIndex.of(emptyList()), emptyList(), "0.5.0")
         assertTrue("(privilege tier BASE)" in base)

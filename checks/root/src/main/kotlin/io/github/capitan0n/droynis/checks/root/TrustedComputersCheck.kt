@@ -39,8 +39,10 @@ class TrustedComputersCheck(private val root: RootShellProbe) : Check {
             "that timeout is turned off. Only root can read the list.",
         remediation = Remediation(
             text = "In Developer options tap \"Revoke USB debugging authorizations\". Your own computer " +
-                "asks again the next time you connect it.",
+                "asks again the next time you connect it. If Developer options are off, turn them on first: in About " +
+                "phone, tap Build number seven times.",
             settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            highlightKey = "clear_adb_keys",
         ),
         requires = setOf(Grant.ROOT),
         // Root reads share one shell, so a check may wait for others.

@@ -84,10 +84,12 @@
     <string name="category_integrity">Device integrity</string>
     <string name="category_access">Access control</string>
     <string name="category_apps">Apps and permissions</string>
+    <string name="category_suspicious">Suspicious apps</string>
     <string name="category_network">Network and radios</string>
     <string name="category_short_integrity">Integrity</string>
     <string name="category_short_access">Access</string>
     <string name="category_short_apps">Apps</string>
+    <string name="category_short_suspicious">Suspicious</string>
     <string name="category_short_network">Network</string>
 
     <!-- Dashboard -->
@@ -173,6 +175,25 @@
     <string name="unmute">Unmute</string>
     <string name="unmute_all_title">Unmute all checks?</string>
     <string name="unmute_all_body">Every muted check will count in the score and the issue lists again.</string>
+
+    <!-- Trusted apps -->
+    <string name="detail_trust_app">Trust</string>
+    <string name="detail_trust_app_for">Trust %1$s in every check</string>
+    <string name="detail_untrust_app">Stop trusting</string>
+    <string name="detail_untrust_app_for">Stop trusting %1$s</string>
+    <string name="detail_trust_hint">Trust an app you know needs this kind of access, such as a watch app that reads your notifications and SMS. It stays listed, but no longer counts against this check or any other. Apps marked Not counted, such as ones that came with the phone, never change this result, so there is nothing to trust.</string>
+    <string name="detail_not_counted">Not counted</string>
+    <string name="app_trusted">App trusted: it no longer counts in any check. Checking again…</string>
+    <string name="app_untrusted">The app counts again. Checking again…</string>
+    <string name="all_untrusted">No app is trusted any more. Checking again…</string>
+    <string name="trusted_title">Trusted apps</string>
+    <string name="trusted_intro">Every check still lists these apps, but none counts them against the result. Tap the cross to stop trusting one.</string>
+    <string name="trusted_empty">No apps are trusted. To trust one, open a check that lists it, such as Notification access, and tap Trust under the app.</string>
+    <string name="trusted_listed_in">Listed but not counted in</string>
+    <string name="trusted_not_listed">No check lists it in the last scan.</string>
+    <string name="untrust_all">Stop trusting all</string>
+    <string name="untrust_all_title">Stop trusting all apps?</string>
+    <string name="untrust_all_body">Every trusted app will count in the checks again.</string>
     <string name="cancel">Cancel</string>
     <string name="detail_set_up_tier">How to set it up</string>
     <string name="detail_duration">Time taken</string>
@@ -279,6 +300,8 @@
     <string name="report_subject">Droynis security report</string>
     <string name="copied">Copied</string>
     <string name="settings_not_opened">This phone has no matching settings screen</string>
+    <!-- A toast over About phone, opened because Developer options are off. -->
+    <string name="developer_options_off">Developer options are off. Tap Build number 7 times to turn them on, then go back to Droynis.</string>
 
     <!-- Help -->
     <string name="help_legend">Reading the results</string>
@@ -385,7 +408,7 @@
     <string name="help_privacy_4">Reports leave out hardware identifiers, phone numbers and account names.</string>
     <string name="help_faq">Questions and answers</string>
     <string name="faq_q1">Does a score of 100 mean my phone is safe?</string>
-    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see. It cannot find malware, spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
+    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see, and signs that an installed app hides from you, such as a blank name or a turned-off icon. It does not scan apps for malicious code, and cannot find spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
     <string name="faq_q2">Why are some checks Unknown?</string>
     <string name="faq_a2">Android hides some settings from apps, and some vendors change or remove them. Droynis then says it does not know instead of guessing. Android 17, for example, can report USB debugging and developer options as off to every app.</string>
     <string name="faq_q3">Why does Droynis need to see all installed apps?</string>
@@ -398,6 +421,8 @@
     <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
     <string name="faq_q8">Can I leave out a check I can\'t fix?</string>
     <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch. To undo them all at once, pick the Muted filter in the Checks tab and tap Unmute all.</string>
+    <string name="faq_q10">An app I use needs a lot of access. Can I stop it from counting?</string>
+    <string name="faq_a10">Yes. Watch, automation and password apps often need notification access, SMS or location all the time. Open a check that lists the app and tap Trust under it: the app stays listed everywhere, but no longer counts in any check, and the score follows. Trust only apps you know: a trusted app that later gets more access, such as an accessibility service, is listed but not counted either. ⋮ › Trusted apps lists every app you trust, and reports name them too.</string>
     <string name="faq_q9">What does “Hide personal details” leave out of reports?</string>
     <string name="faq_a9">It is on by default and applies to saved, shared and copied reports. It replaces every IP address, the DNS and proxy servers, the Private DNS host (a NextDNS-style host carries your personal ID), the computers trusted for USB debugging and the names of saved Wi-Fi networks with [hidden]. App names, the phone model and the Android version stay: the findings are about them, and they don\'t single out your phone. Droynis itself never sends a report anywhere.</string>
     <string name="faq_q7">Is Droynis part of Lynis?</string>

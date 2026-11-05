@@ -12,6 +12,10 @@ fun shizukuChecks(probes: ShizukuProbes): List<Check> = listOf(
     BootPropertiesCheck(probes.shell, probes.properties),
     // Access control
     SimPinCheck(probes.cellular),
+    LockScreenControlsCheck(probes.settings),
+    // Apps and permissions
+    CredentialProvidersCheck(probes.settings, probes.packages),
+    ClipboardAlertsCheck(probes.settings),
     // Network
     AlwaysOnVpnCheck(probes.settings, probes.packages),
     CellularEncryptionCheck(probes.cellular),

@@ -21,7 +21,8 @@ class ScreenTimeoutCheck(private val settings: SystemSettings) : Check {
             "unlocked phone open to anyone nearby, for example on a desk or table.",
         remediation = Remediation(
             text = "Set Screen timeout to 1 minute or less (Settings › Display).",
-            settingsActions = listOf(SettingsActions.DISPLAY),
+            settingsActions = listOf(SettingsActions.SCREEN_TIMEOUT, SettingsActions.DISPLAY),
+            highlightKey = "screen_timeout",
         ),
         failsWhen = "the screen stays on for more than 2 minutes",
     )

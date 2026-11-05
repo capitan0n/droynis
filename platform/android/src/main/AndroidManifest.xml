@@ -26,12 +26,16 @@
         `pm revoke` takes them back. Without them the ADB-tier checks show as N/A.
     -->
 
-    <!-- Lets dumpsys answer us; APPS-4101 reads `dumpsys appops`. -->
+    <!-- Lets dumpsys answer us; SUSP-5102 and the special access checks read `dumpsys appops`. -->
     <uses-permission
         android:name="android.permission.DUMP"
         tools:ignore="ProtectedPermissions" />
 
-    <!-- dumpsys appops also asks for this permission itself; the Usage access switch is not enough. -->
+    <!--
+        dumpsys appops also asks for this permission itself; the Usage access switch is not enough.
+        Declaring it also lists Droynis under Settings › Usage access, whose switch alone is enough
+        for SUSP-5003 to read the usage history.
+    -->
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />

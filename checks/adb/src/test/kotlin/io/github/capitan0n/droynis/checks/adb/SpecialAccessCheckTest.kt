@@ -3,6 +3,7 @@ package io.github.capitan0n.droynis.checks.adb
 import io.github.capitan0n.droynis.checks.adb.SpecialAccessCheck.Access
 import io.github.capitan0n.droynis.checks.base.InstalledApp
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
@@ -11,6 +12,7 @@ import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import io.github.capitan0n.droynis.core.Tier
+import io.github.capitan0n.droynis.core.Trust
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import kotlin.test.assertEquals
@@ -51,8 +53,11 @@ class SpecialAccessCheckTest {
     fun `every access is an adb-tier app check with its own settings screen`() {
         val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4108).map { "APPS-$it" }, specs.values.map { it.id })
+        assertEquals((4102..4107).map { "APPS-$it" } + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
+        // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
+        assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
+        assertTrue(specs.filterKeys { it != Access.SCREEN_CAPTURE }.values.all { it.category == Category.APPS })
         // Each Settings switch has its own screen; screen capture has no switch, only an adb command.
         val switches = specs.filterKeys { it != Access.SCREEN_CAPTURE }.values
         assertEquals(switches.size, switches.map { it.remediation.settingsActions.single() }.toSet().size)
@@ -118,6 +123,33 @@ class SpecialAccessCheckTest {
         assertEquals(Status.FAIL, outcome.status)
         assertEquals("1 app can draw over other apps: Bubbles", outcome.summary)
         assertEquals("Bubbles (org.example.bubbles)", outcome.evidence.single { it.label == "Display over other apps" }.value)
+    }
+
+    @Test
+    fun `a trusted app is listed but not counted`() = runTest {
+        val dump = dump(
+            app("u0a130", "org.example.bubbles", "SYSTEM_ALERT_WINDOW", "allow"),
+            app("u0a132", "org.example.files", "SYSTEM_ALERT_WINDOW", "allow"),
+        )
+        val trustBubbles = context.copy(trustedApps = setOf("org.example.bubbles"))
+
+        val one = check(Access.OVERLAY, dump).run(trustBubbles)
+        assertEquals(Status.FAIL, one.status)
+        assertEquals("1 app can draw over other apps: Files", one.summary)
+        val bubbles = one.evidence.single { it.packageName == "org.example.bubbles" }
+        assertEquals(Trust.TRUSTED, bubbles.trust)
+        assertEquals("trusted by you, not counted", bubbles.note)
+        assertEquals(Trust.COUNTED, one.evidence.single { it.packageName == "org.example.files" }.trust)
+
+        val both = check(Access.OVERLAY, dump).run(
+            trustBubbles.copy(trustedApps = trustBubbles.trustedApps + "org.example.files"),
+        )
+        assertEquals(Status.PASS, both.status)
+        assertEquals("Only apps you trust can draw over other apps: Bubbles and Files", both.summary)
+
+        // Trust covers every access the app holds.
+        val files = check(Access.ALL_FILES, dump(app("u0a130", "org.example.bubbles", "MANAGE_EXTERNAL_STORAGE", "allow")))
+        assertEquals(Status.PASS, files.run(trustBubbles).status)
     }
 
     @Test

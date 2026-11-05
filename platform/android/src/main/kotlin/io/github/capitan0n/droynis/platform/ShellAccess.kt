@@ -19,7 +19,7 @@ interface ShellAccess {
     /** `/proc/cmdline`: the boot parameters the bootloader passed, which apps can't read. */
     fun kernelCmdline(): Reading<String>
 
-    /** `dumpsys <service>` for an allowlisted service. */
+    /** `dumpsys <command>` for an allowlisted command: a service name, or one with fixed arguments such as "activity services". */
     fun dumpsys(service: String): Reading<String>
 
     /** [TelephonyReader]'s read, run as this shell's user. */

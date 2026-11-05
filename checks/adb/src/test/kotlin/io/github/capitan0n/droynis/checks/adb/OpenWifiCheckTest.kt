@@ -151,7 +151,7 @@ class OpenWifiCheckTest {
             SavedNetworksDump.parse(dump(network(4, "Cafe", OPEN, android17 = false))),
         )
         val network = parsed.networks.single()
-        assertEquals(SavedNetworksDump.SavedNetwork(4, "Cafe", setOf(0), autojoin = true, ephemeral = false), network)
+        assertEquals(SavedNetworksDump.SavedNetwork(4, "Cafe", setOf(0), autojoin = true, ephemeral = false, hidden = false), network)
         assertNull(network.autojoinWithAdvancedProtection)
     }
 
@@ -191,7 +191,8 @@ class OpenWifiCheckTest {
         assertEquals(Status.UNKNOWN, check(Reading.Unavailable("Permission Denial", source)).run(context).status)
     }
 
-    private companion object {
+    /** Also builds the dumps of [HiddenWifiCheckTest]. */
+    internal companion object {
         const val BEGIN = "WifiConfigManager - Configured networks Begin ----"
         const val END = "WifiConfigManager - Configured networks End ----"
         val OPEN = listOf(0 to true)
@@ -226,16 +227,17 @@ class OpenWifiCheckTest {
             android17: Boolean = true,
             connectChoice: String? = null,
             identity: String? = null,
+            hidden: Boolean = false,
         ): String = buildList {
             val (firstType, _) = types.first()
             if (android17) {
                 add(
                     "ID: $id SSID: \"$ssid\" PROVIDER-NAME: null BSSID: null FQDN: null HOME-PROVIDER-NETWORK: false " +
-                        "PRIO: 0 HIDDEN: false PMF: false CarrierId: -1 SubscriptionId: -1 SubscriptionGroup: null " +
+                        "PRIO: 0 HIDDEN: $hidden PMF: false CarrierId: -1 SubscriptionId: -1 SubscriptionGroup: null " +
                         "Currently Connected: false User Selected: true",
                 )
             } else {
-                add("ID: $id SSID: \"$ssid\" PROVIDER-NAME: null BSSID: null FQDN: null HOME-PROVIDER-NETWORK: false PRIO: 0 HIDDEN: false PMF: falseCarrierId: -1SubscriptionId-1")
+                add("ID: $id SSID: \"$ssid\" PROVIDER-NAME: null BSSID: null FQDN: null HOME-PROVIDER-NETWORK: false PRIO: 0 HIDDEN: $hidden PMF: falseCarrierId: -1SubscriptionId-1")
             }
             add(" NetworkSelectionStatus NETWORK_SELECTION_ENABLED")
             add((connectChoice?.let { " connect choice: $it connect choice rssi: -60" } ?: "") + " hasEverConnected: true")

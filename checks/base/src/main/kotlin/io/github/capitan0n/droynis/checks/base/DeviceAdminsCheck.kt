@@ -31,7 +31,7 @@ class DeviceAdminsCheck(
         remediation = Remediation(
             text = "Review them under Settings › Security › Device admin apps (the location varies by " +
                 "vendor) and deactivate the ones you do not need.",
-            settingsActions = listOf(SettingsActions.SECURITY),
+            settingsActions = listOf(SettingsActions.DEVICE_ADMINS, SettingsActions.SECURITY),
         ),
         failsWhen = "a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store)",
     )
@@ -45,10 +45,29 @@ class DeviceAdminsCheck(
             val inventory = packages.byPackage()
             val origins = list.associateWith { originOf(it.app.packageName, inventory) }
             // An owner manages the device whatever its origin; other preinstalled admins are part of the phone.
-            val counted = list.filter { it.isDeviceOwner || it.isProfileOwner || origins.getValue(it) != AppOrigin.PREINSTALLED }
+            val countable = list.filter { it.isDeviceOwner || it.isProfileOwner || origins.getValue(it) != AppOrigin.PREINSTALLED }
+            val (trusted, counted) = context.splitTrusted(countable) { it.app.packageName }
             val evidence = list.map { admin ->
-                val note = origins.getValue(admin).note + if (admin in counted) "" else "; not counted"
-                Evidence("Active admin", describe(admin), admins.source, note = note, packageName = admin.app.packageName)
+                val note = origins.getValue(admin).note + when (admin) {
+                    in trusted -> "; $TRUSTED_NOTE"
+                    in counted -> ""
+                    else -> "; not counted"
+                }
+                Evidence(
+                    "Active admin",
+                    describe(admin),
+                    admins.source,
+                    note = note,
+                    packageName = admin.app.packageName,
+                    trust = trustOf(counted = admin in counted, trusted = admin in trusted),
+                )
+            }
+            if (counted.isEmpty() && trusted.isNotEmpty()) {
+                val others = "admins that came with the phone".takeIf { list.size > trusted.size }
+                return@evaluate Outcome.pass(
+                    onlyTrusted("are active", trusted.map { it.app.label }, subject = "device admins", others = others),
+                    evidence,
+                )
             }
             if (counted.isEmpty()) return@evaluate Outcome.pass("Only device admins that came with the phone are active", evidence)
             val holders = counted.map { Holder(it.app, origins.getValue(it)) }
