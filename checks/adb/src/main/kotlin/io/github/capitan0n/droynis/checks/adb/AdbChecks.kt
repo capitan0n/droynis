@@ -16,7 +16,8 @@ fun adbChecks(probes: AdbProbes): List<Check> = (
         OpenWifiCheck(probes.dumpsys, probes.policy) +
         HiddenWifiCheck(probes.dumpsys) +
         HotspotCheck(probes.dumpsys) +
-        HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages)
+        HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages) +
+        BackgroundDataUseCheck(probes.dumpsys, probes.packages, probes.defaultApps)
     )
     // Grouped by category like the other registries (a stable sort keeps the order within each);
     // screen capture is one of the special access switches but belongs to Suspicious apps.

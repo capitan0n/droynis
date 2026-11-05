@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.platform
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -7,6 +8,7 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
+import android.content.pm.Signature
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Build
@@ -15,15 +17,18 @@ import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
 import io.github.capitan0n.droynis.checks.base.LauncherEntry
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import java.io.ByteArrayInputStream
+import java.security.cert.CertificateFactory
+import java.security.cert.X509Certificate
 
 /**
  * How each user app shows itself in the app drawer, and what it declares about starting on its
  * own. Needs QUERY_ALL_PACKAGES like [AndroidPackages]: without it the hiding apps would be hidden
  * from Droynis too, and the checks would pass falsely.
  *
- * Four bulk queries per scan (packages with permissions, launcher entries with and without
- * disabled ones, boot receivers), then for each user app's entries one enabled-state call and,
- * for enabled ones, one icon drawn at [AppFootprintProbe.ICON_SIZE] px.
+ * A few bulk queries per scan (packages with permissions and signers, launcher entries with and
+ * without disabled ones, boot receivers, accessibility services), then for each user app's entries
+ * one enabled-state call and, for enabled ones, one icon drawn at [AppFootprintProbe.ICON_SIZE] px.
  */
 internal class AndroidAppFootprint(private val context: Context) : AppFootprintProbe {
 
@@ -42,6 +47,10 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
             val declared = launcherActivities(PackageManager.MATCH_DISABLED_COMPONENTS).groupBy { it.activityInfo.packageName }
             val shown = launcherActivities(0).mapTo(HashSet()) { it.component() }
             val atBoot = BOOT_ACTIONS.flatMapTo(HashSet()) { action -> receivers(action).map { it.activityInfo.packageName } }
+            // Android binds an accessibility service only when it requires this permission.
+            val accessibility = services(ACCESSIBILITY_SERVICE)
+                .filter { it.serviceInfo?.permission == BIND_ACCESSIBILITY_SERVICE }
+                .mapTo(HashSet()) { it.serviceInfo.packageName }
 
             val footprints = installedPackages().mapNotNull { info ->
                 val app = info.applicationInfo ?: return@mapNotNull null
@@ -53,6 +62,8 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
                     launcherEntries = declared[info.packageName].orEmpty().map { entry(it, it.component() in shown) },
                     startsAtBoot = info.packageName in atBoot && RECEIVE_BOOT_COMPLETED in requested,
                     requested = requested intersect AppFootprintProbe.WATCHED,
+                    accessibilityService = info.packageName in accessibility,
+                    signerSubjects = signers(info).mapNotNull(::subject),
                 )
             }
             Reading.Value(footprints, source)
@@ -120,11 +131,41 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
         }
     }
 
+    private fun services(action: String): List<ResolveInfo> {
+        val intent = Intent(action)
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.queryIntentServices(intent, PackageManager.ResolveInfoFlags.of(0L))
+        } else {
+            legacyServices(intent)
+        }
+    }
+
     private fun installedPackages(): List<PackageInfo> =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()))
+            packageManager.getInstalledPackages(PackageManager.PackageInfoFlags.of(PACKAGE_FLAGS.toLong()))
         } else {
             legacyInstalledPackages()
+        }
+
+    /** Every signer, past keys included where the package rotated its key (API 28+), like [AndroidPackageDetails]. */
+    @Suppress("DEPRECATION") // PackageInfo.signatures is all Android 8 has
+    private fun signers(info: PackageInfo): List<Signature> =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val signing = info.signingInfo ?: return emptyList()
+            val signers = if (signing.hasMultipleSigners()) signing.apkContentsSigners else signing.signingCertificateHistory
+            signers.orEmpty().toList()
+        } else {
+            info.signatures.orEmpty().toList()
+        }
+
+    /** The certificate's subject in RFC 2253 form; null when it isn't an X.509 certificate. */
+    private fun subject(signature: Signature): String? =
+        try {
+            val certificate = CertificateFactory.getInstance("X.509")
+                .generateCertificate(ByteArrayInputStream(signature.toByteArray())) as X509Certificate
+            certificate.subjectX500Principal.name
+        } catch (e: Exception) {
+            null
         }
 
     @Suppress("DEPRECATION") // the ResolveInfoFlags overload needs API 33
@@ -133,11 +174,24 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
     @Suppress("DEPRECATION") // the ResolveInfoFlags overload needs API 33
     private fun legacyReceivers(intent: Intent): List<ResolveInfo> = packageManager.queryBroadcastReceivers(intent, 0)
 
+    @Suppress("DEPRECATION") // the ResolveInfoFlags overload needs API 33
+    private fun legacyServices(intent: Intent): List<ResolveInfo> = packageManager.queryIntentServices(intent, 0)
+
     @Suppress("DEPRECATION") // the PackageInfoFlags overload needs API 33
-    private fun legacyInstalledPackages(): List<PackageInfo> = packageManager.getInstalledPackages(PackageManager.GET_PERMISSIONS)
+    private fun legacyInstalledPackages(): List<PackageInfo> = packageManager.getInstalledPackages(PACKAGE_FLAGS)
 
     private companion object {
         const val RECEIVE_BOOT_COMPLETED = "android.permission.RECEIVE_BOOT_COMPLETED"
+
+        /** `AccessibilityService.SERVICE_INTERFACE`, the action every accessibility service declares. */
+        const val ACCESSIBILITY_SERVICE = "android.accessibilityservice.AccessibilityService"
+        const val BIND_ACCESSIBILITY_SERVICE = "android.permission.BIND_ACCESSIBILITY_SERVICE"
+
+        /** Requested permissions and signers in one bulk read. GET_SIGNATURES is all Android 8 has. */
+        @Suppress("DEPRECATION")
+        @SuppressLint("PackageManagerGetSignatures")
+        val PACKAGE_FLAGS = PackageManager.GET_PERMISSIONS or
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) PackageManager.GET_SIGNING_CERTIFICATES else PackageManager.GET_SIGNATURES
 
         /** Both start an app's receivers after a reboot; LOCKED_BOOT_COMPLETED before the first unlock. */
         val BOOT_ACTIONS = listOf(Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_LOCKED_BOOT_COMPLETED)

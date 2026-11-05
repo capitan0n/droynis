@@ -1,6 +1,6 @@
 # Droynis design notes
 
-Status: 86 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
+Status: 90 checks in four tiers (listed in [CHECKS.md](CHECKS.md)) and a Compose UI with
 dashboard, checks, tools and help screens. This file records how the brief maps onto current
 Android (API 37, October 2026) and the decisions taken so far.
 
@@ -455,8 +455,11 @@ malware list; the README and Help say so.
   or the blank Braille pattern (U+115F, U+1160, U+3164, U+FFA0, U+2800); an unassigned code point
   counts as visible, since the JDK's Unicode tables can be older than the phone's fonts. Boot
   receivers come from `queryBroadcastReceivers` for BOOT_COMPLETED and LOCKED_BOOT_COMPLETED and
-  count only with RECEIVE_BOOT_COMPLETED requested; requested permissions from
-  `getInstalledPackages(GET_PERMISSIONS)`.
+  count only with RECEIVE_BOOT_COMPLETED requested; requested permissions and signing certificates
+  from one `getInstalledPackages(GET_PERMISSIONS | GET_SIGNING_CERTIFICATES)` (GET_SIGNATURES on
+  Android 8), each certificate's subject kept in RFC 2253 form; declared accessibility services from
+  `queryIntentServices` for `android.accessibilityservice.AccessibilityService`, counted only with
+  BIND_ACCESSIBILITY_SERVICE, the permission without which Android never binds one.
 - **Android 10 placeholder**: `LauncherApps` adds a synthetic entry that opens App info for most user
   apps without an enabled launcher activity (not for apps that request no permissions). A turned-off
   icon is still a sign, but hiding apps moved to blank names and transparent icons because of it.
@@ -468,7 +471,11 @@ malware list; the README and Help say so.
 - **Trust** (see Trusted apps): a trusted app is listed with its signs but not counted, and when
   only trusted apps are left the check passes and names them. Add-ons the concern leaves uncounted
   are marked NOT_COUNTED.
-- **SUSP-5001** counts every hiding app. **SUSP-5002** counts out-of-sight apps that declare starting
+- **SUSP-5001** counts every hiding app. It is critical when a counted one came from outside an app
+  store, or holds accessibility (an enabled service), device admin (an active admin) or
+  notification access (`enabled_notification_listeners`), the access stalkerware and banking
+  trojans are set up with; those three are read only when something hides, and an unreadable one
+  never escalates. **SUSP-5002** counts out-of-sight apps that declare starting
   at boot, FOREGROUND_SERVICE, SYSTEM_ALERT_WINDOW, USE_FULL_SCREEN_INTENT or
   REQUEST_IGNORE_BATTERY_OPTIMIZATIONS: declarations, not behaviour. Only for those apps is
   `isIgnoringBatteryOptimizations` asked, to say whether Android already exempts them.
@@ -491,6 +498,30 @@ malware list; the README and Help say so.
   (ActiveServices starts the op for every foreground service) and `SYSTEM_ALERT_WINDOW` (WindowManager
   starts it while an overlay window shows) in the last 7 days. A pass needs both reads; with one
   missing, nothing found is UNKNOWN, not a pass.
+- **SUSP-5004** (base): apps whose installer of record (`getInstallSourceInfo().installingPackageName`,
+  the same field APPS-4004 reads) is another app the user installed: not the app itself
+  (self-updates such as Signal's or Telegram's website builds), not a known store or the /e/OS
+  preinstaller, not a system app (the package installer, the shell for adb, a vendor's store), and
+  not an installer tool for APKs the user picks (SAI, App Manager, InstallerX, APKMirror
+  Installer). An installer missing from the app list counts, noted as gone: a dropper can remove
+  itself once its payload is in. Trusting the installer stops counting what it installed, so an
+  unlisted store needs one tap. Uses only the app list; `initiatingPackageName` (Android 11) was
+  left out, since file managers would count for every APK opened from them.
+- **SUSP-5005** (base): an accessibility service declared, READ_SMS or RECEIVE_SMS and
+  SYSTEM_ALERT_WINDOW requested, the three a banking trojan needs together. Visible apps count too.
+  Critical when it came from outside an app store or its accessibility service is on. Automation
+  apps (Tasker, MacroDroid) match; trust is the way out.
+- **SUSP-5006** (base): a signing certificate whose subject is the debug keystore's
+  (`CN=Android Debug, O=Android, C=US`) or AOSP's public test keys' (`CN=Android, OU=Android,
+  O=Android, L=Mountain View, ST=California, C=US`, emailAddress ignored). Stores never ship
+  either. A notice for a debuggable app (a developer's own build), a warning for a test key or for a
+  debug key on an app that isn't debuggable, which is what re-signing a release APK gives. A
+  certificate can claim any subject, so a match only ever fails, never passes, an app.
+- **SUSP-5104** (ADB tier): the app-ops history SUSP-5102 reads, for `READ_SMS`, `RECEIVE_SMS`
+  (noted when an SMS is delivered), `READ_CALL_LOG` and `READ_CONTACTS` outside the foreground
+  states, in the last 7 days. The default SMS app is left out for SMS and contacts, the default
+  phone app for the call log and contacts, unless it came from outside an app store; a warning when
+  a counted app did.
 - **Moved here**: APPS-4101 (background camera, microphone and location use) became SUSP-5102, and
   APPS-4108 (screen capture without asking) SUSP-5103: both report what apps did or what only adb
   can set up, not access granted in Settings. Their logic is unchanged. The old ids are retired,
@@ -502,7 +533,8 @@ malware list; the README and Help say so.
   stalkerware-indicators would have to be imported).
 - **Not yet checked on a device**: how launchers other than Launcher3 show a blank label, whether
   OEM icon theming (MIUI, One UI) fills in a transparent icon before `loadIcon` returns it (which would
-  only hide a sign, never invent one), and the exact `dumpsys activity services` text on OEM builds.
+  only hide a sign, never invent one), the exact `dumpsys activity services` text on OEM builds, and
+  which ops OEM builds note for SMS delivered to a non-default app (SUSP-5104).
 
 Check logic never imports `android.*`, so every check is unit-tested on the plain JVM with fakes
 (no Robolectric). The cost: a check that needs a new framework call also needs a probe method in
@@ -581,7 +613,7 @@ counting it.
   reports list them under `scan.trustedApps` and mark evidence with `trust`, and Markdown reports
   name them in the header.
 - Supported by the checks that list apps: APPS-4001 to 4013, APPS-4016, APPS-4102 to 4107, APPS-4201,
-  APPS-4301, NETW-3301, SUSP-5001 to 5003 and SUSP-5101 to 5103.
+  APPS-4301, NETW-3301, SUSP-5001 to 5006 and SUSP-5101 to 5104.
 - Limit: trust follows the package name, not the signing key. An app reinstalled under the same
   name by someone else keeps its trust; Android refuses such an update while the original is
   installed, but not after an uninstall.

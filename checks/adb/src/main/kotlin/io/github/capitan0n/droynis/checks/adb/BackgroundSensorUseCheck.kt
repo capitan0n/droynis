@@ -169,7 +169,7 @@ class BackgroundSensorUseCheck(
          */
         val FOREGROUND = setOf("pers", "top", "fgsvcl", "fgsvc", "fg")
 
-        private val STATE_NAMES = mapOf(
+        val STATE_NAMES = mapOf(
             "bg" to "in the background",
             "cch" to "cached in the background",
             "gone" to "not running",

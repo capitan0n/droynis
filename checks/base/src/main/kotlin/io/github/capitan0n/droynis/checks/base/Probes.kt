@@ -414,6 +414,13 @@ data class AppFootprint(
     val startsAtBoot: Boolean,
     /** Which of [AppFootprintProbe.WATCHED] it requests, granted or not. */
     val requested: Set<String> = emptySet(),
+    /** Declares an accessibility service, whether or not it is turned on. */
+    val accessibilityService: Boolean = false,
+    /**
+     * Subjects of its signing certificates in RFC 2253 form, e.g. "C=US,O=Android,CN=Android Debug";
+     * empty when they can't be read.
+     */
+    val signerSubjects: List<String> = emptyList(),
 )
 
 interface AppFootprintProbe {
@@ -430,9 +437,18 @@ interface AppFootprintProbe {
         const val SYSTEM_ALERT_WINDOW = "android.permission.SYSTEM_ALERT_WINDOW"
         const val USE_FULL_SCREEN_INTENT = "android.permission.USE_FULL_SCREEN_INTENT"
         const val REQUEST_IGNORE_BATTERY_OPTIMIZATIONS = "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+        const val READ_SMS = "android.permission.READ_SMS"
+        const val RECEIVE_SMS = "android.permission.RECEIVE_SMS"
 
-        /** Permissions that let an app run or show itself without being opened. */
-        val WATCHED = setOf(FOREGROUND_SERVICE, SYSTEM_ALERT_WINDOW, USE_FULL_SCREEN_INTENT, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        /** Permissions that let an app run or show itself without being opened, or catch SMS codes. */
+        val WATCHED = setOf(
+            FOREGROUND_SERVICE,
+            SYSTEM_ALERT_WINDOW,
+            USE_FULL_SCREEN_INTENT,
+            REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            READ_SMS,
+            RECEIVE_SMS,
+        )
     }
 }
 

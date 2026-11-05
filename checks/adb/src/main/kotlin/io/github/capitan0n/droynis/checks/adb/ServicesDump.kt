@@ -44,9 +44,12 @@ object ServicesDump {
     }
 
     private const val HEADER = "ACTIVITY MANAGER SERVICES"
+
+    // Android's regex engine (ICU) wants every literal brace escaped, closing ones too; the JVM's
+    // doesn't, so only the instrumented test (AndroidPlatformTest) catches a missing escape.
     private val RECORD_START = Regex("""^\s*\* ServiceRecord\{.*""")
     private val RECORD = Regex(
-        """^\s*\* ServiceRecord\{[0-9a-f]+ u(\d+) ([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)/(\S+?)(?: c:\S+)?}$""",
+        """^\s*\* ServiceRecord\{[0-9a-f]+ u(\d+) ([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)/(\S+?)(?: c:\S+)?\}$""",
     )
     private val FOREGROUND = Regex("""^\s+isForeground=(true|false)\b.*""")
     private val STARTED = Regex("""^\s+startRequested=(true|false)\b.*""")

@@ -44,6 +44,10 @@ class SuspiciousAppsTest {
 
     private fun footprints(vararg apps: AppFootprint) = FakeFootprints(value(apps.toList()))
 
+    /** SUSP-5001 with no app holding accessibility, device admin or notification access. */
+    private fun hiddenApps(footprints: AppFootprintProbe, packages: PackageInventory) =
+        HiddenAppsCheck(footprints, packages, FakeAccessibility(), FakePolicy(), FakeSettings())
+
     // Invisible text
 
     @Test
@@ -140,7 +144,7 @@ class SuspiciousAppsTest {
 
     @Test
     fun `spec belongs to the suspicious apps category`() {
-        val spec = HiddenAppsCheck(FakeFootprints(), FakePackages()).spec
+        val spec = hiddenApps(FakeFootprints(), FakePackages()).spec
         assertEquals("SUSP-5001", spec.id)
         assertEquals(Category.SUSPICIOUS_APPS, spec.category)
         assertEquals(Severity.WARNING, spec.severity)
@@ -148,7 +152,7 @@ class SuspiciousAppsTest {
 
     @Test
     fun `apps with a visible icon, or none at all, pass`() = runTest {
-        val outcome = HiddenAppsCheck(
+        val outcome = hiddenApps(
             footprints(footprint("org.signal"), footprint("a.plugin", entries = emptyList())),
             inventory(app("org.signal"), app("a.plugin")),
         ).outcome()
@@ -160,7 +164,7 @@ class SuspiciousAppsTest {
 
     @Test
     fun `a hiding app from a store is a warning, a sideloaded one critical`() = runTest {
-        val fromStore = HiddenAppsCheck(
+        val fromStore = hiddenApps(
             footprints(footprint("com.flash.light", entries = listOf(entry(enabled = false, turnedOff = true)))),
             inventory(app("com.flash.light")),
         ).outcome()
@@ -172,7 +176,7 @@ class SuspiciousAppsTest {
         assertEquals("com.flash.light", hiding.packageName)
         assertEquals("turned its app drawer icon off after it was installed; from an app store", hiding.note)
 
-        val sideloaded = HiddenAppsCheck(
+        val sideloaded = hiddenApps(
             footprints(footprint("x.ads", label = "ㅤ", entries = listOf(entry("ㅤ", coverage = 0.0)))),
             inventory(app("x.ads", installer = packageInstaller)),
         ).outcome()
@@ -187,7 +191,7 @@ class SuspiciousAppsTest {
 
     @Test
     fun `a hiding app the user trusts is listed but not counted`() = runTest {
-        val check = HiddenAppsCheck(
+        val check = hiddenApps(
             footprints(
                 footprint("org.prey", entries = listOf(entry(enabled = false, turnedOff = true))),
                 footprint("x.ads", entries = listOf(entry(coverage = 0.0))),
@@ -230,11 +234,11 @@ class SuspiciousAppsTest {
 
     @Test
     fun `an unreadable app list is never a pass`() = runTest {
-        assertEquals(Status.UNKNOWN, HiddenAppsCheck(FakeFootprints(unavailable("binder died")), inventory()).status())
-        assertEquals(Status.UNSUPPORTED, HiddenAppsCheck(FakeFootprints(unsupported()), inventory()).status())
+        assertEquals(Status.UNKNOWN, hiddenApps(FakeFootprints(unavailable("binder died")), inventory()).status())
+        assertEquals(Status.UNSUPPORTED, hiddenApps(FakeFootprints(unsupported()), inventory()).status())
         assertEquals(
             Status.UNKNOWN,
-            HiddenAppsCheck(footprints(footprint("a.b")), FakePackages(unavailable())).status(),
+            hiddenApps(footprints(footprint("a.b")), FakePackages(unavailable())).status(),
         )
     }
 
@@ -398,8 +402,8 @@ class SuspiciousAppsTest {
     }
 
     @Test
-    fun `the registry runs the three checks in the suspicious apps category`() {
+    fun `the registry runs the base suspicious apps checks in id order`() {
         val ids = baseChecks(FakeProbes()).filter { it.spec.category == Category.SUSPICIOUS_APPS }.map { it.spec.id }
-        assertEquals(listOf("SUSP-5001", "SUSP-5002", "SUSP-5003"), ids)
+        assertEquals((5001..5006).map { "SUSP-$it" }, ids)
     }
 }

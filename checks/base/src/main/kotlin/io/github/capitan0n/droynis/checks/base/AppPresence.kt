@@ -61,9 +61,24 @@ data class AppSighting(
             ?.trim()
             ?: packageName
 
-    /** [trusted]: the user trusts this app, so it is listed but not counted. */
-    fun evidence(label: String, source: Source, details: String? = null, trusted: Boolean = false): Evidence {
-        val visibility = if (hiding) signs.joinToString("; ") { it.note } else "no app drawer icon"
+    /**
+     * [trusted]: the user trusts this app, so it is listed but not counted. [counted] defaults to
+     * this app's concern; checks about something else than hiding pass their own, and leave out the
+     * visibility note unless the app hides ([showVisibility]).
+     */
+    fun evidence(
+        label: String,
+        source: Source,
+        details: String? = null,
+        trusted: Boolean = false,
+        counted: Boolean = this.counted,
+        showVisibility: Boolean = true,
+    ): Evidence {
+        val visibility = when {
+            hiding -> signs.joinToString("; ") { it.note }
+            showVisibility -> "no app drawer icon"
+            else -> null
+        }
         val counting = when {
             trusted -> TRUSTED_NOTE
             counted -> null

@@ -83,7 +83,10 @@ class CatalogDocTest {
     }
 }
 
-/** Renders the check catalog as Markdown: an overview per tier, then every check in full. */
+/**
+ * Renders the check catalog as Markdown: a table of contents, the privilege tiers with their setup,
+ * then one section per category with a table grouped by tier and every check in full.
+ */
 object CatalogDoc {
 
     private const val APP_ID = "io.github.capitan0n.droynis"
@@ -109,14 +112,17 @@ object CatalogDoc {
         33 to "13", 34 to "14", 35 to "15", 36 to "16", 37 to "17",
     )
 
+    private const val TIERS_HEADING = "Privilege tiers"
+
     fun render(specs: List<CheckSpec>): String = buildString {
-        val byTier = specs.groupBy { it.requiredTier }
+        val byCategory = specs.groupBy { it.category }
+        val categories = Category.entries.filter { byCategory[it].orEmpty().isNotEmpty() }
         appendLine("# Droynis checks")
         appendLine()
         appendLine("<!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after")
         appendLine("     changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->")
         appendLine()
-        appendLine("Every check Droynis runs, by privilege tier and category: ${specs.size} checks.")
+        appendLine("Every check Droynis runs, by category and privilege tier: ${specs.size} checks.")
         appendLine()
         val weights = Severity.entries.sortedDescending().joinToString { "${it.name.lowercase()} ${HardeningIndex.weight(it)}" }
         appendLine("A check passes only after reading a passing value; anything it can't establish is Unknown or")
@@ -127,43 +133,63 @@ object CatalogDoc {
         appendLine("You can trust an app that needs a lot of access, such as a watch app: every check that lists apps")
         appendLine("still lists it, but none counts it.")
         appendLine()
-        appendLine("| Tier | Checks |")
-        appendLine("|---|---|")
-        for (tier in Tier.entries) {
-            val count = byTier[tier]?.size ?: 0
-            val name = tierName(tier)
-            appendLine(if (count == 0) "| $name | planned |" else "| [$name](#${anchor("$name tier")}) | $count |")
+        appendLine("## Contents")
+        appendLine()
+        appendLine("- [$TIERS_HEADING](#${anchor(TIERS_HEADING)})")
+        for (tier in Tier.entries) appendLine("  - [${tierName(tier)}](#${tierAnchor(tier)})")
+        for (category in categories) {
+            appendLine("- [${category.label}](#${anchor(category.label)}): ${byCategory.getValue(category).size} checks")
         }
 
+        appendLine()
+        appendLine("## $TIERS_HEADING")
+        appendLine()
+        appendLine("Checks per category and tier. Each tier also runs the checks of the tiers before it.")
+        appendLine()
+        appendLine("| Category | " + Tier.entries.joinToString(" | ") { "[${tierName(it)}](#${tierAnchor(it)})" } + " | All |")
+        appendLine("|---|" + "---|".repeat(Tier.entries.size) + "---|")
+        for (category in categories) {
+            val inCategory = byCategory.getValue(category)
+            appendLine(
+                "| [${category.label}](#${anchor(category.label)}) | " +
+                    Tier.entries.joinToString(" | ") { tier -> count(inCategory.count { it.requiredTier == tier }) } +
+                    " | ${inCategory.size} |",
+            )
+        }
+        appendLine(
+            "| **All** | " + Tier.entries.joinToString(" | ") { tier -> count(specs.count { it.requiredTier == tier }) } +
+                " | ${specs.size} |",
+        )
         for (tier in Tier.entries) {
-            val inTier = byTier[tier].orEmpty()
+            val inTier = specs.filter { it.requiredTier == tier }
             appendLine()
-            appendLine("## ${tierName(tier)} tier")
+            appendLine("### ${tierName(tier)} tier")
             appendLine()
             appendLine(INTRO.getValue(tier))
             if (tier == Tier.ADB) appendSetup(inTier)
             if (tier == Tier.SHIZUKU && inTier.isNotEmpty()) appendShizukuSetup()
             if (tier == Tier.ROOT && inTier.isNotEmpty()) appendRootSetup()
-            if (inTier.isEmpty()) continue
+        }
 
+        for (category in categories) {
+            // Same order in the table and the sections below: by tier, then by id.
+            val inCategory = byCategory.getValue(category).sortedWith(compareBy({ it.requiredTier.ordinal }, { it.id }))
+            appendLine()
+            appendLine("## ${category.label}")
             appendLine()
             appendLine("| ID | Check | Severity | Fails when |")
             appendLine("|---|---|---|---|")
-            // Same order as the sections below: by category, then by id.
-            for (spec in inTier.sortedWith(compareBy({ it.category.ordinal }, { it.id }))) {
-                val since = if (spec.minSdk > CheckSpec.MIN_SDK) " (Android ${android(spec.minSdk)}+)" else ""
-                appendLine(
-                    "| [${spec.id}](#${anchor(heading(spec))}) | ${spec.title}$since | ${severity(spec.severity)} | " +
-                        "${spec.failsWhen} |",
-                )
+            for ((tier, inTier) in inCategory.groupBy { it.requiredTier }) {
+                appendLine("| **[${tierName(tier)}](#${tierAnchor(tier)})** | | | |")
+                for (spec in inTier) {
+                    val since = if (spec.minSdk > CheckSpec.MIN_SDK) " (Android ${android(spec.minSdk)}+)" else ""
+                    appendLine(
+                        "| [${spec.id}](#${anchor(heading(spec))}) | ${spec.title}$since | ${severity(spec.severity)} | " +
+                            "${spec.failsWhen} |",
+                    )
+                }
             }
-            for (category in Category.entries) {
-                val inCategory = inTier.filter { it.category == category }.sortedBy { it.id }
-                if (inCategory.isEmpty()) continue
-                appendLine()
-                appendLine("### ${category.label}")
-                for (spec in inCategory) appendCheck(spec)
-            }
+            for (spec in inCategory) appendCheck(spec)
         }
     }.trimEnd() + "\n"
 
@@ -202,9 +228,12 @@ object CatalogDoc {
 
     private fun StringBuilder.appendCheck(spec: CheckSpec) {
         appendLine()
-        appendLine("#### ${heading(spec)}")
+        appendLine("### ${heading(spec)}")
         appendLine()
-        appendLine("${severity(spec.severity)} · Android ${android(spec.minSdk)} and later · fails when ${spec.failsWhen}")
+        appendLine(
+            "${severity(spec.severity)} · ${tierName(spec.requiredTier)} tier · Android ${android(spec.minSdk)} and later · " +
+                "fails when ${spec.failsWhen}",
+        )
         appendLine()
         appendLine(spec.explanation)
         appendLine()
@@ -212,6 +241,10 @@ object CatalogDoc {
     }
 
     private fun heading(spec: CheckSpec) = "${spec.id} ${spec.title}"
+
+    private fun tierAnchor(tier: Tier) = anchor("${tierName(tier)} tier")
+
+    private fun count(n: Int) = if (n == 0) "–" else "$n"
 
     private fun tierName(tier: Tier) = when (tier) {
         Tier.BASE -> "Base"

@@ -12,7 +12,7 @@ never changes anything itself.
 > and signs that adware leaves, such as an app that hides from the app drawer and runs on its own,
 > but it can't tell you whether that app is malware.
 
-- 86 checks: device integrity, access control, apps and permissions, suspicious apps, network and
+- 90 checks: device integrity, access control, apps and permissions, suspicious apps, network and
   radios. Every check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
