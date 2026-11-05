@@ -29,16 +29,18 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.automirrored.rounded.ListAlt
-import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Assessment
 import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.PhoneAndroid
 import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Assessment
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Share
@@ -103,6 +105,7 @@ import io.github.capitan0n.droynis.core.Tier
 import io.github.capitan0n.droynis.report.Verdict
 import io.github.capitan0n.droynis.report.issues
 import io.github.capitan0n.droynis.report.withoutMuted
+import io.github.capitan0n.droynis.schedule.ScanInterval
 import io.github.capitan0n.droynis.ui.theme.ThemeAccent
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 import io.github.capitan0n.droynis.ui.theme.colorSchemeFor
@@ -166,12 +169,28 @@ interface AppActions {
     /** Opens [url] in the browser; Droynis itself has no internet access. */
     fun openLink(url: String)
     fun sendFeedback()
+
+    /** How often Droynis scans in the background. */
+    fun setSchedule(interval: ScanInterval)
+
+    /** Turns scheduled scan notifications on (asking for the permission first) or off. */
+    fun setNotify(on: Boolean)
+
+    /** A detailed scheduled scan notification, or only the score and the previous one. */
+    fun setVerbose(verbose: Boolean)
+
+    /** Runs a scheduled scan now: it notifies when notifications are on, else shows its result. */
+    fun runScheduledScan()
+
+    /** Opens Droynis' notification settings, or its App info where there are none. */
+    fun openNotificationSettings()
 }
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
     DASHBOARD(R.string.tab_dashboard, Icons.Outlined.Dashboard, Icons.Rounded.Dashboard),
     CHECKS(R.string.tab_checks, Icons.AutoMirrored.Outlined.FactCheck, Icons.AutoMirrored.Rounded.FactCheck),
-    TOOLS(R.string.tab_tools, Icons.Outlined.Build, Icons.Rounded.Build),
+    DEVICE(R.string.tab_device, Icons.Outlined.PhoneAndroid, Icons.Rounded.PhoneAndroid),
+    REPORTS(R.string.tab_reports, Icons.Outlined.Assessment, Icons.Rounded.Assessment),
     HELP(R.string.tab_help, Icons.AutoMirrored.Outlined.HelpOutline, Icons.AutoMirrored.Rounded.Help),
 }
 
@@ -406,7 +425,7 @@ fun DroynisApp(
                                 onScan = actions::scan,
                                 onOpenCheck = { openCheckId = it },
                                 onShowChecks = showChecks,
-                                onShowTools = { tab = Tab.TOOLS },
+                                onShowTools = { tab = Tab.DEVICE },
                             )
                             Tab.CHECKS -> ChecksScreen(
                                 catalog = catalog,
@@ -427,7 +446,8 @@ fun DroynisApp(
                                     filter = CheckFilter.ALL
                                 },
                             )
-                            Tab.TOOLS -> ToolsScreen(state = state, actions = actions)
+                            Tab.DEVICE -> DeviceScreen(state = state, actions = actions)
+                            Tab.REPORTS -> ReportsScreen(state = state, actions = actions)
                             Tab.HELP -> HelpScreen(
                                 checkCount = catalog.size,
                                 appVersion = appVersion,

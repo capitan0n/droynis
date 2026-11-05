@@ -69,15 +69,19 @@ class DroynisAppTest {
     }
 
     @Test
-    fun toolsAndHelpTabsShowTheirSections() {
+    fun deviceReportsAndHelpTabsShowTheirSections() {
         waitForScan()
 
-        compose.onNodeWithText(text(R.string.tab_tools)).performClick()
+        compose.onNodeWithText(text(R.string.tab_device)).performClick()
         compose.onNodeWithText(text(R.string.tools_network)).assertExists()
         // IP addresses start hidden; the eye shows them and hides them again.
         compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).performClick()
         compose.onNodeWithContentDescription(text(R.string.net_hide_addresses)).performClick()
         compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).assertExists()
+
+        compose.onNodeWithText(text(R.string.tab_reports)).performClick()
+        compose.onNodeWithText(text(R.string.tools_report)).assertExists()
+        compose.onNodeWithText(text(R.string.tools_schedule)).assertExists()
 
         compose.onNodeWithText(text(R.string.tab_help)).performClick()
         compose.onNodeWithText(text(R.string.help_legend)).assertExists()
