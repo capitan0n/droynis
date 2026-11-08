@@ -111,6 +111,8 @@ data class UiState(
     val backgroundRestricted: Boolean = false,
     /** The last scheduled scan ran late, or the next one is overdue. */
     val scheduleLate: Boolean = false,
+    /** This version's changelog, shown once after an update; null when there is nothing to show. */
+    val whatsNew: String? = null,
 ) {
     val done: Int get() = findings.size
 }
@@ -143,6 +145,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             lastScheduledResult = scheduledResult(schedule.lastScore, schedule.lastNewIssues),
             backgroundRestricted = ScheduledScans.backgroundRestricted(application),
             scheduleLate = schedule.late(System.currentTimeMillis()),
+            whatsNew = WhatsNew.pending(application, prefs),
             // Build constants only, so the dashboard's device card is filled from the start.
             device = platform.build.device(),
         ),
@@ -447,6 +450,12 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         prefs.edit().putBoolean(KEY_HIDE_PERSONAL, hide).apply()
         _state.update { it.copy(hidePersonal = hide) }
         message(if (hide) R.string.personal_hidden else R.string.personal_included)
+    }
+
+    /** The "What's new" dialog was closed: not shown again for this version. */
+    fun dismissWhatsNew() {
+        WhatsNew.markSeen(prefs)
+        _state.update { it.copy(whatsNew = null) }
     }
 
     /** Turns the scheduled scan on, changes how often it runs, or turns it off. */

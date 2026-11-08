@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.DataObject
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
@@ -187,6 +188,9 @@ interface AppActions {
 
     /** Opens Droynis' App info, where App battery usage (Battery on some phones) allows background use. */
     fun openBatterySettings()
+
+    /** Closes "What's new" for good, until the next version with notes. */
+    fun dismissWhatsNew()
 }
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {
@@ -478,6 +482,10 @@ fun DroynisApp(
     if (showAppIcon) {
         AppIconDialog(selected = appIcon, onSelect = actions::setAppIcon, onDismiss = { showAppIcon = false })
     }
+
+    state.whatsNew?.let { notes ->
+        WhatsNewDialog(version = appVersion, notes = notes, onDismiss = actions::dismissWhatsNew)
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -705,6 +713,24 @@ private fun AccentSwatch(labelRes: Int, color: Color, selected: Boolean, onClick
             overflow = TextOverflow.Ellipsis,
         )
     }
+}
+
+/** Once after an update: this version's changelog. Back or a tap outside closes it too. */
+@Composable
+private fun WhatsNewDialog(version: String, notes: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.NewReleases, contentDescription = null) },
+        title = { Text(stringResource(R.string.whats_new_title, version)) },
+        text = {
+            Text(
+                notes,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+            )
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.whats_new_ok)) } },
+    )
 }
 
 /** Stays open on a pick, like the theme dialog; the launcher updates behind it. */

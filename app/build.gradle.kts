@@ -1,3 +1,4 @@
+import java.util.Locale
 import java.util.Properties
 
 plugins {
@@ -17,6 +18,32 @@ fun signingValue(key: String, env: String): String? =
 
 val releaseKeystore = signingValue("storeFile", "DROYNIS_KEYSTORE")
 
+/** The F-Droid changelog of [versionCode], trimmed; empty when there is none. */
+fun changelog(versionCode: Int): String =
+    providers.fileContents(
+        rootProject.layout.projectDirectory.file("fastlane/metadata/android/en-US/changelogs/$versionCode.txt"),
+    ).asText.orNull.orEmpty().trim()
+
+/**
+ * [text] as a Java string literal for BuildConfig. Non-ASCII as \u escapes; control characters other
+ * than newlines and tabs are dropped, since a \u escape of one would end the literal.
+ */
+fun javaString(text: String): String = buildString {
+    append('"')
+    for (c in text) {
+        when {
+            c == '\\' -> append("\\\\")
+            c == '"' -> append("\\\"")
+            c == '\n' -> append("\\n")
+            c == '\t' -> append("\\t")
+            c < ' ' -> Unit
+            c.code > 0x7e -> append("\\u%04x".format(Locale.ROOT, c.code))
+            else -> append(c)
+        }
+    }
+    append('"')
+}
+
 android {
     namespace = "io.github.capitan0n.droynis"
     compileSdk = 37
@@ -25,9 +52,12 @@ android {
         applicationId = "io.github.capitan0n.droynis"
         minSdk = 26
         targetSdk = 37
-        versionCode = 22
-        versionName = "0.16.0"
+        // Written out: the release workflow and F-Droid read both from this file.
+        versionCode = 23
+        versionName = "0.17.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // This version's changelog, which the app shows once after an update ("What's new").
+        buildConfigField("String", "WHATS_NEW", javaString(changelog(versionCode ?: 0)))
     }
 
     signingConfigs {

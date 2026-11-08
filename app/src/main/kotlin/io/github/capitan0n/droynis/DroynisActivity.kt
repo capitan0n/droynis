@@ -301,6 +301,8 @@ class DroynisActivity : ComponentActivity(), AppActions {
      */
     override fun openBatterySettings() = openAppSettings(emptyList(), packageName)
 
+    override fun dismissWhatsNew() = viewModel.dismissWhatsNew()
+
     override fun sendFeedback() {
         val subject = getString(R.string.feedback_subject, BuildConfig.VERSION_NAME)
         val mailto = Uri.parse("mailto:${AppInfo.FEEDBACK_EMAIL}?subject=${Uri.encode(subject)}")
