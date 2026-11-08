@@ -107,6 +107,10 @@ data class UiState(
     val lastScheduledResult: String? = null,
     /** A scheduled scan started from the app ("Run one now") is running. */
     val runningScheduledScan: Boolean = false,
+    /** Android restricts Droynis in the background, so scheduled scans wait until the app opens. */
+    val backgroundRestricted: Boolean = false,
+    /** The last scheduled scan ran late, or the next one is overdue. */
+    val scheduleLate: Boolean = false,
 ) {
     val done: Int get() = findings.size
 }
@@ -137,6 +141,8 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             notificationsAllowed = ScanNotifier.canNotify(application),
             lastScheduledScan = schedule.lastRun,
             lastScheduledResult = scheduledResult(schedule.lastScore, schedule.lastNewIssues),
+            backgroundRestricted = ScheduledScans.backgroundRestricted(application),
+            scheduleLate = schedule.late(System.currentTimeMillis()),
             // Build constants only, so the dashboard's device card is filled from the start.
             device = platform.build.device(),
         ),
@@ -457,6 +463,8 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 // The first scheduled scan compares against the results on screen now.
                 _state.value.result?.let { recordBaseline(it) }
             }
+            // A new job, or none, starts its timing afresh.
+            refreshSchedule()
         }
     }
 
@@ -498,15 +506,21 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /** Re-reads whether Droynis may notify, and when the last scheduled scan ran and what it found. */
+    /**
+     * Re-reads whether Droynis may notify and run in the background, when the last scheduled scan ran,
+     * what it found, and whether scans run late.
+     */
     fun refreshSchedule() {
         val app = getApplication<Application>()
         val result = scheduledResult(schedule.lastScore, schedule.lastNewIssues)
+        val late = schedule.late(System.currentTimeMillis())
         _state.update {
             it.copy(
                 notificationsAllowed = ScanNotifier.canNotify(app),
                 lastScheduledScan = schedule.lastRun,
                 lastScheduledResult = result,
+                backgroundRestricted = ScheduledScans.backgroundRestricted(app),
+                scheduleLate = late,
             )
         }
     }

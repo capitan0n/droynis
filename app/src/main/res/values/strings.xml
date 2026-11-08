@@ -318,6 +318,9 @@
     <string name="schedule_verbose_off">Only the score and the previous one.</string>
     <string name="schedule_notifications_off">Notifications are blocked for Droynis in Android\'s settings.</string>
     <string name="schedule_notification_settings">Notification settings</string>
+    <string name="schedule_background_restricted">Android restricts Droynis in the background, so scheduled scans wait until you open the app. Allow background use in App info › App battery usage (Battery on some phones).</string>
+    <string name="schedule_late">Scheduled scans are running late: Android or the phone\'s battery saver is holding Droynis back in the background, or the phone was off. For scans on time, choose Unrestricted in App info › App battery usage (Battery on some phones), and take Droynis off any list of sleeping apps.</string>
+    <string name="schedule_app_info">App info</string>
     <string name="schedule_never_ran">No scheduled scan has run yet.</string>
     <string name="schedule_last_run">Last scheduled scan: %1$s</string>
     <string name="schedule_result_unchanged">Score %1$d/100, nothing got worse</string>

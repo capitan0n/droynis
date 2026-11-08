@@ -1,9 +1,11 @@
 package io.github.capitan0n.droynis.schedule
 
+import android.app.ActivityManager
 import android.app.job.JobInfo
 import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.content.Context
+import android.os.Build
 import io.github.capitan0n.droynis.SharedPlatform
 import io.github.capitan0n.droynis.allChecks
 import io.github.capitan0n.droynis.core.Scanner
@@ -40,8 +42,10 @@ object ScheduledScans {
      */
     fun apply(context: Context, interval: ScanInterval): Boolean {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return false
+        val settings = ScheduleSettings(context)
         if (interval == ScanInterval.OFF) {
             scheduler.cancel(JOB_ID)
+            settings.clearTiming()
             return true
         }
         val periodMillis = interval.period.inWholeMilliseconds
@@ -52,11 +56,24 @@ object ScheduledScans {
             .setPersisted(true)
             .setRequiresBatteryNotLow(true)
             .build()
-        return try {
+        val scheduled = try {
             scheduler.schedule(job) == JobScheduler.RESULT_SUCCESS
         } catch (e: RuntimeException) {
             false // e.g. IllegalArgumentException from a vendor's stricter JobScheduler
         }
+        // A new job starts a new period, so its first scan is timed from now.
+        if (scheduled) settings.startTiming(System.currentTimeMillis(), interval)
+        return scheduled
+    }
+
+    /**
+     * Whether the user or the phone restricted Droynis' background use (battery usage "Restricted",
+     * or background usage not allowed): JobScheduler then holds every scheduled scan until the app
+     * opens. Android 9+ can say; no permission needed.
+     */
+    fun backgroundRestricted(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+        return context.getSystemService(ActivityManager::class.java)?.isBackgroundRestricted == true
     }
 
     /**

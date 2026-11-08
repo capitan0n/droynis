@@ -184,6 +184,9 @@ interface AppActions {
 
     /** Opens Droynis' notification settings, or its App info where there are none. */
     fun openNotificationSettings()
+
+    /** Opens Droynis' App info, where App battery usage (Battery on some phones) allows background use. */
+    fun openBatterySettings()
 }
 
 enum class Tab(val labelRes: Int, val icon: ImageVector, val selectedIcon: ImageVector) {

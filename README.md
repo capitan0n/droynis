@@ -121,6 +121,12 @@ schedule is on, Droynis keeps the last result of each check (its id and status, 
 private storage to compare against; turning the schedule off deletes it. Android may delay
 background work to save battery, so daily means about daily.
 
+When Android holds the scans back, the card says so and opens App info: with Droynis' battery
+usage set to Restricted (background usage not allowed), scans wait until you open the app; and a
+scan that starts more than 6 hours past the window Android gives itself is reported as late, which
+battery savers that put apps to sleep (Samsung, Xiaomi, OnePlus) often cause. Choosing Unrestricted
+fixes that, but Droynis' own check APPS-4013 then lists it: trust Droynis to leave it out.
+
 ## Build
 
 JDK 21 and the Android SDK (compileSdk 37).

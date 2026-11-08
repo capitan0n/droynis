@@ -164,6 +164,23 @@ private fun ScheduleCard(state: UiState, actions: AppActions) {
             }
         }
         if (state.schedule == ScanInterval.OFF) return@SectionCard
+        // Without this, scans that wait for the app to open look like notifications that don't work.
+        val heldBack = when {
+            state.backgroundRestricted -> R.string.schedule_background_restricted
+            state.scheduleLate -> R.string.schedule_late
+            else -> null
+        }
+        if (heldBack != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(heldBack),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            TextButton(onClick = actions::openBatterySettings) {
+                Text(stringResource(R.string.schedule_app_info))
+            }
+        }
         Spacer(Modifier.height(6.dp))
         // Turning this on is the only place Droynis asks for the notification permission.
         ScheduleSwitch(

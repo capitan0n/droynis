@@ -295,6 +295,12 @@ class DroynisActivity : ComponentActivity(), AppActions {
         if (!tryStart(intent)) openAppSettings(emptyList(), packageName)
     }
 
+    /**
+     * App info: Android has no public action for one app's battery page, and asking to skip battery
+     * optimization directly would need REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.
+     */
+    override fun openBatterySettings() = openAppSettings(emptyList(), packageName)
+
     override fun sendFeedback() {
         val subject = getString(R.string.feedback_subject, BuildConfig.VERSION_NAME)
         val mailto = Uri.parse("mailto:${AppInfo.FEEDBACK_EMAIL}?subject=${Uri.encode(subject)}")
