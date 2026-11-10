@@ -421,6 +421,8 @@ data class AppFootprint(
      * empty when they can't be read.
      */
     val signerSubjects: List<String> = emptyList(),
+    /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
+    val signerSha1: List<String> = emptyList(),
 )
 
 interface AppFootprintProbe {

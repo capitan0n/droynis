@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-Every check Droynis runs, by category and privilege tier: 90 checks.
+Every check Droynis runs, by category and privilege tier: 91 checks.
 
 A check passes only after reading a passing value; anything it can't establish is Unknown or
 N/A, never Passed.
@@ -23,7 +23,7 @@ still lists it, but none counts it.
 - [Device integrity](#device-integrity): 16 checks
 - [Access control](#access-control): 18 checks
 - [Apps and permissions](#apps-and-permissions): 26 checks
-- [Suspicious apps](#suspicious-apps): 10 checks
+- [Suspicious apps](#suspicious-apps): 11 checks
 - [Network and radios](#network-and-radios): 20 checks
 
 ## Privilege tiers
@@ -35,9 +35,9 @@ Checks per category and tier. Each tier also runs the checks of the tiers before
 | [Device integrity](#device-integrity) | 11 | – | 2 | 3 | 16 |
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
 | [Apps and permissions](#apps-and-permissions) | 16 | 6 | 2 | 2 | 26 |
-| [Suspicious apps](#suspicious-apps) | 6 | 4 | – | – | 10 |
+| [Suspicious apps](#suspicious-apps) | 7 | 4 | – | – | 11 |
 | [Network and radios](#network-and-radios) | 12 | 4 | 3 | 1 | 20 |
-| **All** | 59 | 15 | 9 | 7 | 90 |
+| **All** | 60 | 15 | 9 | 7 | 91 |
 
 ### Base tier
 
@@ -651,6 +651,7 @@ Magisk can hand root to apps, to the ADB shell, to both or to neither. The defau
 | [SUSP-5004](#susp-5004-apps-installed-by-another-app) | Apps installed by another app | Warning | an app was installed by another app you installed that isn't an app store or an installer tool |
 | [SUSP-5005](#susp-5005-apps-with-banking-trojan-permissions) | Apps with banking-trojan permissions | Warning | an installed app declares an accessibility service and asks for SMS and to draw over other apps (critical when it came from outside an app store or its accessibility service is on) |
 | [SUSP-5006](#susp-5006-apps-signed-with-a-debug-or-test-key) | Apps signed with a debug or test key | Notice | a user app is signed with Android's debug key or a public test key (warning for a test key, or a debug key on an app that isn't debuggable) |
+| [SUSP-5007](#susp-5007-known-stalkerware-and-monitoring-apps) | Known stalkerware and monitoring apps | Warning | an app you installed has the package name or signing key of an app on Echap's Stalkerware Indicators list (critical for stalkerware, warning for a monitoring app that doesn't hide) |
 | **[ADB](#adb-tier)** | | | |
 | [SUSP-5101](#susp-5101-hidden-apps-running-in-the-background) | Hidden apps running in the background (Android 10+) | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
 | [SUSP-5102](#susp-5102-background-camera-microphone-and-location-use) | Background camera, microphone and location use (Android 10+) | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
@@ -704,6 +705,14 @@ Notice · Base tier · Android 8.0 and later · fails when a user app is signed 
 Every app is signed by its developer. Android's debug key is meant for testing on the developer's own phone, and Android's test keys are published with its source code, so anyone can sign with them. Apps from an app store never use either. A finished app re-signed with a debug key is usually a repackaged copy, modded or with malware added; a debuggable one is often a developer's own build.
 
 **What to do:** Uninstall apps listed here unless you built them yourself or know where they came from, and install them again from the developer or an app store.
+
+### SUSP-5007 Known stalkerware and monitoring apps
+
+Warning · Base tier · Android 8.0 and later · fails when an app you installed has the package name or signing key of an app on Echap's Stalkerware Indicators list (critical for stalkerware, warning for a monitoring app that doesn't hide)
+
+Stalkerware is an app someone installs on another person's phone to secretly read their messages, follow their location or listen in. It usually hides its icon and poses as a system service. Droynis compares every app you installed with Stalkerware Indicators, a public list by Echap of the package names and signing keys of known stalkerware, and of monitoring apps that don't hide, such as child-monitoring and family-locator apps. The list ships with Droynis and works offline. A new or rebuilt stalkerware app won't be on it, so a pass means no known stalkerware, not none at all.
+
+**What to do:** If you didn't install a listed app yourself, someone with access to your phone may be watching you. Removing it can alert them, so if you might be in danger, first talk to a support organization for domestic violence or stalking (the Coalition Against Stalkerware lists some at stopstalkerware.org). Then remove its device admin access (APPS-4002) if it has any, uninstall it, and change your account passwords from another device. Mark a monitoring app you set up on purpose as trusted.
 
 ### SUSP-5101 Hidden apps running in the background
 

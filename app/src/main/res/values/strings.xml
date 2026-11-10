@@ -48,6 +48,7 @@
     <string name="about_body">A security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
     <string name="about_independent">Droynis is an independent project. It is not affiliated with, endorsed by or connected to Lynis or CISOfy; Lynis was only the inspiration for a readable audit with a hardening score.</string>
     <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
+    <string name="about_license_indicators">The stalkerware check (SUSP-5007) uses Stalkerware Indicators by Echap (github.com/AssoEchap/stalkerware-indicators), licensed under CC BY 4.0. Only app names, package names and signing-key fingerprints are kept. Echap gives no guarantee that the list is accurate.</string>
     <string name="about_what">What Droynis does</string>
     <string name="help_about_link">Version %1$s · author, source code and feedback</string>
     <string name="about_author_title">Author</string>
@@ -256,26 +257,6 @@
     <string name="perm_activity">Physical activity</string>
     <string name="perm_body_sensors">Body sensors</string>
     <string name="perm_files">Files and media</string>
-
-    <!-- Tools: shortcuts -->
-    <string name="tools_shortcuts">Security shortcuts</string>
-    <string name="tools_shortcuts_intro">Jump straight to the Settings screens the checks talk about.</string>
-    <string name="shortcut_security">Security</string>
-    <string name="shortcut_privacy">Privacy</string>
-    <string name="shortcut_network">Network</string>
-    <string name="shortcut_wifi">Wi-Fi</string>
-    <string name="shortcut_vpn">VPN</string>
-    <string name="shortcut_bluetooth">Bluetooth</string>
-    <string name="shortcut_nfc">NFC</string>
-    <string name="shortcut_developer">Developer options</string>
-    <string name="shortcut_accessibility">Accessibility</string>
-    <string name="shortcut_notifications">Notification access</string>
-    <string name="shortcut_keyboards">Keyboards</string>
-    <string name="shortcut_apps">Apps</string>
-    <string name="shortcut_unknown_sources">Install unknown apps</string>
-    <string name="shortcut_usage">Usage access</string>
-    <string name="shortcut_display">Display</string>
-    <string name="shortcut_about_phone">About phone</string>
 
     <!-- Tools: device and report -->
     <string name="tools_device">Device details</string>

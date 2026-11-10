@@ -10,9 +10,11 @@ never changes anything itself.
 > doesn't remove anything. It audits how the phone is set up: what is locked, patched, exposed and
 > granted. It can point out risky access, such as an app with accessibility or device-admin rights,
 > and signs that adware leaves, such as an app that hides from the app drawer and runs on its own,
-> but it can't tell you whether that app is malware.
+> but it can't tell you whether that app is malware. The one exception is a fixed list: it flags apps
+> whose package name or signing key matches known stalkerware or monitoring apps
+> ([SUSP-5007](docs/CHECKS.md#susp-5007-known-stalkerware-and-monitoring-apps)).
 
-- 90 checks: device integrity, access control, apps and permissions, suspicious apps, network and
+- 91 checks: device integrity, access control, apps and permissions, suspicious apps, network and
   radios. Every check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
 - No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
   you share a report.
@@ -62,7 +64,7 @@ On first install, check that the signing certificate matches the SHA-256 in the 
 
 | Tier | Setup | Adds |
 |---|---|---|
-| Base | none | 53 checks through public Android APIs |
+| Base | none | 60 checks through public Android APIs |
 | ADB | two grants from a computer, once | 13 checks from `dumpsys`: special app access, screen capture without asking, Smart Lock, background camera, microphone and location use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically, hidden Wi-Fi networks, hotspot security |
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, device controls on the lock screen, passkey and password providers, clipboard access alerts, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
 | Root | opt-in switch in the app | trusted computers, apps with root, root modules, root boot scripts others can change, programs staged in shared temp, root access over ADB, apps listening on the network; runs the ADB and Shizuku checks |
@@ -148,3 +150,11 @@ design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEA
 Author: Alexandros (capitan0n) · <https://github.com/capitan0n> · [capitan0n@protonmail.com](mailto:capitan0n@protonmail.com)
 
 License: GNU General Public License v3.0 or later (GPL-3.0-or-later), see [LICENSE](LICENSE).
+
+The stalkerware check uses [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators)
+by [Echap](https://echap.eu.org/), licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Droynis keeps only app names, package names and signing-certificate fingerprints from it
+([StalkerwareIndicatorData.kt](checks/base/src/main/kotlin/io/github/capitan0n/droynis/checks/base/StalkerwareIndicatorData.kt),
+regenerated with [scripts/update-stalkerware-indicators.py](scripts/update-stalkerware-indicators.py)).
+Echap gives no guarantee that the list is accurate, and asks those who find it useful to consider
+donating to an organization that supports women facing violence in their country.

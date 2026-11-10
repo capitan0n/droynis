@@ -16,40 +16,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
-import androidx.compose.material.icons.rounded.Accessibility
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CameraAlt
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.DeveloperMode
-import androidx.compose.material.icons.rounded.DisplaySettings
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.InstallMobile
-import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.NetworkCheck
-import androidx.compose.material.icons.rounded.Nfc
-import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PrivacyTip
-import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.Radar
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Security
-import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Sms
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
-import androidx.compose.material.icons.rounded.VpnKey
-import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -71,8 +57,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.capitan0n.droynis.DroynisViewModel
 import io.github.capitan0n.droynis.R
@@ -87,7 +71,7 @@ import io.github.capitan0n.droynis.platform.PermissionUsage
 import io.github.capitan0n.droynis.platform.SensitivePermission
 import io.github.capitan0n.droynis.report.Verdict
 
-/** Facts about the phone: its network, app permissions, Settings shortcuts and build. */
+/** Facts about the phone: its build, network and app permissions. */
 @Composable
 fun DeviceScreen(state: UiState, actions: AppActions) {
     // Network state changes often; re-read it whenever the tab is opened.
@@ -98,10 +82,9 @@ fun DeviceScreen(state: UiState, actions: AppActions) {
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item { DeviceInfoCard(state, actions::copy) }
         item { NetworkCard(state.network, state.refreshingTools, actions::refreshTools) }
         item { PermissionsCard(state.permissions) { actions.openSettings(listOf(SettingsActions.PRIVACY, SettingsActions.APPS)) } }
-        item { ShortcutsCard { actions.openSettings(it) } }
-        item { DeviceInfoCard(state, actions::copy) }
     }
 }
 
@@ -374,80 +357,6 @@ private val SensitivePermission.icon: ImageVector
         SensitivePermission.BODY_SENSORS -> Icons.Rounded.MonitorHeart
         SensitivePermission.FILES_AND_MEDIA -> Icons.Rounded.Folder
     }
-
-private class Shortcut(val labelRes: Int, val icon: ImageVector, val action: String)
-
-private val SHORTCUTS = listOf(
-    Shortcut(R.string.shortcut_security, Icons.Rounded.Security, SettingsActions.SECURITY),
-    Shortcut(R.string.shortcut_privacy, Icons.Rounded.PrivacyTip, SettingsActions.PRIVACY),
-    Shortcut(R.string.shortcut_network, Icons.Rounded.NetworkCheck, SettingsActions.NETWORK),
-    Shortcut(R.string.shortcut_wifi, Icons.Rounded.Wifi, SettingsActions.WIFI),
-    Shortcut(R.string.shortcut_vpn, Icons.Rounded.VpnKey, SettingsActions.VPN),
-    Shortcut(R.string.shortcut_bluetooth, Icons.Rounded.Bluetooth, SettingsActions.BLUETOOTH),
-    Shortcut(R.string.shortcut_nfc, Icons.Rounded.Nfc, SettingsActions.NFC),
-    Shortcut(R.string.shortcut_developer, Icons.Rounded.DeveloperMode, SettingsActions.DEVELOPER_OPTIONS),
-    Shortcut(R.string.shortcut_accessibility, Icons.Rounded.Accessibility, SettingsActions.ACCESSIBILITY),
-    Shortcut(R.string.shortcut_notifications, Icons.Rounded.NotificationsActive, SettingsActions.NOTIFICATION_ACCESS),
-    Shortcut(R.string.shortcut_keyboards, Icons.Rounded.Keyboard, SettingsActions.INPUT_METHODS),
-    Shortcut(R.string.shortcut_apps, Icons.Rounded.Apps, SettingsActions.APPS),
-    Shortcut(R.string.shortcut_unknown_sources, Icons.Rounded.InstallMobile, SettingsActions.UNKNOWN_APP_SOURCES),
-    Shortcut(R.string.shortcut_usage, Icons.Rounded.QueryStats, SettingsActions.USAGE_ACCESS),
-    Shortcut(R.string.shortcut_display, Icons.Rounded.DisplaySettings, SettingsActions.DISPLAY),
-    Shortcut(R.string.shortcut_about_phone, Icons.Rounded.Smartphone, SettingsActions.DEVICE_INFO),
-)
-
-@Composable
-private fun ShortcutsCard(onOpen: (List<String>) -> Unit) {
-    SectionCard(
-        title = stringResource(R.string.tools_shortcuts),
-        icon = Icons.Rounded.Security,
-        accent = MaterialTheme.colorScheme.secondary,
-    ) {
-        Text(
-            stringResource(R.string.tools_shortcuts_intro),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(12.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            for (row in SHORTCUTS.chunked(SHORTCUT_COLUMNS)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (shortcut in row) {
-                        ShortcutTile(shortcut, Modifier.weight(1f)) { onOpen(listOf(shortcut.action)) }
-                    }
-                    repeat(SHORTCUT_COLUMNS - row.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-        }
-    }
-}
-
-private const val SHORTCUT_COLUMNS = 3
-
-@Composable
-private fun ShortcutTile(shortcut: Shortcut, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Icon(shortcut.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                stringResource(shortcut.labelRes),
-                style = MaterialTheme.typography.labelSmall,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
 
 @Composable
 private fun DeviceInfoCard(state: UiState, onCopy: (String, String) -> Unit) {

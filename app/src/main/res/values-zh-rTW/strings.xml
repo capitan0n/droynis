@@ -46,6 +46,7 @@
     <string name="about_body">專為 Android 設計的安全性與隱私權稽核工具。它能讀取並解釋您的設定，且絕不會自行變更任何設定。</string>
     <string name="about_independent">Droynis 是一個獨立專案，與 Lynis 或 CISOfy 無任何關聯、未獲其認可亦無附屬關係；Lynis 僅作為具備強化評分且易於閱讀之稽核概念的靈感來源。</string>
     <string name="about_license">採用 GNU GPL v3.0 或後續版本授權的自由暨開源軟體。</string>
+    <string name="about_license_indicators">跟蹤軟體檢查（SUSP-5007）使用 Echap 的 Stalkerware Indicators（github.com/AssoEchap/stalkerware-indicators），採用 CC BY 4.0 授權。僅保留應用程式名稱、套件名稱與簽署金鑰指紋。Echap 不保證該清單的準確性。</string>
     <string name="about_what">Droynis 的功能</string>
     <string name="help_about_link">版本 %1$s · 開發者、原始碼與意見反應</string>
     <string name="about_author_title">開發者</string>
@@ -254,26 +255,6 @@
     <string name="perm_activity">身體活動</string>
     <string name="perm_body_sensors">人體感應器</string>
     <string name="perm_files">檔案與媒體</string>
-
-    <!-- Tools: shortcuts -->
-    <string name="tools_shortcuts">安全性捷徑</string>
-    <string name="tools_shortcuts_intro">快速跳轉至各檢查項目所對應的系統設定頁面。</string>
-    <string name="shortcut_security">安全性</string>
-    <string name="shortcut_privacy">隱私權</string>
-    <string name="shortcut_network">網路</string>
-    <string name="shortcut_wifi">Wi-Fi</string>
-    <string name="shortcut_vpn">VPN</string>
-    <string name="shortcut_bluetooth">藍牙</string>
-    <string name="shortcut_nfc">NFC</string>
-    <string name="shortcut_developer">開發人員選項</string>
-    <string name="shortcut_accessibility">無障礙設定</string>
-    <string name="shortcut_notifications">通知存取權</string>
-    <string name="shortcut_keyboards">鍵盤與輸入法</string>
-    <string name="shortcut_apps">應用程式</string>
-    <string name="shortcut_unknown_sources">安裝未知的應用程式</string>
-    <string name="shortcut_usage">使用情況存取權</string>
-    <string name="shortcut_display">顯示螢幕</string>
-    <string name="shortcut_about_phone">關於手機</string>
 
     <!-- Tools: device and report -->
     <string name="tools_device">裝置資訊</string>
