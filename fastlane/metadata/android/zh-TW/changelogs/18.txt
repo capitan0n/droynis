@@ -1,0 +1,1 @@
+採用 JDK 21 建構，使 F-Droid 能直接以預設工具鏈實現可重現組建 (Reproducible Build)。更新 README：詳細說明如何完成 ADB 階層設定，並再次重申 Droynis 並非防毒軟體的產品定位。各項安全性檢查邏輯維持不變。
