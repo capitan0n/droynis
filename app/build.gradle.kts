@@ -45,6 +45,10 @@ fun javaString(text: String): String = buildString {
 }
 
 android {
+    androidResources {
+        generateLocaleConfig = true
+    }
+
     namespace = "io.github.capitan0n.droynis"
     compileSdk = 37
 
@@ -102,6 +106,7 @@ android {
 
     lint {
         checkDependencies = true
+        warning += "MissingTranslation"
     }
 }
 
