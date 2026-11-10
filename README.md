@@ -100,9 +100,32 @@ SMS. Instead of muting whole checks, open one that lists the app and tap **Trust
 stays listed in every check but no longer counts in any of them. **⋮ › Trusted apps** shows where
 each one is listed and removes them, and reports name every trusted app.
 
-⋮ › Save the report as Markdown or JSON, or share it; Tools › Report can also copy it.
+⋮ › Save the report as Markdown or JSON, or share it; Reports › Report can also copy it.
 **Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private
 DNS host, trusted computers and saved Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
+
+### Scheduled scans
+
+Reports › **Scheduled scan** (off by default) scans about once a day or once a week in the
+background, through Android's JobScheduler. With **Notifications** on, every scheduled scan ends
+with a notification: **Verbose notification** (on by default) lists which checks got worse, got fixed
+or couldn't run; off, it gives only the score and the previous one. With notifications off, scans
+run quietly and the card shows the last result. A scheduled scan uses the tiers
+available at that moment: checks that can't run then (say, Shizuku stopped after a reboot) keep
+their last result and are not reported as changes. On the lock screen the notification only says
+that a scan finished.
+
+This adds two permissions: `POST_NOTIFICATIONS` (Android 13+ asks only when you turn notifications
+on) and `RECEIVE_BOOT_COMPLETED`, which JobScheduler needs to keep the schedule across reboots. While a
+schedule is on, Droynis keeps the last result of each check (its id and status, nothing else) in its
+private storage to compare against; turning the schedule off deletes it. Android may delay
+background work to save battery, so daily means about daily.
+
+When Android holds the scans back, the card says so and opens App info: with Droynis' battery
+usage set to Restricted (background usage not allowed), scans wait until you open the app; and a
+scan that starts more than 6 hours past the window Android gives itself is reported as late, which
+battery savers that put apps to sleep (Samsung, Xiaomi, OnePlus) often cause. Choosing Unrestricted
+fixes that, but Droynis' own check APPS-4013 then lists it: trust Droynis to leave it out.
 
 ## Build
 

@@ -6,7 +6,6 @@
     <!-- Navigation and menus -->
     <string name="tab_dashboard">儀表板</string>
     <string name="tab_checks">檢查項目</string>
-    <string name="tab_tools">工具</string>
     <string name="tab_help">說明</string>
     <string name="navigate_back">返回</string>
     <string name="more_options">更多選項</string>

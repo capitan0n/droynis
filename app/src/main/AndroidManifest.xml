@@ -4,6 +4,15 @@
 
     <!-- No INTERNET permission: CI fails the build if one appears in the release APK. -->
 
+    <!--
+        Scheduled scans, off until the user picks a schedule on the Reports tab. Android 13+ asks
+        only when the user turns on their notifications; nothing else notifies.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- JobScheduler keeps a schedule across reboots only for apps that hold this. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <application
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -92,6 +101,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+
+        <!-- Runs scheduled scans; only JobScheduler can bind it. -->
+        <service
+            android:name=".schedule.ScheduledScanService"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
 
     </application>
 

@@ -211,11 +211,12 @@ checks/adb        :checks-adb        Kotlin/JVM  ADB-tier checks, dumpsys parser
 checks/shizuku    :checks-shizuku    Kotlin/JVM  Shizuku-tier checks and the `PrivilegedShell` probe they read
 checks/root       :checks-root       Kotlin/JVM  root-tier checks, their parsers and the `RootShellProbe` they read
 platform/android  :platform-android  Android     probe implementations; the only framework calls for checks;
-                                                 grant detection; the permission overview on the Tools screen;
+                                                 grant detection; the permission overview on the Device screen;
                                                  the Shizuku client and its read-only UserService (AIDL);
                                                  the opt-in root shell
 app               :app               Android     Compose UI (dashboard, checks, tools, help), registry
-                                                 wiring, settings deep links, report save/share
+                                                 wiring, settings deep links, report save/share,
+                                                 scheduled scans (JobScheduler) and their notification
 ```
 
 Directories group modules by layer; Gradle project paths stay flat (settings.gradle.kts maps each one),
@@ -679,7 +680,7 @@ out one phone. One menu switch, saved on the device, covers saving, sharing and 
   session needs a rooted device. Instrumented tests check that root is off by default and that
   nothing runs `su` then.
 - `app`: a Compose UI test launches the app, waits for the scan, opens the Checks tab, scrolls to
-  every check, opens one and its evidence, visits the Tools, Help and About pages and every
+  every check, opens one and its evidence, visits the Device, Reports, Help and About pages and every
   catalog tab (including the adb commands), and mutes and unmutes a check.
 - CI on pushes to main and pull requests: unit tests, lint, debug and release builds, and a gate
   that the release APK does not request `INTERNET`; the debug APK is kept as an artifact. A tag
@@ -698,7 +699,7 @@ directories, and compares the APKs (baseline profiles are the usual suspect if t
 ## 8. UI
 
 Material 3 with a teal brand scheme by default, large rounded cards and a bottom navigation bar:
-Dashboard, Checks, Tools, Help. Status colors never change with the theme or accent and always
+Dashboard, Checks, Device, Reports, Help. Status colors never change with the theme or accent and always
 come with a glyph and a label: green ✓ passed, yellow – needs attention, red ✗
 critical, grey ? unknown and ⃠ not available. Category colors (blue, violet, magenta, purple, green) are
 used for category icons only, so they never read as a status. The score ring is colored by the
@@ -734,7 +735,7 @@ an app's name finds the checks that named it; "pin" does not match "keeping", an
 optional ("wifi" finds "Wi-Fi"). The search combines with the verdict, category and tier filters,
 the verdict chips count within it, and the dashboard's links clear it.
 
-The network inspector on the Tools tab shows IP addresses, DNS servers and the HTTP proxy as dots
+The network inspector on the Device tab shows IP addresses, DNS servers and the HTTP proxy as dots
 until the eye in its header is tapped, so a screenshot gives none of them away. The choice is not
 stored: every new start of the app hides them again.
 

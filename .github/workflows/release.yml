@@ -9,7 +9,7 @@ name: Release
 #
 # Each release: raise versionCode and versionName in app/build.gradle.kts, write
 # fastlane/metadata/android/en-US/changelogs/<versionCode>.txt (max 500 characters; release notes
-# here and on F-Droid), run ./gradlew check, then:
+# here, on F-Droid and in the app's "What's new" dialog), run ./gradlew check, then:
 #   git tag -a v1.2.3 -m "Droynis 1.2.3" && git push origin main v1.2.3
 on:
   push:

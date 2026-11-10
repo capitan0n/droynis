@@ -6,12 +6,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import io.github.capitan0n.droynis.checks.adb.adbChecks
 import io.github.capitan0n.droynis.checks.base.DeviceSummary
 import io.github.capitan0n.droynis.checks.base.NetworkSnapshot
-import io.github.capitan0n.droynis.checks.base.baseChecks
-import io.github.capitan0n.droynis.checks.root.rootChecks
-import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.Grant
@@ -19,7 +15,6 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Scanner
 import io.github.capitan0n.droynis.core.Trust
-import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.platform.PermissionOverview
 import io.github.capitan0n.droynis.platform.root.RootState
 import io.github.capitan0n.droynis.platform.root.RootStatus
@@ -29,11 +24,18 @@ import io.github.capitan0n.droynis.report.DeviceFact
 import io.github.capitan0n.droynis.report.HardeningIndex
 import io.github.capitan0n.droynis.report.JsonReport
 import io.github.capitan0n.droynis.report.MarkdownReport
+import io.github.capitan0n.droynis.schedule.ScanHistory
+import io.github.capitan0n.droynis.schedule.ScanInterval
+import io.github.capitan0n.droynis.schedule.ScanNotifier
+import io.github.capitan0n.droynis.schedule.ScanSnapshot
+import io.github.capitan0n.droynis.schedule.ScheduleSettings
+import io.github.capitan0n.droynis.schedule.ScheduledScans
 import io.github.capitan0n.droynis.ui.theme.ThemeAccent
 import io.github.capitan0n.droynis.ui.theme.ThemeMode
 import java.io.IOException
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.Dispatchers
@@ -91,17 +93,39 @@ data class UiState(
     val root: RootStatus? = null,
     /** Reports leave out IP addresses, DNS and proxy servers and trusted computers; on by default. */
     val hidePersonal: Boolean = true,
+    /** How often Droynis scans in the background; off by default. */
+    val schedule: ScanInterval = ScanInterval.OFF,
+    /** Every scheduled scan notifies; off by default, and the only thing that asks for the permission. */
+    val notify: Boolean = false,
+    /** The notification lists the changes; otherwise only the score and the previous one. */
+    val verbose: Boolean = true,
+    /** Whether Android lets Droynis post notifications. */
+    val notificationsAllowed: Boolean = true,
+    /** When the last scheduled scan finished, in epoch milliseconds; null before the first. */
+    val lastScheduledScan: Long? = null,
+    /** What the last scheduled scan found, e.g. "Score 78/100, 1 new problem"; null without a score. */
+    val lastScheduledResult: String? = null,
+    /** A scheduled scan started from the app ("Run one now") is running. */
+    val runningScheduledScan: Boolean = false,
+    /** Android restricts Droynis in the background, so scheduled scans wait until the app opens. */
+    val backgroundRestricted: Boolean = false,
+    /** The last scheduled scan ran late, or the next one is overdue. */
+    val scheduleLate: Boolean = false,
+    /** This version's changelog, shown once after an update; null when there is nothing to show. */
+    val whatsNew: String? = null,
 ) {
     val done: Int get() = findings.size
 }
 
 class DroynisViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val platform = AndroidPlatform(application)
+    // Shared with scheduled scans in this process, so the two never run separate shells.
+    private val platform = SharedPlatform.acquire(application)
     private val prefs = application.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    private val schedule = ScheduleSettings(application)
 
     // Each tier module contributes its registry here; checks above the detected tier show as N/A.
-    private val checks = baseChecks(platform) + adbChecks(platform) + shizukuChecks(platform) + rootChecks(platform)
+    private val checks = allChecks(platform)
     private val scanner = Scanner()
 
     /** Every check in display order, whether or not it has run. */
@@ -113,6 +137,15 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             muted = readMuted(),
             trusted = readTrusted(),
             hidePersonal = prefs.getBoolean(KEY_HIDE_PERSONAL, true),
+            schedule = schedule.interval,
+            notify = schedule.notify,
+            verbose = schedule.verbose,
+            notificationsAllowed = ScanNotifier.canNotify(application),
+            lastScheduledScan = schedule.lastRun,
+            lastScheduledResult = scheduledResult(schedule.lastScore, schedule.lastNewIssues),
+            backgroundRestricted = ScheduledScans.backgroundRestricted(application),
+            scheduleLate = schedule.late(System.currentTimeMillis()),
+            whatsNew = WhatsNew.pending(application, prefs),
             // Build constants only, so the dashboard's device card is filled from the start.
             device = platform.build.device(),
         ),
@@ -163,9 +196,14 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         platform.shizuku.addListener(onShizukuChanged)
         scan()
         refreshTrustedLabels()
-        // The Tools screen's permission overview loads the label of every app, which needs the same
+        // Brings the schedule back after a force stop, which cancels it; a matching job is left alone.
+        val interval = schedule.interval
+        if (interval != ScanInterval.OFF) {
+            viewModelScope.launch(Dispatchers.IO) { ScheduledScans.apply(application, interval) }
+        }
+        // The Device screen's permission overview loads the label of every app, which needs the same
         // package manager and resource locks as the scan's checks: started together, it slows the
-        // first scan. Read it once the first scan is done; the Tools screen also refreshes itself
+        // first scan. Read it once the first scan is done; the Device screen also refreshes itself
         // whenever it opens.
         val firstScan = scanJob
         viewModelScope.launch {
@@ -176,7 +214,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
 
     override fun onCleared() {
         platform.shizuku.removeListener(onShizukuChanged)
-        platform.close()
+        SharedPlatform.release(platform)
     }
 
     fun scan() {
@@ -191,18 +229,22 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val started = TimeSource.Monotonic.markNow()
             // Starting the Shizuku shell can take a few seconds, so show the scan as running first.
             _state.update { it.copy(scanning = true, findings = emptyMap()) }
-            val context = platform.newScanContext().copy(trustedApps = _state.value.trusted)
-            // Read after newScanContext, which connects Shizuku and opens root, and shown in one update.
-            val shizuku = platform.shizuku.status()
-            val root = platform.root.status()
-            _state.update { it.copy(grants = context.capabilities.grants, shizuku = shizuku, root = root) }
-            try {
-                scanner.scan(checks, context).collect { finding ->
-                    _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
+            // A scheduled scan may be running on the same platform: wait for it to finish.
+            val context = SharedPlatform.scanLock.withLock {
+                val scanContext = platform.newScanContext().copy(trustedApps = _state.value.trusted)
+                // Read after newScanContext, which connects Shizuku and opens root, and shown in one update.
+                val shizuku = platform.shizuku.status()
+                val root = platform.root.status()
+                _state.update { it.copy(grants = scanContext.capabilities.grants, shizuku = shizuku, root = root) }
+                try {
+                    scanner.scan(checks, scanContext).collect { finding ->
+                        _state.update { it.copy(findings = it.findings + (finding.spec.id to finding)) }
+                    }
+                } finally {
+                    // The root shell lives only as long as a scan, even a cancelled one.
+                    withContext(NonCancellable) { platform.scanFinished() }
                 }
-            } finally {
-                // The root shell lives only as long as a scan, even a cancelled one.
-                withContext(NonCancellable) { platform.scanFinished() }
+                scanContext
             }
             // Cosmetic only: a scan takes a fraction of a second, too short to see that it ran.
             delay(MIN_VISIBLE_SCAN - started.elapsedNow())
@@ -211,10 +253,12 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 val index = HardeningIndex.of(findings, it.muted)
                 it.copy(scanning = false, result = ScanResult(context, findings, index))
             }
+            // What the next scheduled scan compares against: the results the user has seen.
+            _state.value.result?.let { recordBaseline(it) }
         }
     }
 
-    /** Re-reads the device, network, permission and grant facts shown on the Tools screen. */
+    /** Re-reads the device, network, permission and grant facts shown on the Device screen. */
     fun refreshTools() {
         if (_state.value.refreshingTools) return
         _state.update { it.copy(refreshingTools = true) }
@@ -225,6 +269,7 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
             val grants = withContext(Dispatchers.IO) { platform.detectGrants() }
             refreshShizuku()
             refreshRoot()
+            refreshSchedule()
             _state.update {
                 it.copy(
                     device = device,
@@ -371,12 +416,16 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         scanJob = viewModelScope.launch(Dispatchers.IO) {
             // Let an earlier recheck close its root shell first, so it can't close this one's.
             previous?.join()
-            val context = platform.newScanContext().copy(trustedApps = _state.value.trusted)
             val fresh = HashMap<String, Finding>()
-            try {
-                scanner.scan(subset, context).collect { fresh[it.spec.id] = it }
-            } finally {
-                withContext(NonCancellable) { platform.scanFinished() }
+            // Like a full scan, it waits for a scheduled scan on the same platform to finish.
+            val context = SharedPlatform.scanLock.withLock {
+                val scanContext = platform.newScanContext().copy(trustedApps = _state.value.trusted)
+                try {
+                    scanner.scan(subset, scanContext).collect { fresh[it.spec.id] = it }
+                } finally {
+                    withContext(NonCancellable) { platform.scanFinished() }
+                }
+                scanContext
             }
             _state.update { state ->
                 val findings = state.findings + fresh
@@ -391,6 +440,8 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
                 }
                 state.copy(findings = findings, result = result)
             }
+            // Trusting an app is the user's choice, not a change for the next scheduled scan to report.
+            _state.value.result?.let { recordBaseline(it) }
         }
     }
 
@@ -399,6 +450,105 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
         prefs.edit().putBoolean(KEY_HIDE_PERSONAL, hide).apply()
         _state.update { it.copy(hidePersonal = hide) }
         message(if (hide) R.string.personal_hidden else R.string.personal_included)
+    }
+
+    /** The "What's new" dialog was closed: not shown again for this version. */
+    fun dismissWhatsNew() {
+        WhatsNew.markSeen(prefs)
+        _state.update { it.copy(whatsNew = null) }
+    }
+
+    /** Turns the scheduled scan on, changes how often it runs, or turns it off. */
+    fun setSchedule(interval: ScanInterval) {
+        schedule.interval = interval
+        _state.update { it.copy(schedule = interval) }
+        val app = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            if (!ScheduledScans.apply(app, interval)) message(R.string.schedule_failed)
+            if (interval == ScanInterval.OFF) {
+                // Nothing of the scans is kept while no schedule needs it.
+                ScanHistory.clear(app)
+            } else {
+                // The first scheduled scan compares against the results on screen now.
+                _state.value.result?.let { recordBaseline(it) }
+            }
+            // A new job, or none, starts its timing afresh.
+            refreshSchedule()
+        }
+    }
+
+    /** Turns scheduled scan notifications on or off; the activity asks for the permission first. */
+    fun setNotify(on: Boolean) {
+        schedule.notify = on
+        _state.update { it.copy(notify = on) }
+    }
+
+    /** A detailed notification, or only the score and the previous one. */
+    fun setVerbose(verbose: Boolean) {
+        schedule.verbose = verbose
+        _state.update { it.copy(verbose = verbose) }
+    }
+
+    /**
+     * Runs a scheduled scan now, to see what one does: with notifications on it notifies, with them
+     * off its result shows in the snackbar.
+     */
+    fun runScheduledScan() {
+        if (_state.value.runningScheduledScan) return
+        _state.update { it.copy(runningScheduledScan = true) }
+        val app = getApplication<Application>()
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val summary = ScheduledScans.runScan(app)
+                when {
+                    !schedule.notify -> scheduledResult(summary.score, summary.newIssues)?.let { _messages.tryEmit(it) }
+                    !ScanNotifier.canNotify(app) -> message(R.string.schedule_notifications_off)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                message(R.string.schedule_run_failed)
+            } finally {
+                _state.update { it.copy(runningScheduledScan = false) }
+                refreshSchedule()
+            }
+        }
+    }
+
+    /**
+     * Re-reads whether Droynis may notify and run in the background, when the last scheduled scan ran,
+     * what it found, and whether scans run late.
+     */
+    fun refreshSchedule() {
+        val app = getApplication<Application>()
+        val result = scheduledResult(schedule.lastScore, schedule.lastNewIssues)
+        val late = schedule.late(System.currentTimeMillis())
+        _state.update {
+            it.copy(
+                notificationsAllowed = ScanNotifier.canNotify(app),
+                lastScheduledScan = schedule.lastRun,
+                lastScheduledResult = result,
+                backgroundRestricted = ScheduledScans.backgroundRestricted(app),
+                scheduleLate = late,
+            )
+        }
+    }
+
+    /** "Score 78/100, 1 new problem" or "Score 78/100, nothing got worse"; null without a score. */
+    private fun scheduledResult(score: Int?, newIssues: Int): String? {
+        if (score == null) return null
+        val res = getApplication<Application>().resources
+        return if (newIssues == 0) {
+            res.getString(R.string.schedule_result_unchanged, score)
+        } else {
+            res.getQuantityString(R.plurals.schedule_result_new_issues, newIssues, score, newIssues)
+        }
+    }
+
+    private fun recordBaseline(result: ScanResult) {
+        if (schedule.interval == ScanInterval.OFF) return
+        val snapshot = ScanSnapshot.of(result.findings, result.index.score, System.currentTimeMillis())
+        ScanHistory.record(getApplication(), snapshot)
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -504,16 +654,17 @@ class DroynisViewModel(application: Application) : AndroidViewModel(application)
     }
 
     companion object {
-        private const val PREFS = "settings"
+        // Scheduled scans read the same file.
+        internal const val PREFS = "settings"
         private const val KEY_THEME = "theme"
         private const val KEY_ACCENT = "accent"
-        private const val KEY_MUTED = "muted_checks"
-        private const val KEY_TRUSTED = "trusted_apps"
+        internal const val KEY_MUTED = "muted_checks"
+        internal const val KEY_TRUSTED = "trusted_apps"
 
         /** Evidence whose result changes with trust; a NOT_COUNTED app never counts anyway. */
         private val TRUSTABLE = setOf(Trust.COUNTED, Trust.TRUSTED)
         private const val KEY_HIDE_PERSONAL = "hide_personal"
-        private const val KEY_ROOT = "root_tier"
+        internal const val KEY_ROOT = "root_tier"
         private val MIN_VISIBLE_SCAN = 700.milliseconds
 
         private val FILE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmm")

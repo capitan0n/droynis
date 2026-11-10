@@ -17,6 +17,9 @@ Most checks need no setup. Two read-only adb grants, Shizuku or root unlock the 
 <b>Honest results</b>
 A check passes only on a value it actually read. When Android won't say, the result is Unknown, never Passed. A score from 0 to 100 sums it up; checks you can't fix can be muted.
 
+<b>Scheduled scans</b>
+Optional: Droynis scans about once a day or once a week in the background and compares with the last results. Notifications, off until you turn them on, say what got worse, got fixed or couldn't run.
+
 <b>Private by design</b>
 No internet permission, no Google Play Services, no analytics. Reports (Markdown or JSON) leave out IP addresses, DNS and proxy servers and trusted computers by default.
 

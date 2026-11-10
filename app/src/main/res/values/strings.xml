@@ -6,7 +6,8 @@
     <!-- Navigation and menus -->
     <string name="tab_dashboard">Dashboard</string>
     <string name="tab_checks">Checks</string>
-    <string name="tab_tools">Tools</string>
+    <string name="tab_device">Device</string>
+    <string name="tab_reports">Reports</string>
     <string name="tab_help">Help</string>
     <string name="navigate_back">Back</string>
     <string name="more_options">More options</string>
@@ -277,7 +278,7 @@
     <string name="shortcut_about_phone">About phone</string>
 
     <!-- Tools: device and report -->
-    <string name="tools_device">Device</string>
+    <string name="tools_device">Device details</string>
     <string name="device_manufacturer">Manufacturer</string>
     <string name="device_model">Model</string>
     <string name="device_android_version">Android version</string>
@@ -302,6 +303,61 @@
     <string name="settings_not_opened">This phone has no matching settings screen</string>
     <!-- A toast over About phone, opened because Developer options are off. -->
     <string name="developer_options_off">Developer options are off. Tap Build number 7 times to turn them on, then go back to Droynis.</string>
+
+    <!-- Scheduled scans -->
+    <string name="tools_schedule">Scheduled scan</string>
+    <string name="schedule_body">Droynis can scan in the background with the tiers available at that moment, and notify you of the result. Checks that can\'t run then are left out of the comparison.</string>
+    <string name="schedule_off">Off</string>
+    <string name="schedule_daily">About once a day</string>
+    <string name="schedule_weekly">About once a week</string>
+    <string name="schedule_notify">Notifications</string>
+    <string name="schedule_notify_on">You get a notification after every scheduled scan.</string>
+    <string name="schedule_notify_off">Scans run quietly; the last result shows below.</string>
+    <string name="schedule_verbose">Verbose notification</string>
+    <string name="schedule_verbose_on">The score, and which checks got worse, got fixed or couldn\'t run.</string>
+    <string name="schedule_verbose_off">Only the score and the previous one.</string>
+    <string name="schedule_notifications_off">Notifications are blocked for Droynis in Android\'s settings.</string>
+    <string name="schedule_notification_settings">Notification settings</string>
+    <string name="schedule_background_restricted">Android restricts Droynis in the background, so scheduled scans wait until you open the app. Allow background use in App info › App battery usage (Battery on some phones).</string>
+    <string name="schedule_late">Scheduled scans are running late: Android or the phone\'s battery saver is holding Droynis back in the background, or the phone was off. For scans on time, choose Unrestricted in App info › App battery usage (Battery on some phones), and take Droynis off any list of sleeping apps.</string>
+    <string name="schedule_app_info">App info</string>
+    <string name="whats_new_title">What\'s new in %1$s</string>
+    <string name="whats_new_ok">Got it</string>
+    <string name="schedule_never_ran">No scheduled scan has run yet.</string>
+    <string name="schedule_last_run">Last scheduled scan: %1$s</string>
+    <string name="schedule_result_unchanged">Score %1$d/100, nothing got worse</string>
+    <plurals name="schedule_result_new_issues">
+        <item quantity="one">Score %1$d/100, %2$d new problem</item>
+        <item quantity="other">Score %1$d/100, %2$d new problems</item>
+    </plurals>
+    <string name="schedule_run_now">Run one now</string>
+    <string name="schedule_failed">Android refused the schedule</string>
+    <string name="schedule_run_failed">The scheduled scan failed</string>
+    <string name="schedule_notifications_denied">Notifications not allowed. Try the switch again, or allow them in Android\'s settings.</string>
+    <string name="channel_worse">Security got worse</string>
+    <string name="channel_worse_desc">A scheduled scan found a check that passed before and fails now.</string>
+    <string name="channel_results">Scan results</string>
+    <string name="channel_results_desc">The score after every scheduled scan.</string>
+    <string name="notify_title">Security score %1$d/100</string>
+    <string name="notify_title_changed">Security score %1$d/100 (was %2$d)</string>
+    <string name="notify_title_no_score">Scheduled scan finished</string>
+    <string name="notify_public">Scan finished. Unlock to see the result.</string>
+    <string name="notify_no_changes">No changes since the last scan.</string>
+    <string name="notify_short_previous">Previous scan: %1$d/100</string>
+    <string name="notify_short_no_previous">No earlier score to compare with.</string>
+    <string name="notify_and_more">%1$s and %2$d more</string>
+    <plurals name="notify_new_issues">
+        <item quantity="one">%1$d new problem: %2$s</item>
+        <item quantity="other">%1$d new problems: %2$s</item>
+    </plurals>
+    <plurals name="notify_fixed">
+        <item quantity="one">%1$d fixed: %2$s</item>
+        <item quantity="other">%1$d fixed: %2$s</item>
+    </plurals>
+    <plurals name="notify_not_run">
+        <item quantity="one">%1$d check could not run this time.</item>
+        <item quantity="other">%1$d checks could not run this time.</item>
+    </plurals>
 
     <!-- Help -->
     <string name="help_legend">Reading the results</string>

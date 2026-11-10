@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status bar icon: the owl-shield of ic_launcher_monochrome, cropped to its shape. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <group
+        android:translateX="-22"
+        android:translateY="-24">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:fillType="evenOdd"
+            android:pathData="M36,28 C41,31 47,35 54,35 C61,35 67,31 72,28 C74.5,34 76,41 76,48 C76,64 67,76 54,84 C41,76 32,64 32,48 C32,41 33.5,34 36,28 Z M37.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M57.4,52 a6.6,6.6 0 1,0 13.2,0 a6.6,6.6 0 1,0 -13.2,0 Z M54,58.5 L57,62.5 L54,67 L51,62.5 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M40.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z M60.7,52 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z" />
+    </group>
+</vector>
