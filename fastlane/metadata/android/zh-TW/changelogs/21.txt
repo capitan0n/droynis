@@ -1,0 +1,1 @@
+新增 7 項檢查：生物辨識強度、Google Play 服務、Play Protect 掃描；Shizuku：偽造開機屬性；Root：可被修改的開機指令碼、共用暫存區程式、透過 ADB 的 Root 權限。新增彩色主題與 5 款圖示（⋮ › 應用程式圖示）。修復 Fairphone 5 在 /e/OS 下的相容性。新增 USE_BIOMETRIC 權限：僅讀取註冊之生物辨識類型，不讀取特徵本身。
