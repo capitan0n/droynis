@@ -6,6 +6,8 @@
     <!-- Navigation and menus -->
     <string name="tab_dashboard">儀表板</string>
     <string name="tab_checks">檢查項目</string>
+    <string name="tab_device">裝置</string>
+    <string name="tab_reports">報告</string>
     <string name="tab_help">說明</string>
     <string name="navigate_back">返回</string>
     <string name="more_options">更多選項</string>
@@ -282,6 +284,57 @@
     <string name="settings_not_opened">此手機未提供對應的設定頁面</string>
     <!-- A toast over About phone, opened because Developer options are off. -->
     <string name="developer_options_off">開發人員選項尚未啟用。請連續輕觸「版本號碼」7 次以開啟，隨後返回 Droynis。</string>
+
+    <!-- Scheduled scans -->
+    <string name="tools_schedule">排程掃描</string>
+    <string name="schedule_body">Droynis 可使用當下可用的權限階層在背景執行掃描，並將結果通知您。當下無法執行的檢查項目將排除於比對之外。</string>
+    <string name="schedule_off">關閉</string>
+    <string name="schedule_daily">約每天一次</string>
+    <string name="schedule_weekly">約每週一次</string>
+    <string name="schedule_notify">通知</string>
+    <string name="schedule_notify_on">每次排程掃描完成後都會收到通知。</string>
+    <string name="schedule_notify_off">掃描將在背景安靜執行；最近一次的結果會顯示於下方。</string>
+    <string name="schedule_verbose">詳細通知</string>
+    <string name="schedule_verbose_on">顯示評分，以及惡化、已修復或無法執行的檢查項目。</string>
+    <string name="schedule_verbose_off">僅顯示本次與前一次的評分。</string>
+    <string name="schedule_notifications_off">Android 系統設定中已封鎖 Droynis 的通知權限。</string>
+    <string name="schedule_notification_settings">通知設定</string>
+    <string name="schedule_background_restricted">Android 限制了 Droynis 的背景運作，因此排程掃描會等到您開啟應用程式時才執行。請前往「應用程式資訊」›「應用程式電池用量」（部分手機為「電池」）允許背景使用。</string>
+    <string name="schedule_late">排程掃描延遲執行：Android 系統或手機的省電模式在背景攔阻了 Droynis，或是手機先前處於關機狀態。若要準時執行掃描，請前往「應用程式資訊」›「應用程式電池用量」（部分手機為「電池」）選擇「不受限制」，並將 Droynis 從休眠應用程式清單中移除。</string>
+    <string name="schedule_app_info">應用程式資訊</string>
+    <string name="whats_new_title">%1$s 更新內容</string>
+    <string name="whats_new_ok">知道了</string>
+    <string name="schedule_never_ran">尚未執行過任何排程掃描。</string>
+    <string name="schedule_last_run">上次排程掃描：%1$s</string>
+    <string name="schedule_result_unchanged">評分 %1$d/100，無任何項目惡化</string>
+    <plurals name="schedule_result_new_issues">
+        <item quantity="other">評分 %1$d/100，新增 %2$d 個問題</item>
+    </plurals>
+    <string name="schedule_run_now">立即執行一次</string>
+    <string name="schedule_failed">Android 系統拒絕了排程設定</string>
+    <string name="schedule_run_failed">排程掃描失敗</string>
+    <string name="schedule_notifications_denied">未允許通知權限。請再次切換開關，或前往 Android「設定」允許通知。</string>
+    <string name="channel_worse">安全性惡化</string>
+    <string name="channel_worse_desc">排程掃描發現先前通過但現在未通過的檢查項目。</string>
+    <string name="channel_results">掃描結果</string>
+    <string name="channel_results_desc">每次排程掃描完成後的安全性評分。</string>
+    <string name="notify_title">安全性評分 %1$d/100</string>
+    <string name="notify_title_changed">安全性評分 %1$d/100（原為 %2$d）</string>
+    <string name="notify_title_no_score">排程掃描已完成</string>
+    <string name="notify_public">掃描已完成。請解鎖以檢視結果。</string>
+    <string name="notify_no_changes">與上次掃描相比無任何變化。</string>
+    <string name="notify_short_previous">上次掃描：%1$d/100</string>
+    <string name="notify_short_no_previous">無先前的評分可供比對。</string>
+    <string name="notify_and_more">%1$s 與另外 %2$d 項</string>
+    <plurals name="notify_new_issues">
+        <item quantity="other">新增 %1$d 個問題：%2$s</item>
+    </plurals>
+    <plurals name="notify_fixed">
+        <item quantity="other">已修復 %1$d 項：%2$s</item>
+    </plurals>
+    <plurals name="notify_not_run">
+        <item quantity="other">本次有 %1$d 項檢查無法執行。</item>
+    </plurals>
 
     <!-- Help -->
     <string name="help_legend">判讀檢查結果</string>
