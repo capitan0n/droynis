@@ -59,6 +59,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     InstalledByAppCheck(probes.packages),
     TrojanPermissionsCheck(probes.footprints, probes.packages, probes.accessibility),
     TestKeyAppsCheck(probes.footprints, probes.packages),
+    StalkerwareCheck(probes.footprints, probes.packages),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),
