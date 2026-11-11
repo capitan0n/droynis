@@ -7,6 +7,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     // Device integrity
     SecurityPatchAgeCheck(probes.build),
     VendorPatchCheck(probes.build, probes.attestation, probes.properties),
+    PlaySystemUpdateCheck(probes.modules),
     StorageEncryptionCheck(probes.policy),
     BootloaderCheck(probes.attestation, probes.properties, probes.files, probes.packages),
     OemUnlockingCheck(probes.properties),
@@ -16,6 +17,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     RestartCheck(probes.uptime),
     StorageSpaceCheck(probes.storage),
     AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
+    ManagedDeviceCheck(probes.policy, probes.profiles, probes.packages),
     // Access control
     LockScreenCheck(probes.keyguard),
     LockStrengthCheck(probes.keyguard),
@@ -48,6 +50,8 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     PlayProtectCheck(probes.settings),
     OutdatedAppsCheck(probes.packages),
     PlayServicesCheck(probes.packageDetails),
+    OtherProfilesCheck(probes.profiles),
+    CleartextAppsCheck(probes.packages, probes.permissions),
     // Suspicious apps
     HiddenAppsCheck(probes.footprints, probes.packages, probes.accessibility, probes.policy, probes.settings),
     HiddenAutostartCheck(probes.footprints, probes.packages, probes.battery),
@@ -55,7 +59,6 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     InstalledByAppCheck(probes.packages),
     TrojanPermissionsCheck(probes.footprints, probes.packages, probes.accessibility),
     TestKeyAppsCheck(probes.footprints, probes.packages),
-    StalkerwareCheck(probes.footprints, probes.packages),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),

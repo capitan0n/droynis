@@ -1,80 +1,131 @@
+
 # Droynis
 <img src="fastlane/metadata/android/en-US/images/icon.png" width="96" align="right" alt="">
 
-A read-only security and privacy audit for Android, inspired by Lynis (Android + Lynis). Droynis
-checks the phone it runs on, explains every finding, shows the evidence and opens the Settings
-screen that fixes it. It never changes anything itself.
+A read-only security and privacy audit for Android, inspired by Lynis (Android+Lynis). Droynis checks the phone it
+runs on, explains every finding, shows the evidence and opens the Settings screen that fixes it. It
+never changes anything itself.
 
-- **90+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
-  apps, network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
-- **Private:** no `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the
-  phone unless you share a report.
-- **Honest:** a check passes only on a value it actually read. When Android won't say, the result
-  is Unknown, never Passed.
+> **Not an antivirus or malware scanner.** Droynis doesn't scan apps or files for malicious code and
+> doesn't remove anything. It audits how the phone is set up: what is locked, patched, exposed and
+> granted. It can point out risky access, such as an app with accessibility or device-admin rights,
+> and signs that adware leaves, such as an app that hides from the app drawer and runs on its own,
+> but it can't tell you whether that app is malware.
 
-> **Not an antivirus.** Droynis doesn't scan apps for malicious code or remove anything. It audits
-> how the phone is set up, and points out risky access and signs adware leaves, such as an app that
-> hides its icon. The one exception is a fixed list: it flags apps that match known stalkerware or
-> monitoring apps (SUSP-5007).
+- 96 checks: device integrity, access control, apps and permissions, suspicious apps, network and
+  radios. Every check, with when it fails and what to do: **[docs/CHECKS.md](docs/CHECKS.md)**.
+- No `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the phone unless
+  you share a report.
+- A check passes only on a value it actually read. When Android won't say, the result is Unknown,
+  never Passed.
+
+> Droynis is an independent project, not affiliated with, endorsed by or connected to
+> [Lynis](https://cisofy.com/lynis/) or CISOfy, and shares no code with it.
 
 ## Install
 
-Android 8.0 or later.
+Android 8.0 or later. Pick one:
 
-| Source | |
-|---|---|
-| [<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="60">](https://f-droid.org/en/packages/io.github.capitan0n.droynis/) | Built by F-Droid from the tagged source; can arrive a few days after a release. |
-| [<img src="art/badge_obtainium.png" alt="Get it on Obtainium" height="60">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.capitan0n.droynis%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fcapitan0n%2Fdroynis%22%2C%22author%22%3A%22capitan0n%22%2C%22name%22%3A%22Droynis%22%7D) | Installs each GitHub release directly. Pre-releases only with **Include prereleases**. |
-| [GitHub Releases](https://github.com/capitan0n/droynis/releases) | The APK, with a checksum and a GitHub build attestation. |
+### 1. F-Droid
 
-To verify a GitHub download:
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/en/packages/io.github.capitan0n.droynis/)
+
+Install from the [F-Droid page](https://f-droid.org/en/packages/io.github.capitan0n.droynis/) or
+search for Droynis in the F-Droid client, which also keeps it updated. F-Droid builds each version
+from the tagged source, so it may appear a few days after the GitHub release.
+
+### 2. GitHub Releases
+
+Download the APK from [Releases](https://github.com/capitan0n/droynis/releases) and verify it
+before installing:
 
 ```sh
 sha256sum -c droynis-<version>.apk.sha256
-gh attestation verify droynis-<version>.apk --repo capitan0n/droynis
+gh attestation verify droynis-<version>.apk --repo capitan0n/droynis   # built by GitHub from the tag
 ```
 
-Each release lists the signing certificate's SHA-256. Check it on first install (for example with
-AppVerifier); Android then refuses any update signed with another key.
+Each release lists the signing certificate's SHA-256.
+
+### 3. Obtainium
+
+[<img src="art/badge_obtainium.png" alt="Get it on Obtainium" height="80">](https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22io.github.capitan0n.droynis%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2Fcapitan0n%2Fdroynis%22%2C%22author%22%3A%22capitan0n%22%2C%22name%22%3A%22Droynis%22%7D)
+
+[Obtainium](https://github.com/ImranR98/Obtainium) installs each GitHub release directly, with no
+store delay: tap the badge on your phone, or in Obtainium tap **Add App** and enter
+`https://github.com/capitan0n/droynis`. Pre-releases are skipped unless you turn on
+**Include prereleases**.
+
+On first install, check that the signing certificate matches the SHA-256 in the release notes
+(for example with AppVerifier); Android then refuses any update signed with another key.
 
 ## Tiers
 
-Most checks need nothing. More access unlocks more checks; each tier also runs the ones before it.
-
 | Tier | Setup | Adds |
 |---|---|---|
-| Base | none | everything public Android APIs can read |
-| ADB | two grants from a computer, once | `dumpsys` checks: special app access, Smart Lock, background camera, microphone and location use, Wi-Fi privacy, hotspot security |
-| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | settings Android hides from apps: SELinux, SIM PIN, always-on VPN lockdown, passkey providers, mobile network encryption |
-| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network |
+| Base | none | 63 checks through public Android APIs |
+| ADB | two grants from a computer, once | 17 checks from `dumpsys`: special app access, apps that keep their permissions while unused, screen capture without asking, Smart Lock, hidden apps running in the background, background camera, microphone, location, SMS, call log and contacts use, Wi-Fi MAC randomization, open Wi-Fi networks that join automatically, hidden and WEP Wi-Fi networks, hotspot security |
+| Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | SELinux, spoofed boot properties, always-on VPN lockdown, SIM PIN, device controls on the lock screen, passkey and password providers, clipboard access alerts, mobile network encryption and fake cell tower alerts; reads what Android hides from apps, and runs the ADB checks |
+| Root | opt-in switch in the app | trusted computers, apps with root, root modules, root boot scripts others can change, programs staged in shared temp, root access over ADB, apps listening on the network; runs the ADB and Shizuku checks |
 
-**⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku and root run
-only a fixed set of read-only commands, and root stays off until you turn it on.
+In the app, **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku
+and root run only a fixed set of read-only commands; root stays off until you turn it on.
 
-**ADB tier setup** (not needed with Shizuku or root): turn on USB debugging, connect the phone to a
-computer with `adb` (Arch/Manjaro: `android-tools`, Debian/Ubuntu: `adb`) and run:
+### Setting up the ADB tier
 
-```sh
-adb shell pm grant io.github.capitan0n.droynis android.permission.DUMP
-adb shell pm grant io.github.capitan0n.droynis android.permission.PACKAGE_USAGE_STATS
-```
+Android hides `dumpsys` output from apps unless they hold `DUMP` and `PACKAGE_USAGE_STATS`, and only
+a computer with `adb` can grant those two. You don't need this if you use Shizuku or root.
 
-Tap Scan again, then turn USB debugging off. The grants survive reboots; `pm revoke` removes them.
+1. On the phone, turn on Developer options › USB debugging and connect it to a computer with
+   `adb` (Arch/Manjaro: `android-tools`, Debian/Ubuntu: `adb`).
+2. Grant the two permissions:
 
-## Using it
+   ```sh
+   adb shell pm grant io.github.capitan0n.droynis android.permission.DUMP
+   adb shell pm grant io.github.capitan0n.droynis android.permission.PACKAGE_USAGE_STATS
+   ```
 
-- **Score:** passed weight ÷ scored weight × 100 (critical 10, warning 5, notice 2, info 0). Any
-  critical failure caps it at 40. Unknown, N/A and muted checks don't count.
-- **Mute** a check you can't fix, such as a patch only the maker can ship.
-- **Trust** an app that needs a lot of access on purpose, such as a watch app: it stays listed but
-  stops counting in every check. **⋮ › Trusted apps** lists them.
-- **Reports:** save or share as Markdown or JSON from the ⋮ menu. **Hide personal details** (on by
-  default) hides IP addresses, DNS and proxy servers, trusted computers and Wi-Fi names. JSON keeps
-  a fixed order, so `diff` compares two scans.
-- **Scheduled scans** (Reports tab, off by default) run about daily or weekly and can notify you of
-  what got worse or got fixed. They add two permissions, notifications and starting after a reboot,
-  and keep only each check's last status. If Android holds scans back to save battery, the card
-  says so.
+3. Tap Scan again, then turn USB debugging off; Droynis reports it as a risk when it's on.
+
+The grants survive reboots and stay until you uninstall the app or run the same commands with
+`pm revoke`. They let Droynis read, never change, system state.
+
+## Score and reports
+
+The score is passed weight ÷ scored weight × 100 (critical 10, warning 5, notice 2, info 0); a
+critical failure caps it at 40. Unknown, N/A and muted checks don't count. Mute what you can't fix,
+such as a patch level only the maker can update; the Muted filter has Unmute all.
+
+Some apps need a lot of access to do their job, such as a watch app that reads notifications and
+SMS. Instead of muting whole checks, open one that lists the app and tap **Trust** under it: the app
+stays listed in every check but no longer counts in any of them. **⋮ › Trusted apps** shows where
+each one is listed and removes them, and reports name every trusted app.
+
+⋮ › Save the report as Markdown or JSON, or share it; Reports › Report can also copy it.
+**Hide personal details** (on by default) replaces IP addresses, DNS and proxy servers, the Private
+DNS host, trusted computers and saved Wi-Fi network names with `[hidden]`. JSON reports keep a fixed order, so you can compare two scans with `diff`.
+
+### Scheduled scans
+
+Reports › **Scheduled scan** (off by default) scans about once a day or once a week in the
+background, through Android's JobScheduler. With **Notifications** on, every scheduled scan ends
+with a notification: **Verbose notification** (on by default) lists which checks got worse, got fixed
+or couldn't run; off, it gives only the score and the previous one. With notifications off, scans
+run quietly and the card shows the last result. A scheduled scan uses the tiers
+available at that moment: checks that can't run then (say, Shizuku stopped after a reboot) keep
+their last result and are not reported as changes. On the lock screen the notification only says
+that a scan finished.
+
+This adds two permissions: `POST_NOTIFICATIONS` (Android 13+ asks only when you turn notifications
+on) and `RECEIVE_BOOT_COMPLETED`, which JobScheduler needs to keep the schedule across reboots. While a
+schedule is on, Droynis keeps the last result of each check (its id and status, nothing else) in its
+private storage to compare against; turning the schedule off deletes it. Android may delay
+background work to save battery, so daily means about daily.
+
+When Android holds the scans back, the card says so and opens App info: with Droynis' battery
+usage set to Restricted (background usage not allowed), scans wait until you open the app; and a
+scan that starts more than 6 hours past the window Android gives itself is reported as late, which
+battery savers that put apps to sleep (Samsung, Xiaomi, OnePlus) often cause. Choosing Unrestricted
+fixes that, but Droynis' own check APPS-4013 then lists it: trust Droynis to leave it out.
 
 ## Build
 
@@ -86,26 +137,14 @@ JDK 21 and the Android SDK (compileSdk 37).
 ```
 
 `assembleRelease` signs with `keystore.properties` (git-ignored) or `DROYNIS_*` environment
-variables, and builds an unsigned APK without them, as F-Droid expects.
+variables, and builds an unsigned APK without them, as F-Droid expects. Debug builds are slow by
+design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## More
 
-- [docs/CHECKS.md](docs/CHECKS.md): every check and when it fails
-- [docs/DESIGN.md](docs/DESIGN.md): how it works, and what Android allows
-- [CONTRIBUTING.md](CONTRIBUTING.md): report a wrong result, translate, add a check
-- [SECURITY.md](SECURITY.md): report a vulnerability privately
+- [docs/DESIGN.md](docs/DESIGN.md): architecture, what Android allows, and why each check works the way it does
+- [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md)
 
-## Credits and license
+Author: Alexandros (capitan0n) · <https://github.com/capitan0n> · [capitan0n@protonmail.com](mailto:capitan0n@protonmail.com)
 
-Droynis is GPL-3.0-or-later ([LICENSE](LICENSE)), by Alexandros (capitan0n) ·
-<https://github.com/capitan0n> · [capitan0n@protonmail.com](mailto:capitan0n@protonmail.com).
-
-It is an independent project, not affiliated with, endorsed by or connected to
-[Lynis](https://cisofy.com/lynis/) or CISOfy, and shares no code with it.
-
-The stalkerware check uses [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators)
-by [Echap](https://echap.eu.org/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-Only app names, package names and signing-certificate fingerprints are kept
-([scripts/update-stalkerware-indicators.py](scripts/update-stalkerware-indicators.py)). Echap gives
-no guarantee that the list is accurate, and asks those who find it useful to consider donating to an
-organization that supports women facing violence in their country.
+License: GNU General Public License v3.0 or later (GPL-3.0-or-later), see [LICENSE](LICENSE).

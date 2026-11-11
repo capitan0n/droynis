@@ -68,6 +68,15 @@ class AndroidPlatformTest {
         assertValue(apps)
         assertTrue("expected more than a handful of apps", (apps as Reading.Value).value.size > 5)
 
+        // Any app may ask about its own profile group; the emulator's user 0 is the system user.
+        val profiles = platform.profiles.state()
+        assertValue(profiles)
+        assertTrue("$profiles", (profiles as Reading.Value).value.profiles >= 1)
+        val organization = platform.profiles.organizationOwned()
+        val modules = platform.modules.metadata()
+        if (Build.VERSION.SDK_INT >= 30) assertValue(organization) else assertUnsupported(organization)
+        if (Build.VERSION.SDK_INT >= 29) assertValue(modules) else assertUnsupported(modules)
+
         val complexity = platform.keyguard.passwordComplexity()
         val advancedProtection = platform.policy.advancedProtection()
         if (Build.VERSION.SDK_INT >= 29) assertValue(complexity) else assertUnsupported(complexity)

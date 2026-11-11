@@ -20,10 +20,12 @@ import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.FileProbe
 import io.github.capitan0n.droynis.checks.base.InputMethodProbe
 import io.github.capitan0n.droynis.checks.base.Keyguard
+import io.github.capitan0n.droynis.checks.base.ModuleProbe
 import io.github.capitan0n.droynis.checks.base.NetworkProbe
 import io.github.capitan0n.droynis.checks.base.PackageDetailsProbe
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
+import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
@@ -87,6 +89,8 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     private val appFootprints = AndroidAppFootprint(app)
     override val footprints: AppFootprintProbe = appFootprints
     override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
+    override val modules: ModuleProbe = AndroidModules(app)
+    override val profiles: ProfileProbe = AndroidProfiles(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells

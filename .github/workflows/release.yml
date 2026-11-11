@@ -11,6 +11,7 @@ name: Release
 # fastlane/metadata/android/en-US/changelogs/<versionCode>.txt (max 500 characters; release notes
 # here, on F-Droid and in the app's "What's new" dialog), run ./gradlew check, then:
 #   git tag -a v1.2.3 -m "Droynis 1.2.3" && git push origin main v1.2.3
+# The full checklist is in docs/RELEASING.md.
 on:
   push:
     tags: ["v*"]
@@ -29,7 +30,7 @@ jobs:
       id-token: write # signing the provenance attestation
       attestations: write
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -41,13 +42,16 @@ jobs:
             exit 1
           fi
 
-      - uses: actions/setup-java@v6
+      - name: This version has a changelog
+        run: bash ci/check-changelog.sh
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: 21
 
       # No cache: a release is built from the tagged sources alone.
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-disabled: true
 
@@ -72,6 +76,9 @@ jobs:
 
       - name: Check and name the APK
         id: apk
+        env:
+          # SHA-256 of the release signing certificate, as every release's notes state it.
+          EXPECTED_CERTIFICATE: 3604c5d2464cf53614df4ab944d1d5e1150e6144de49340b05953e23c67f0caa
         run: |
           rm -f "$RUNNER_TEMP/release.jks"
           version="${GITHUB_REF_NAME#v}"
@@ -81,20 +88,22 @@ jobs:
             echo "::error::No signed APK was built"
             exit 1
           fi
-          "${tools}aapt2" dump permissions "$built" > permissions.txt
-          if grep -q "android.permission.INTERNET" permissions.txt; then
-            echo "::error::The release APK requests android.permission.INTERNET"
-            exit 1
-          fi
+          bash ci/check-permissions.sh "$built"
           "${tools}apksigner" verify --print-certs "$built" | tee certificates.txt
           mkdir dist
           cp "$built" "dist/droynis-$version.apk"
           (cd dist && sha256sum "droynis-$version.apk" > "droynis-$version.apk.sha256")
           cat dist/*.sha256
-          echo "certificate=$(sed -n 's/.*certificate SHA-256 digest: //p' certificates.txt | head -n 1)" >> "$GITHUB_OUTPUT"
+          certificate="$(sed -n 's/.*certificate SHA-256 digest: //p' certificates.txt | head -n 1)"
+          # Android refuses an update signed with another key, so a wrong key must never be published.
+          if [ "$certificate" != "$EXPECTED_CERTIFICATE" ]; then
+            echo "::error::Signed with certificate ${certificate:-(none)}, expected $EXPECTED_CERTIFICATE"
+            exit 1
+          fi
+          echo "certificate=$certificate" >> "$GITHUB_OUTPUT"
 
       - name: Attest where the APK was built
-        uses: actions/attest-build-provenance@v4
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/droynis-*.apk
 

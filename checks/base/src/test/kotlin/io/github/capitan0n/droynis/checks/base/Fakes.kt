@@ -218,7 +218,23 @@ class FakeProbes(
     override val packageDetails: PackageDetailsProbe = FakePackageDetails(),
     override val footprints: AppFootprintProbe = FakeFootprints(),
     override val usageHistory: UsageHistoryProbe = FakeUsageHistory(),
+    override val modules: ModuleProbe = FakeModules(),
+    override val profiles: ProfileProbe = FakeProfiles(),
 ) : BaseProbes
+
+/** By default the phone has no module metadata package, like a ROM without Google's modules. */
+class FakeModules(private val metadata: Reading<ModuleMetadata?> = value(null)) : ModuleProbe {
+    override fun metadata() = metadata
+}
+
+/** By default Droynis runs in the main user, which has no other profile and no organization behind it. */
+class FakeProfiles(
+    private val state: Reading<ProfileState> = value(ProfileState(profiles = 1, isSystemUser = true)),
+    private val organizationOwned: Reading<Boolean> = value(false),
+) : ProfileProbe {
+    override fun state() = state
+    override fun organizationOwned() = organizationOwned
+}
 
 /** [exempt] lists the allowlisted packages; [asked] records which packages a check asked about. */
 class FakeBattery(private val exempt: Reading<Set<String>> = value(emptySet())) : BatteryProbe {

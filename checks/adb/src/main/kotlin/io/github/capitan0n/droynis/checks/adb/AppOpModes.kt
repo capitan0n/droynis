@@ -8,7 +8,7 @@ data class OpGrant(
     val uid: String,
     /** App-op name as dumpsys prints it, e.g. `SYSTEM_ALERT_WINDOW`. */
     val op: String,
-    /** `allow`, or `foreground` for "only while the app is in use". */
+    /** `allow`, or `foreground` for "only while the app is in use"; whatever mode [AppOpModes.inModes] asked for. */
     val mode: String,
     /** True when the mode is set for the whole uid rather than for the package. */
     val uidWide: Boolean = false,
@@ -61,7 +61,14 @@ object AppOpModes {
     }
 
     /** Apps allowed any of [ops], by the rules `AppOpsService.checkOperation` applies. */
-    fun allowed(text: String, ops: Set<String>): Result {
+    fun allowed(text: String, ops: Set<String>): Result = inModes(text, ops, ALLOWING)
+
+    /**
+     * Apps whose mode for any of [ops] is one of [modes], by the same rules. For an op that is
+     * allowed by default, such as AUTO_REVOKE_PERMISSIONS_IF_UNUSED, the mode worth finding is
+     * `ignore`: the dump prints a mode only where it differs from the default.
+     */
+    fun inModes(text: String, ops: Set<String>, modes: Set<String>): Result {
         val lines = text.lines().map { it.trimEnd() }
         // Android 12 and later put the per-app part under a header; older releases start it with
         // the first Uid line, which must then be read too.
@@ -115,14 +122,14 @@ object AppOpModes {
             return Result.Failed("$unexpected app-op lines in an unexpected format, the first: \"$firstUnexpected\"")
         }
         if (blocks.isEmpty()) return Result.Failed("no apps listed")
-        return Result.Parsed(blocks.flatMap { grantsIn(it, ops) }, blocks.sumOf { it.packages.size })
+        return Result.Parsed(blocks.flatMap { grantsIn(it, ops, modes) }, blocks.sumOf { it.packages.size })
     }
 
-    private fun grantsIn(block: UidBlock, ops: Set<String>): List<OpGrant> = ops.flatMap { op ->
+    private fun grantsIn(block: UidBlock, ops: Set<String>, wanted: Set<String>): List<OpGrant> = ops.flatMap { op ->
         val uidMode = block.uidModes[op]
         if (uidMode != null) {
             // A uid mode that differs from the default decides for every package of the uid.
-            if (uidMode !in ALLOWING) return@flatMap emptyList()
+            if (uidMode !in wanted) return@flatMap emptyList()
             val names = block.packages.keys.ifEmpty { setOf(null) }
             names.map { OpGrant(it, block.uid, op, uidMode, uidWide = true) }
         } else {
@@ -135,7 +142,7 @@ object AppOpModes {
                     block.uidModes[switch] != null -> block.uidModes.getValue(switch)
                     else -> record.switchMode ?: record.mode
                 }
-                if (mode in ALLOWING) OpGrant(name, block.uid, op, mode) else null
+                if (mode in wanted) OpGrant(name, block.uid, op, mode) else null
             }
         }
     }

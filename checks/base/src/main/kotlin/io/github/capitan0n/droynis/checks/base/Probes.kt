@@ -93,6 +93,12 @@ data class InstalledApp(
     val isEnabled: Boolean = true,
     /** The app's Linux uid, which dumpsys prints instead of package names in places. */
     val uid: Int? = null,
+    /**
+     * `ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC`: the manifest lets the app send unencrypted
+     * traffic (the default for apps built for Android 8.1 or older). A network security config in the
+     * app can override it either way, and no other app can read that.
+     */
+    val usesCleartextTraffic: Boolean = false,
 )
 
 interface PackageInventory {
@@ -421,8 +427,6 @@ data class AppFootprint(
      * empty when they can't be read.
      */
     val signerSubjects: List<String> = emptyList(),
-    /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
-    val signerSha1: List<String> = emptyList(),
 )
 
 interface AppFootprintProbe {
@@ -472,6 +476,44 @@ interface UsageHistoryProbe {
     fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>>
 }
 
+/** The package that carries the date of the last Google Play system update (Mainline). */
+data class ModuleMetadata(
+    /** `com.google.android.modulemetadata` on phones with Google's modules; AOSP builds ship `com.android.modulemetadata`. */
+    val packageName: String,
+    /** Its version name: the update's date as `2026-09-01` on phones with Google's modules. */
+    val versionName: String,
+)
+
+interface ModuleProbe {
+    /**
+     * The module metadata provider, the package Settings reads "Google Play system update" from;
+     * `Value(null)` when the phone has none. Unsupported below Android 10, which has no modules.
+     */
+    fun metadata(): Reading<ModuleMetadata?>
+}
+
+/** The profiles that share the user Droynis runs in. */
+data class ProfileState(
+    /**
+     * `UserManager.getUserProfiles().size`: this user and every enabled profile in its group, such
+     * as a work profile, a Private Space or a cloned-apps profile. At least 1.
+     */
+    val profiles: Int,
+    /** `UserManager.isSystemUser()`: Droynis runs in the phone's first user, not in a secondary user or a profile. */
+    val isSystemUser: Boolean,
+)
+
+interface ProfileProbe {
+    /** Needs no permission: Android answers any app about its own profile group. */
+    fun state(): Reading<ProfileState>
+
+    /**
+     * `DevicePolicyManager.isOrganizationOwnedDeviceWithManagedProfile()` (Android 11+): an
+     * organization owns the phone and manages a work profile on it. Unsupported on older releases.
+     */
+    fun organizationOwned(): Reading<Boolean>
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -500,4 +542,6 @@ interface BaseProbes {
     val packageDetails: PackageDetailsProbe
     val footprints: AppFootprintProbe
     val usageHistory: UsageHistoryProbe
+    val modules: ModuleProbe
+    val profiles: ProfileProbe
 }
