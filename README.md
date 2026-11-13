@@ -90,9 +90,13 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 
 ## In the media
 
-- English review: [Android Authority](https://www.androidauthority.com/droynis-open-source-android-security-app-3731115/)
-- Russian review: [AndroidInsider.ru](https://androidinsider.ru/obzory-prilozhenij/nashyol-prilozhenie-dlya-proverki-android-ono-obnaruzhilo-5-opasnyh-nastroek.html)
-- Video, German/English subtitles: [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
+- English: [Android Authority](…)
+- Russian: [AndroidInsider.ru](…) · [Trashbox.ru](…)
+- Chinese: [驱动中国 (Qudong)](…) · [Tencent News](…)
+- Turkish: [Teknoblog](…)
+- Czech: [ITTB.cz](…)
+- Lithuanian: [iBlog.lt](…)
+- Video (German, English subtitles): [CH3 on YouTube](…)
 
 ## More
 
