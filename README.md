@@ -140,6 +140,10 @@ JDK 21 and the Android SDK (compileSdk 37).
 variables, and builds an unsigned APK without them, as F-Droid expects. Debug builds are slow by
 design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEASING.md).
 
+## In the media
+
+- [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
+
 ## More
 
 - [docs/DESIGN.md](docs/DESIGN.md): architecture, what Android allows, and why each check works the way it does
