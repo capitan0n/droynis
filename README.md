@@ -142,7 +142,9 @@ design; use a release build day to day. Releases: [docs/RELEASING.md](docs/RELEA
 
 ## In the media
 
-- [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
+- English review: [Android Authority](https://www.androidauthority.com/droynis-open-source-android-security-app-3731115/)
+- Russian review: [AndroidInsider.ru](https://androidinsider.ru/obzory-prilozhenij/nashyol-prilozhenie-dlya-proverki-android-ono-obnaruzhilo-5-opasnyh-nastroek.html)
+- Video, German/English subtitles: [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
 
 ## More
 
