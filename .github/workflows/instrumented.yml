@@ -63,7 +63,20 @@ jobs:
           target: google_apis
           arch: x86_64
           disable-animations: true
-          # keyevent 82 dismisses a swipe lock screen so the UI test can resume the activity
+          # keyevent 82 dismisses a swipe lock screen so the UI test can resume the activity.
+          # --no-parallel: one module's tests at a time, never two instrumentations on one
+          # emulator at once. On failure, keep the device log for the report upload below.
           script: |
             adb shell input keyevent 82
-            ./gradlew --stacktrace connectedDebugAndroidTest
+            ./gradlew --stacktrace --no-parallel connectedDebugAndroidTest || { adb logcat -d > logcat.txt; exit 1; }
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: instrumented-${{ matrix.api-level }}
+          path: |
+            **/build/reports/androidTests/
+            **/build/outputs/androidTest-results/
+            logcat.txt
+          retention-days: 7
