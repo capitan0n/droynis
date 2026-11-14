@@ -23,6 +23,7 @@ import io.github.capitan0n.droynis.checks.shizuku.shizukuChecks
 import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.ui.CHECKS_LIST_TAG
 import io.github.capitan0n.droynis.ui.CHECKS_SEARCH_TAG
+import io.github.capitan0n.droynis.ui.DEVICE_LIST_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -75,6 +76,8 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tab_device)).performClick()
         // Device details first, then the network inspector.
         compose.onNodeWithText(text(R.string.tools_device)).assertExists()
+        // A lazy list composes only what is on screen: bring the network inspector into view first.
+        compose.onNodeWithTag(DEVICE_LIST_TAG).performScrollToNode(hasText(text(R.string.tools_network)))
         compose.onNodeWithText(text(R.string.tools_network)).assertExists()
         // IP addresses start hidden; the eye shows them and hides them again.
         compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).performClick()
@@ -95,7 +98,8 @@ class DroynisAppTest {
 
         compose.onNodeWithContentDescription(text(R.string.more_options)).performClick()
         compose.onNodeWithText(text(R.string.menu_about)).performClick()
-        compose.onNodeWithText(AppInfo.HANDLE, substring = true).assertExists()
+        // The handle is also in the GitHub link and the e-mail address: match the author line itself.
+        compose.onNodeWithText("${AppInfo.AUTHOR} – ${AppInfo.HANDLE}").assertExists()
         compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
         compose.onNodeWithText("not affiliated", substring = true).assertExists()
 
@@ -130,6 +134,8 @@ class DroynisAppTest {
             val checks = baseChecks(platform)
             checks.single { it is SmsAccessCheck }.spec.title to checks.single { it is SecurityPatchAgeCheck }.spec.title
         }
+        // Other checks mention SMS too, so this one can sit below the fold of the lazy list.
+        compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(sms))
         compose.onNodeWithText(sms).assertExists()
         compose.onNodeWithText(patch).assertDoesNotExist()
 

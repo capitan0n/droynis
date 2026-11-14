@@ -236,6 +236,7 @@ private object TrustedPage
 const val CHECKS_LIST_TAG = "checks_list"
 const val CATALOG_LIST_TAG = "catalog_list"
 const val CHECKS_SEARCH_TAG = "checks_search"
+const val DEVICE_LIST_TAG = "device_list"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

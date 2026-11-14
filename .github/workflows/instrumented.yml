@@ -62,6 +62,9 @@ jobs:
           api-level: ${{ matrix.api-level }}
           target: google_apis
           arch: x86_64
+          # A phone-sized screen (1080×2400). The default AVD is 320×640 px, so small that the UI
+          # tests' sections fall below the fold or get clipped.
+          profile: pixel_6
           disable-animations: true
           # keyevent 82 dismisses a swipe lock screen so the UI test can resume the activity.
           # --no-parallel: one module's tests at a time, never two instrumentations on one
