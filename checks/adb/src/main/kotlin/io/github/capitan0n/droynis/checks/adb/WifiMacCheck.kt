@@ -67,15 +67,17 @@ object WifiDump {
     // would let a 28-character network name fake the whole sequence where SSIDs print unquoted.
     private val ADDRESSES = Regex(""", BSSID: (<none>|$ADDRESS), MAC: ($ADDRESS), """)
     private val SUPPLICANT = Regex(""", Supplicant state: ([A-Z_0-9]+),""")
-    private val NET_ID = Regex(""", Net ID: (-?\d+),""")
-    internal val HEADER = Regex("""^(?:\* |- DSBLE )?ID: (-?\d+) SSID: (.*?) PROVIDER-NAME: """)
-    private val SETTING = Regex("""^\s*macRandomizationSetting: (-?\d+)$""")
-    private val SETTING_LIKE = Regex("""^\s*macRandomizationSetting:""")
+    private val NET_ID = Regex(""", Net ID: (-?[0-9]+),""")
+    // Bracket sets, never \s, \S or \d loops: see DumpLines.kt. The lazy SSID can't run past a
+    // line, which dumpLines keeps short.
+    internal val HEADER = Regex("""^(?:\* |- DSBLE )?ID: (-?[0-9]+) SSID: (.*?) PROVIDER-NAME: """)
+    private val SETTING = Regex("""^[ \t]*macRandomizationSetting: (-?[0-9]+)$""")
+    private val SETTING_LIKE = Regex("""^[ \t]*macRandomizationSetting:""")
     private const val MAX_QUOTE = 100
     internal const val NOT_STARTED = "Wifi Service is not started"
 
     fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+        val lines = dumpLines(text)
         lines.firstOrNull { it.startsWith(NOT_STARTED) }?.let { return Result.Failed(it.trim()) }
 
         val connections = mutableListOf<Connection>()

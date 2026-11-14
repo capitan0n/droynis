@@ -43,14 +43,15 @@ object TrustDump {
         data class Failed(val reason: String) : Result
     }
 
-    private val USER = Regex("""^\s*User ".*" \(id=\d+, flags=0x[0-9a-fA-F]+\)""")
+    // Bracket sets, never \s, \S or \d loops: see DumpLines.kt.
+    private val USER = Regex("""^[ \t]*User ".*" \(id=[0-9]+, flags=0x[0-9a-fA-F]+\)""")
     private val MANAGED = Regex("""trustManaged=([01])""")
     private val ACTIVE_UNLOCK = Regex("""isActiveUnlockRunning=([01])""")
-    private val COMPONENT = Regex("""^\s+([\w.]+/[\w.$]+)$""")
-    private val FLAGS = Regex("""^\s+bound=[01], connected=[01], managingTrust=([01]), trusted=([01])$""")
+    private val COMPONENT = Regex("""^[ \t]+([\w.]+/[\w.$]+)$""")
+    private val FLAGS = Regex("""^[ \t]+bound=[01], connected=[01], managingTrust=([01]), trusted=([01])$""")
 
     fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+        val lines = dumpLines(text)
         lines.firstOrNull { it.trim().startsWith("disabled because") }?.let { return Result.Failed(it.trim()) }
         val start = lines.indexOfFirst { USER.containsMatchIn(it) && "(current)" in it }
         if (start < 0) return Result.Failed("no current user in the output")

@@ -81,16 +81,23 @@ object SavedNetworksDump {
     private val INSECURE = setOf(TYPE_OPEN, TYPE_WEP, TYPE_OWE)
     private const val LIST = "SecurityParams List:"
     private const val ENTERPRISE = "Enterprise config:"
-    private val TYPE = Regex("""^\s*Type: (\d+)$""")
-    private val ENABLED = Regex("""^\s*Enabled: (true|false)$""")
+    // Bracket sets, never \s, \S or \d loops: see DumpLines.kt.
+    private val TYPE = Regex("""^[ \t]*Type: ([0-9]+)$""")
+    private val ENABLED = Regex("""^[ \t]*Enabled: (true|false)$""")
     private val AUTOJOIN = Regex("""(?:^|\s)allowAutojoin=(true|false)(?=\s|$)""")
     private val AUTOJOIN_AAPM = Regex("""(?:^|\s)mAllowedAutoJoinInAdvancedProtection=(true|false)(?=\s|$)""")
     private val HIDDEN = Regex(""" HIDDEN: (true|false) PMF: """)
     private val NOT_USER_SAVED = setOf("ephemeral", "fromWifiNetworkSuggestion", "fromWifiNetworkSpecifier")
-    private val FREE_TEXT_LINE = Regex("""^\s*(?:connect choice:|linked:)""")
+    private val FREE_TEXT_LINE = Regex("""^[ \t]*(?:connect choice:|linked:)""")
+    private val SPACES = Regex("""[ \t]+""")
 
-    fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+    private val lastParse = LastParse(::read)
+
+    /** Parses [text]; every check reading the same dump in a scan gets the same, single parse. */
+    fun parse(text: String): Result = lastParse.of(text)
+
+    private fun read(text: String): Result {
+        val lines = dumpLines(text)
         lines.firstOrNull { it.startsWith(WifiDump.NOT_STARTED) }?.let { return Result.Failed(it.trim()) }
         val begin = lines.indexOfFirst { it.trim() == WifiDump.SAVED_BEGIN }
         if (begin < 0) return Result.Failed("no saved-network section in the output")
@@ -141,7 +148,7 @@ object SavedNetworksDump {
 
         // Flags print as bare words between the header and the security list.
         val flags = body.subList(0, list).filterNot { FREE_TEXT_LINE.containsMatchIn(it) }
-            .flatMap { it.trim().split(Regex("\\s+")) }.toSet()
+            .flatMap { it.trim().split(SPACES) }.toSet()
 
         val types = mutableSetOf<Int>()
         val params = body.subList(list + 1, enterprise)

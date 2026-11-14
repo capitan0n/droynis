@@ -74,6 +74,15 @@ class AppOpModesTest {
 
         allowed(changed, "SYSTEM_ALERT_WINDOW")
         assertIs<AppOpModes.Result.Failed>(AppOpModes.allowed(changed, setOf("WAKE_LOCK")))
+        // The same dump again, as the next check reads it: the shared parse still judges by op.
+        allowed(changed, "SYSTEM_ALERT_WINDOW")
+    }
+
+    @Test
+    fun `lines far longer than any record change nothing`() {
+        val long = SAMPLE + "\n    " + "x".repeat(2_000_000) + "\n"
+
+        assertEquals(allowed(SAMPLE, "SYSTEM_ALERT_WINDOW"), allowed(long, "SYSTEM_ALERT_WINDOW"))
     }
 
     @Test

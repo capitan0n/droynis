@@ -30,6 +30,14 @@ class AppOpsDumpTest {
     }
 
     @Test
+    fun `lines far longer than any record change nothing`() {
+        // Cut to MAX_LINE, the long package line no longer ends in ":" and names no package.
+        val long = SAMPLE + "\n  " + "x".repeat(2_000_000) + "\n    Package " + "a".repeat(1_000_000) + ":\n"
+
+        assertEquals(AppOpsDump.parse(SAMPLE), AppOpsDump.parse(long))
+    }
+
+    @Test
     fun `an access line in an unknown shape fails the whole parse`() {
         val changed = SAMPLE.replace("Access: [bg-s] 2026", "Access: bg 2026")
 

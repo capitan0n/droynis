@@ -75,7 +75,8 @@ object HotspotDump {
     private const val SECURITY = "SecurityType"
     private const val AUTO_SHUTDOWN = "AutoShutdownEnabled"
     private const val TIMEOUT = "ShutdownTimeoutMillis"
-    private val FIELD = Regex("""^\s*($PASSWORD|$SECURITY|$AUTO_SHUTDOWN|$TIMEOUT) = (.*)$""")
+    // A bracket set, never a \s loop: see DumpLines.kt.
+    private val FIELD = Regex("""^[ \t]*($PASSWORD|$SECURITY|$AUTO_SHUTDOWN|$TIMEOUT) = (.*)$""")
 
     /** How Settings names each security type; null for a type Droynis doesn't know. */
     fun securityName(type: Int): String? = when (type) {
@@ -89,7 +90,7 @@ object HotspotDump {
     }
 
     fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+        val lines = dumpLines(text)
         lines.firstOrNull { it.startsWith(WifiDump.NOT_STARTED) }?.let { return Result.Failed(it.trim()) }
         val starts = lines.indices.filter { lines[it].startsWith(PREFIX) }
         if (starts.isEmpty()) return Result.Failed("no hotspot settings in the output")

@@ -66,6 +66,13 @@ class HiddenBackgroundCheckTest {
     }
 
     @Test
+    fun `a record line too long to read whole fails the parse`() {
+        val long = SERVICES.replace("x.ads/.AdService c:x.ads}", "x.ads/." + "A".repeat(MAX_LINE) + "}")
+        val failed = assertIs<ServicesDump.Result.Failed>(ServicesDump.parse(long))
+        assertEquals("1 service records in an unexpected format", failed.reason)
+    }
+
+    @Test
     fun `other output, or none, fails the parse`() {
         assertIs<ServicesDump.Result.Failed>(ServicesDump.parse("AppOps Uid Op State\n  Uid u0a1:"))
         assertIs<ServicesDump.Result.Failed>(ServicesDump.parse("ACTIVITY MANAGER SERVICES (dumpsys activity services)\n  (nothing)"))

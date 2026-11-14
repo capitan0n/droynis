@@ -47,18 +47,21 @@ object ServicesDump {
 
     // Android's regex engine (ICU) wants every literal brace escaped, closing ones too; the JVM's
     // doesn't, so only the instrumented test (AndroidPlatformTest) catches a missing escape.
-    private val RECORD_START = Regex("""^\s*\* ServiceRecord\{.*""")
+    // Bracket sets, never \s, \S or \d loops, and a cheap test before each pattern: see DumpLines.kt.
+    private const val RECORD_START = "* ServiceRecord{"
     private val RECORD = Regex(
-        """^\s*\* ServiceRecord\{[0-9a-f]+ u(\d+) ([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)/(\S+?)(?: c:\S+)?\}$""",
+        """^[ \t]*\* ServiceRecord\{[0-9a-f]+ u([0-9]+) ([A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)*)/([^ \t\}]+)(?: c:[^ \t\}]+)?\}$""",
     )
-    private val FOREGROUND = Regex("""^\s+isForeground=(true|false)\b.*""")
-    private val STARTED = Regex("""^\s+startRequested=(true|false)\b.*""")
+    private const val FOREGROUND_KEY = "isForeground="
+    private const val STARTED_KEY = "startRequested="
+    private val FOREGROUND = Regex("""^[ \t]+isForeground=(true|false)\b.*""")
+    private val STARTED = Regex("""^[ \t]+startRequested=(true|false)\b.*""")
 
     /** A record's own lines are indented by four spaces or more; anything less ends it. */
     private const val RECORD_INDENT = 4
 
     fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+        val lines = dumpLines(text)
         if (lines.none { it.trim().startsWith(HEADER) }) return Result.Failed("not the output of dumpsys activity services")
 
         val services = mutableListOf<RunningService>()
@@ -72,7 +75,7 @@ object ServicesDump {
 
         for (line in lines) {
             when {
-                RECORD_START.matches(line) -> {
+                line.startsAfterIndent(RECORD_START) -> {
                     close()
                     val match = RECORD.matchEntire(line)
                     if (match == null) {
@@ -85,8 +88,10 @@ object ServicesDump {
                 line.isBlank() -> Unit
                 line.length - line.trimStart().length < RECORD_INDENT -> close()
                 current == null -> Unit
-                FOREGROUND.matches(line) -> current = current?.copy(foreground = FOREGROUND.find(line)!!.groupValues[1] == "true")
-                STARTED.matches(line) -> current = current?.copy(started = STARTED.find(line)!!.groupValues[1] == "true")
+                line.startsAfterIndent(FOREGROUND_KEY) && FOREGROUND.matches(line) ->
+                    current = current?.copy(foreground = FOREGROUND.find(line)!!.groupValues[1] == "true")
+                line.startsAfterIndent(STARTED_KEY) && STARTED.matches(line) ->
+                    current = current?.copy(started = STARTED.find(line)!!.groupValues[1] == "true")
             }
         }
         close()

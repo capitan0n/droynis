@@ -44,21 +44,27 @@ object AppOpsDump {
     }
 
     private const val SECTION = "AppOps Uid Op State"
-    private val UID = Regex("""^\s*Uid (\S+):$""")
-    private val PACKAGE = Regex("""^\s*Package (\S+):$""")
-    private val OP = Regex("""^\s*([A-Z][A-Z0-9_]*) \([a-z]+(?: / switch [A-Z][A-Z0-9_]*=[a-z]+)?\):$""")
+    // Bracket sets, never \s, \S or \d loops, and a cheap test before each pattern: see DumpLines.kt.
+    private val UID = Regex("""^[ \t]*Uid ([^ \t]+):$""")
+    private val PACKAGE = Regex("""^[ \t]*Package ([^ \t]+):$""")
+    private val OP = Regex("""^[ \t]*([A-Z][A-Z0-9_]*) \([a-z]+(?: / switch [A-Z][A-Z0-9_]*=[a-z]+)?\):$""")
     private val ACCESS = Regex(
-        """^\s*Access: \[([a-z]+)-[a-z|]+] \d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3} \(([^)]+)\)(?: .*)?$""",
+        """^[ \t]*Access: \[([a-z]+)-[a-z|]+] [0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} \(([^)]+)\)(?: .*)?$""",
     )
 
     // android.util.TimeUtils.formatDuration: "-1d2h3m4s5ms", "-5s0ms", "-12ms" or "0".
-    private val DURATION = Regex("""([+-])(?:(\d+)d)?(?:(\d+)h)?(?:(\d+)m(?=\d))?(?:(\d+)s)?(\d+)ms""")
+    private val DURATION = Regex("""([+-])(?:([0-9]+)d)?(?:([0-9]+)h)?(?:([0-9]+)m(?=[0-9]))?(?:([0-9]+)s)?([0-9]+)ms""")
 
-    fun parse(text: String): Result {
-        val lines = text.lines().map { it.trimEnd() }
+    private val lastParse = LastParse(::read)
+
+    /** Parses [text]; every check reading the same dump in a scan gets the same, single parse. */
+    fun parse(text: String): Result = lastParse.of(text)
+
+    private fun read(text: String): Result {
+        val lines = dumpLines(text)
         val start = lines.indexOfFirst { it.trim() == SECTION }
             .takeIf { it >= 0 }
-            ?: lines.indexOfFirst { UID.matches(it) }.takeIf { it >= 0 }
+            ?: lines.indexOfFirst { isUid(it) }.takeIf { it >= 0 }
             ?: return Result.Failed("no per-app section in the output")
 
         val accesses = mutableListOf<OpAccess>()
@@ -69,15 +75,15 @@ object AppOpsDump {
 
         for (line in lines.subList(start, lines.size)) {
             when {
-                UID.matches(line) -> {
+                isUid(line) -> {
                     pkg = null
                     op = null
                 }
-                PACKAGE.matches(line) -> {
+                line.startsAfterIndent("Package ") && PACKAGE.matches(line) -> {
                     pkg = PACKAGE.find(line)!!.groupValues[1].also { packages += it }
                     op = null
                 }
-                OP.matches(line) -> op = if (pkg == null) null else OP.find(line)!!.groupValues[1]
+                line.endsWith("):") && OP.matches(line) -> op = if (pkg == null) null else OP.find(line)!!.groupValues[1]
                 "Access:" in line -> {
                     val match = ACCESS.find(line)
                     val ago = match?.let { parseDuration(it.groupValues[2]) }
@@ -98,6 +104,8 @@ object AppOpsDump {
             else -> Result.Parsed(accesses, packages.size)
         }
     }
+
+    private fun isUid(line: String) = line.startsAfterIndent("Uid ") && UID.matches(line)
 
     internal fun parseDuration(text: String): Duration? {
         if (text == "0") return Duration.ZERO
