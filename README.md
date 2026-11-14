@@ -98,12 +98,6 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 - Lithuanian: [iBlog.lt](…)
 - Video (German, English subtitles): [CH3 on YouTube](…)
 
-## In the media
-
-- English review: [Android Authority](https://www.androidauthority.com/droynis-open-source-android-security-app-3731115/)
-- Russian review: [AndroidInsider.ru](https://androidinsider.ru/obzory-prilozhenij/nashyol-prilozhenie-dlya-proverki-android-ono-obnaruzhilo-5-opasnyh-nastroek.html)
-- Video, German/English subtitles: [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
-
 ## More
 
 - [docs/CHECKS.md](docs/CHECKS.md): every check and when it fails
