@@ -1,0 +1,57 @@
+name: CodeQL
+
+# Static analysis (SAST) of the Kotlin and Java sources. Findings go to Security › Code scanning.
+# This is the "advanced" setup: CodeQL's default setup must stay off in Settings › Code security.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "53 5 * * 4" # Thursdays, 05:53 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      security-events: write # upload the findings
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic # MIT-licensed cache instead of the proprietary default
+
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: java-kotlin
+          # Kotlin needs a real compilation for CodeQL to see it ("none" reads Java only).
+          build-mode: manual
+
+      # CodeQL extracts the code while kotlinc runs, so every source must actually compile here:
+      # no build cache, no configuration cache, no Gradle or Kotlin daemon.
+      - name: Compile
+        run: >
+          ./gradlew --stacktrace --no-daemon --no-build-cache --no-configuration-cache
+          -Pkotlin.compiler.execution.strategy=in-process -Pkotlin.incremental=false
+          assembleDebug
+
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:java-kotlin

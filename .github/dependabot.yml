@@ -1,10 +1,14 @@
 version: 2
 updates:
   # AGP, Kotlin and Gradle must move together (see gradle/libs.versions.toml), so one grouped PR.
+  # cooldown: a release must be a week old before Dependabot proposes it, so a hijacked or broken
+  # release is usually yanked before it reaches a pull request.
   - package-ecosystem: gradle
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       gradle:
         patterns: ["*"]
@@ -13,6 +17,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns: ["*"]
