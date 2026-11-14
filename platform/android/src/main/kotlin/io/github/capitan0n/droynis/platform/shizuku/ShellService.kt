@@ -143,6 +143,7 @@ class ShellService : IShellService.Stub() {
             "trust" to listOf("trust"),
             "wifi" to listOf("wifi"),
             "activity services" to listOf("activity", "services"),
+            "telephony.registry" to listOf("telephony.registry"),
         )
 
         const val COMMAND_TIMEOUT_SECONDS = 10L

@@ -5,7 +5,7 @@ A read-only security and privacy audit for Android, inspired by Lynis (Android +
 checks the phone it runs on, explains every finding, shows the evidence and opens the Settings
 screen that fixes it. It never changes anything itself.
 
-- **90+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
+- **100+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
   apps, network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
 - **Private:** no `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the
   phone unless you share a report.
@@ -44,9 +44,9 @@ Most checks need nothing. More access unlocks more checks; each tier also runs t
 | Tier | Setup | Adds |
 |---|---|---|
 | Base | none | everything public Android APIs can read |
-| ADB | two grants from a computer, once | `dumpsys` checks: special app access, Smart Lock, background camera, microphone and location use, Wi-Fi privacy, hotspot security |
+| ADB | two grants from a computer, once | `dumpsys` checks: special app access, Smart Lock, background camera, microphone and location use, Wi-Fi privacy, hotspot security, call forwarding |
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | settings Android hides from apps: SELinux, SIM PIN, always-on VPN lockdown, passkey providers, mobile network encryption |
-| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network |
+| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network, premium SMS access |
 
 **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku and root run
 only a fixed set of read-only commands, and root stays off until you turn it on.
@@ -97,12 +97,6 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 - Czech: [ITTB.cz](…)
 - Lithuanian: [iBlog.lt](…)
 - Video (German, English subtitles): [CH3 on YouTube](…)
-
-## In the media
-
-- English review: [Android Authority](https://www.androidauthority.com/droynis-open-source-android-security-app-3731115/)
-- Russian review: [AndroidInsider.ru](https://androidinsider.ru/obzory-prilozhenij/nashyol-prilozhenie-dlya-proverki-android-ono-obnaruzhilo-5-opasnyh-nastroek.html)
-- Video, German/English subtitles: [Droynis review](https://www.youtube.com/watch?v=pE8tvQCQzJ0) by CH3 on YouTube (independent review)
 
 ## More
 

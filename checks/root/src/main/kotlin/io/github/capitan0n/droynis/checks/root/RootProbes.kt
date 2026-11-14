@@ -53,6 +53,12 @@ interface RootShellProbe {
 
     /** The contents of `/proc/net/<file>`; `Unsupported` when the kernel has no such table. */
     fun procNet(table: ProcNet): Reading<String>
+
+    /**
+     * `/data/misc/sms/premium_sms_policy.xml` as text (binary XML converted with `abx2xml`), in the
+     * format [PremiumSmsPolicies.parse] reads; `Value(null)` when the file doesn't exist.
+     */
+    fun premiumSmsPolicy(): Reading<String?>
 }
 
 /** Everything the root-tier checks read. Implemented by :platform-android. */

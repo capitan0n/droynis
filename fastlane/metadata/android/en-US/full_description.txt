@@ -4,11 +4,11 @@ It is not an antivirus: it audits how the phone is set up and looks for signs ad
 
 <b>What it checks</b>
 <ul>
-<li>Device integrity: patches, encryption, bootloader, root, SELinux</li>
+<li>Device integrity: patches, encryption, bootloader, root, SELinux, SD card</li>
 <li>Access control: screen lock, biometrics, USB debugging, SIM PIN</li>
-<li>Apps and permissions: accessibility, device admins, sideloaded apps</li>
+<li>Apps and permissions: accessibility, device admins, sideloaded apps, Shizuku, Termux and adb grants</li>
 <li>Suspicious apps: hidden apps, background camera/mic use, trojan permissions</li>
-<li>Network: Private DNS, VPN, Wi-Fi, certificates, 2G, Bluetooth, NFC</li>
+<li>Network: Private DNS, VPN, Wi-Fi, certificates, 2G, call forwarding, Bluetooth, NFC</li>
 </ul>
 
 <b>Honest results</b>

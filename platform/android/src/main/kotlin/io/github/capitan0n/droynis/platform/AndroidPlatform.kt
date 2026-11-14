@@ -27,6 +27,7 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
@@ -43,6 +44,7 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.platform.root.RootShell
+import io.github.capitan0n.droynis.platform.shizuku.AndroidShizukuServer
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import java.time.ZonedDateTime
 
@@ -91,6 +93,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
     override val modules: ModuleProbe = AndroidModules(app)
     override val profiles: ProfileProbe = AndroidProfiles(app)
+    override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val shell: PrivilegedShell = shells

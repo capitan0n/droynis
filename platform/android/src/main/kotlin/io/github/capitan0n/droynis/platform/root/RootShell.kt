@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.platform.root
 
 import android.content.Context
 import android.os.Process
+import io.github.capitan0n.droynis.checks.root.PremiumSmsCheck
 import io.github.capitan0n.droynis.checks.root.ProcNet
 import io.github.capitan0n.droynis.checks.root.RootManager
 import io.github.capitan0n.droynis.checks.root.RootModules
@@ -200,6 +201,15 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             }
         }
     }
+
+    override fun premiumSmsPolicy(): Reading<String?> =
+        read("cat ${PremiumSmsCheck.POLICY_FILE}", PREMIUM_SMS) { exit, output, source ->
+            when (exit) {
+                0 -> Reading.Value(output, source)
+                MISSING -> Reading.Value(null, source)
+                else -> failed(exit, output, source)
+            }
+        }
 
     override fun readSetting(table: String, key: String): Reading<String?> {
         if (table !in TABLES || !KEY.matches(key)) {
@@ -400,6 +410,14 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         /** Exit code [ifExists] uses for a missing file. */
         const val MISSING = 3
 
+        /**
+         * Prints the premium SMS settings as text. Android 12+ may keep the file as binary XML, which
+         * starts with "ABX"; `abx2xml` turns it back into text. Runs in a subshell, so its `exit` ends
+         * only this command.
+         */
+        val PREMIUM_SMS = "( f=${PremiumSmsCheck.POLICY_FILE}; [ -e \"\$f\" ] || exit $MISSING; " +
+            "if [ \"\$(head -c 3 \"\$f\")\" = ABX ]; then abx2xml \"\$f\" -; else cat \"\$f\"; fi )"
+
         fun ifExists(path: String) = "( [ -e $path ] || exit $MISSING; cat $path )"
 
         fun managerOf(output: String): RootManager = when (output.trim()) {
@@ -412,7 +430,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         val TABLES = setOf("global", "secure", "system")
         val KEY = Regex("[a-z0-9_.-]{1,100}")
         /** Run as `dumpsys <command>`: fixed strings only, never text from elsewhere. */
-        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services")
+        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services", "telephony.registry")
 
         /** Manager apps by package; a hidden (renamed) Magisk app is not among them. */
         val MANAGER_APPS = linkedMapOf(

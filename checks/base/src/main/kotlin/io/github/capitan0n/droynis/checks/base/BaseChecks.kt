@@ -16,6 +16,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     WebViewCheck(probes.webView),
     RestartCheck(probes.uptime),
     StorageSpaceCheck(probes.storage),
+    RemovableStorageCheck(probes.storage),
     AdvancedProtectionCheck(probes.policy, probes.webView, probes.packages),
     ManagedDeviceCheck(probes.policy, probes.profiles, probes.packages),
     // Access control
@@ -44,7 +45,9 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     KeyboardAppsCheck(probes.inputMethods),
     AutofillServiceCheck(probes.autofill, probes.packages),
     AssistantAppCheck(probes.settings, probes.packages),
-    ShizukuAppsCheck(probes.permissions, probes.packages),
+    ShizukuAppsCheck(probes.permissions, probes.packages, probes.shizukuServer),
+    CommandBridgeCheck(probes.permissions, probes.packages),
+    AdbGrantedPermissionsCheck(probes.permissions, probes.packages),
     DebuggableAppsCheck(probes.packages),
     UnknownSourceAppsCheck(probes.packages),
     PlayProtectCheck(probes.settings),

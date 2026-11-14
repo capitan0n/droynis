@@ -212,6 +212,13 @@ interface StorageProbe {
      * shows the same two numbers.
      */
     fun internal(): Reading<StorageSpace>
+
+    /**
+     * Removable volumes Android uses as portable storage: SD cards and USB drives that are not
+     * formatted as internal storage (`isRemovable()` and not `isEmulated()`), in any state. Empty when
+     * there are none. An SD card formatted as internal storage (adopted) is encrypted and isn't listed.
+     */
+    fun removableVolumes(): Reading<List<RemovableVolume>>
 }
 
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */
@@ -516,6 +523,52 @@ interface ProfileProbe {
     fun organizationOwned(): Reading<Boolean>
 }
 
+/** The Shizuku service, as it tells any app that asks; Sui, its root-only variant, answers the same way. */
+data class ShizukuServer(
+    /** `Shizuku.getUid()`: 0 when Shizuku was started with root, 2000 (adb's shell user) when started over adb. */
+    val uid: Int,
+) {
+    val asRoot: Boolean get() = uid == ROOT_UID
+
+    val runsAs: String get() = when (uid) {
+        ROOT_UID -> "root (uid 0)"
+        SHELL_UID -> "adb's shell user (uid 2000)"
+        else -> "uid $uid"
+    }
+
+    private companion object {
+        const val ROOT_UID = 0
+        const val SHELL_UID = 2000
+    }
+}
+
+interface ShizukuServerProbe {
+    /**
+     * The running Shizuku service; `Value(null)` while neither Shizuku nor Sui runs. Shizuku 13 tells
+     * every app its uid when the app connects, before and without any permission.
+     */
+    fun server(): Reading<ShizukuServer?>
+}
+
+/** A removable volume: an SD card or USB drive as `StorageManager.getStorageVolumes()` lists it. */
+data class RemovableVolume(
+    /** What Settings calls it, such as "SanDisk SD card" or "USB drive"; never its serial or UUID. */
+    val description: String,
+    /** `StorageVolume.getState()`, such as "mounted", "mounted_ro", "unmounted" or "removed". */
+    val state: String,
+) {
+    /** Its files can be read right now: mounted, read-write or read-only. */
+    val mounted: Boolean get() = state == MOUNTED || state == MOUNTED_READ_ONLY
+
+    companion object {
+        /** `Environment.MEDIA_MOUNTED` */
+        const val MOUNTED = "mounted"
+
+        /** `Environment.MEDIA_MOUNTED_READ_ONLY` */
+        const val MOUNTED_READ_ONLY = "mounted_ro"
+    }
+}
+
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -546,4 +599,5 @@ interface BaseProbes {
     val usageHistory: UsageHistoryProbe
     val modules: ModuleProbe
     val profiles: ProfileProbe
+    val shizukuServer: ShizukuServerProbe
 }

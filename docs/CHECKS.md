@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-97 checks. Each one's full explanation and fix are in the app: tap the check.
+102 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -11,12 +11,12 @@
 
 | Category | Base | ADB | Shizuku | Root | All |
 |---|---|---|---|---|---|
-| [Device integrity](#device-integrity) | 13 | – | 2 | 3 | 18 |
+| [Device integrity](#device-integrity) | 14 | – | 2 | 3 | 19 |
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
-| [Apps and permissions](#apps-and-permissions) | 18 | 7 | 2 | 2 | 29 |
+| [Apps and permissions](#apps-and-permissions) | 20 | 7 | 2 | 3 | 32 |
 | [Suspicious apps](#suspicious-apps) | 7 | 4 | – | – | 11 |
-| [Network and radios](#network-and-radios) | 12 | 5 | 3 | 1 | 21 |
-| **All** | 64 | 17 | 9 | 7 | 97 |
+| [Network and radios](#network-and-radios) | 12 | 6 | 3 | 1 | 22 |
+| **All** | 67 | 18 | 9 | 8 | 102 |
 
 ## Device integrity
 
@@ -35,6 +35,7 @@
 | INTG-1070 | WebView updates | Base | Warning | WebView hasn't been updated for more than 60 days, or its Chromium version is older than that |
 | INTG-1080 | Time since restart | Base | Notice | the phone hasn't restarted for more than 7 days |
 | INTG-1090 | Storage space | Base | Notice | more than 80% of the internal storage is in use |
+| INTG-1091 | Unencrypted SD card or USB drive | Base | Notice | an SD card or USB drive is mounted as portable storage, which Android doesn't encrypt |
 | INTG-1201 | SELinux mode | Shizuku | Critical | SELinux is permissive or disabled |
 | INTG-1202 | Spoofed boot properties | Shizuku | Warning | a security-relevant ro.boot.* property differs from the kernel command line (a props spoofer) |
 | INTG-1301 | Root modules | Root | Info | an enabled root module is installed (information only) |
@@ -83,9 +84,11 @@
 | APPS-4013 | Apps that skip battery optimization | Base | Info | an app you installed may skip battery optimization (information only) |
 | APPS-4014 | Google Play services | Base | Info | Google Play services is built into the system, with privileged access (information only) |
 | APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier (Play Protect) is turned off |
-| APPS-4016 | Apps with Shizuku access | Base | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store) |
+| APPS-4016 | Apps with Shizuku access | Base | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store, or Shizuku runs as root) |
 | APPS-4017 | Profiles this scan doesn't cover | Base | Info | another profile shares this user, or Droynis doesn't run in the phone's main user (information only) |
 | APPS-4018 | Apps that allow unencrypted connections | Base | Info | an app you installed has network access and declares that it may connect without encryption (information only) |
+| APPS-4019 | Apps that can run commands through Termux or Tasker | Base | Notice | another app may run commands in Termux or start Tasker tasks (a warning when it came from outside an app store) |
+| APPS-4020 | Apps with system permissions granted over adb | Base | Warning | an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS, which only adb, Shizuku or root can grant |
 | APPS-4102 | Apps that can draw over other apps (Android 10+) | ADB | Notice | a user app may display over other apps |
 | APPS-4103 | Apps with access to all files (Android 11+) | ADB | Notice | a user app has all files access |
 | APPS-4104 | Apps that can install other apps (Android 10+) | ADB | Notice | a user app other than a known app store may install apps |
@@ -97,6 +100,7 @@
 | APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | APPS-4301 | Apps with root access | Root | Warning | an app other than Droynis may get root |
 | APPS-4302 | Root access over ADB | Root | Warning | Magisk grants root to the ADB shell (Superuser access includes ADB; the default) |
+| APPS-4303 | Apps allowed to text premium numbers | Root | Warning | an app's Premium SMS access is set to Always allow |
 
 ## Suspicious apps
 
@@ -135,6 +139,7 @@
 | NETW-3103 | Hotspot security (Android 14+) | ADB | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
 | NETW-3104 | Hidden Wi-Fi networks (Android 12+) | ADB | Notice | a saved Wi-Fi network is hidden, so the phone calls out its name when it looks for Wi-Fi |
 | NETW-3105 | Saved Wi-Fi networks with broken encryption (Android 12+) | ADB | Notice | a saved Wi-Fi network uses WEP |
+| NETW-3106 | Call forwarding | ADB | Warning | a SIM in use forwards all calls to another number |
 | NETW-3201 | Always-on VPN lockdown | Shizuku | Notice | an always-on VPN lets traffic out while it is down |
 | NETW-3202 | Mobile network encryption (Android 14+) | Shizuku | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
 | NETW-3203 | Mobile network security alerts (Android 15+) | Shizuku | Notice | the phone doesn't warn about signs of a fake cell tower (Network notifications are off) |

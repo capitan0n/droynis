@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis.checks.adb
 
 import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
+import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.DefaultAppsProbe
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.PackageInventory
@@ -31,4 +32,7 @@ interface AdbProbes {
 
     /** The SMS and phone apps, whose role explains their SMS and call log use (SUSP-5104). */
     val defaultApps: DefaultAppsProbe
+
+    /** The SIMs in use, whose slots NETW-3106 reads call forwarding for. */
+    val cellular: CellularProbe
 }

@@ -38,6 +38,7 @@ class RootChecksTest {
         var bootScripts: Reading<String> = Reading.Value("", Source("su")),
         var tempFiles: Reading<String> = Reading.Value("", Source("su")),
         var net: Map<ProcNet, Reading<String>> = ProcNet.entries.associateWith { Reading.Value(HEADER, Source("su")) },
+        var premiumSms: Reading<String?> = Reading.Value(null, Source("su")),
     ) : RootShellProbe {
         override fun adbKeys() = keys
         override fun modules() = modules
@@ -47,6 +48,7 @@ class RootChecksTest {
         override fun bootScripts() = bootScripts
         override fun tempFiles() = tempFiles
         override fun procNet(table: ProcNet) = net.getValue(table)
+        override fun premiumSmsPolicy() = premiumSms
     }
 
     private val packages = object : PackageInventory {
@@ -64,7 +66,7 @@ class RootChecksTest {
         ).map { it.spec }
 
         assertEquals(
-            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "NETW-3301"),
+            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "APPS-4303", "NETW-3301"),
             specs.map { it.id },
         )
         assertEquals(setOf(Tier.ROOT), specs.map { it.requiredTier }.toSet())
@@ -260,6 +262,57 @@ class RootChecksTest {
 
         val odd = FakeRoot(net = ProcNet.entries.associateWith { v(HEADER + "garbage line\n") })
         assertEquals(Status.UNKNOWN, ListeningAppsCheck(odd, packages).run(context).status)
+    }
+
+    private fun smsPolicy(vararg apps: Pair<String, Int>) = v(
+        "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<premium-sms-policy>\n" +
+            apps.joinToString("") { (pkg, policy) -> "<package name=\"$pkg\" sms-policy=\"$policy\" />\n" } +
+            "</premium-sms-policy>\n",
+    )
+
+    @Test
+    fun `apps allowed to text premium numbers fail, others and uninstalled ones don't count`() = runTest {
+        val root = FakeRoot(
+            premiumSms = smsPolicy("com.termux" to 3, "org.kde.kdeconnect_tp" to 1, "org.example.gone" to 3, "org.example.denied" to 2),
+        )
+        val outcome = PremiumSmsCheck(root, packages).run(context)
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("1 app may text premium numbers without asking: Termux", outcome.summary)
+        assertEquals("4", outcome.evidence.single { it.label == "Apps with a premium SMS setting" }.value)
+        val allowed = outcome.evidence.filter { it.label == "Always allowed" }
+        assertEquals(listOf("Termux (com.termux)", "org.example.gone"), allowed.map { it.value })
+        assertEquals("not installed; not counted", allowed.last().note)
+
+        val trusted = PremiumSmsCheck(root, packages).run(context.copy(trustedApps = setOf("com.termux")))
+        assertEquals(Status.PASS, trusted.status)
+        assertEquals("Only apps you trust may text premium numbers without asking: Termux", trusted.summary)
+    }
+
+    @Test
+    fun `no file or no app always allowed passes, an odd or unreadable file is unknown`() = runTest {
+        val none = PremiumSmsCheck(FakeRoot(), packages).run(context)
+        assertEquals(Status.PASS, none.status)
+        assertEquals("the file doesn't exist yet", none.evidence.single().note)
+
+        assertEquals(Status.PASS, PremiumSmsCheck(FakeRoot(premiumSms = smsPolicy("com.termux" to 1)), packages).run(context).status)
+        assertEquals(Status.UNKNOWN, PremiumSmsCheck(FakeRoot(premiumSms = v("ABX\u0000binary")), packages).run(context).status)
+        assertEquals(
+            Status.UNKNOWN,
+            PremiumSmsCheck(FakeRoot(premiumSms = Reading.Unavailable("permission denied", source)), packages).run(context).status,
+        )
+    }
+
+    @Test
+    fun `the premium SMS file parser never skips a package it can't read`() {
+        assertEquals(
+            mapOf("a.b" to 3, "c.d" to 2),
+            PremiumSmsPolicies.parse("<premium-sms-policy><package sms-policy=\"3\" name=\"a.b\"/><package name=\"c.d\" sms-policy=\"2\"></package></premium-sms-policy>"),
+        )
+        assertEquals(emptyMap(), PremiumSmsPolicies.parse("<premium-sms-policy />"))
+        assertNull(PremiumSmsPolicies.parse("<premium-sms-policy><package name=\"a.b\" /></premium-sms-policy>"))
+        assertNull(PremiumSmsPolicies.parse("<premium-sms-policy><package name=\"a.b\" sms-policy=\"always\" /></premium-sms-policy>"))
+        assertNull(PremiumSmsPolicies.parse("<package name=\"a.b\" sms-policy=\"3\" />"))
     }
 
     @Test

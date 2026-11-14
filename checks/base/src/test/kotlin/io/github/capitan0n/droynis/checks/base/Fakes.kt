@@ -149,11 +149,18 @@ class FakeUptime(private val sinceBoot: Reading<Duration> = value(5.hours)) : Up
     override fun sinceBoot() = sinceBoot
 }
 
-/** By default a 128 GB phone with 64 GB free. */
+/** By default a 128 GB phone with 64 GB free and no SD card. */
 class FakeStorage(
     private val space: Reading<StorageSpace> = value(StorageSpace(totalBytes = 128_000_000_000, freeBytes = 64_000_000_000)),
+    private val removable: Reading<List<RemovableVolume>> = value(emptyList()),
 ) : StorageProbe {
     override fun internal() = space
+    override fun removableVolumes() = removable
+}
+
+/** By default Shizuku isn't running. */
+class FakeShizukuServer(private val server: Reading<ShizukuServer?> = value(null)) : ShizukuServerProbe {
+    override fun server() = server
 }
 
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
@@ -220,6 +227,7 @@ class FakeProbes(
     override val usageHistory: UsageHistoryProbe = FakeUsageHistory(),
     override val modules: ModuleProbe = FakeModules(),
     override val profiles: ProfileProbe = FakeProfiles(),
+    override val shizukuServer: ShizukuServerProbe = FakeShizukuServer(),
 ) : BaseProbes
 
 /** By default the phone has no module metadata package, like a ROM without Google's modules. */

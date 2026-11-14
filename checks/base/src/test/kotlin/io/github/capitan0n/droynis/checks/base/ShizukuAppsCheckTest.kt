@@ -31,8 +31,11 @@ class ShizukuAppsCheckTest {
         labels,
     )
 
-    private fun check(holders: Reading<Map<String, Set<String>>>, packages: PackageInventory = inventory) =
-        ShizukuAppsCheck(FakePermissions(holders), packages)
+    private fun check(
+        holders: Reading<Map<String, Set<String>>>,
+        packages: PackageInventory = inventory,
+        server: Reading<ShizukuServer?> = value(ShizukuServer(2000)),
+    ) = ShizukuAppsCheck(FakePermissions(holders), packages, FakeShizukuServer(server))
 
     private fun granted(vararg packages: String) = value(packages.associateWith { setOf(ShizukuAppsCheck.PERMISSION) })
 
@@ -71,6 +74,28 @@ class ShizukuAppsCheckTest {
         assertEquals(Severity.WARNING, sideloaded.escalation)
         assertEquals("2 apps may use Shizuku: Canta and Helper; Helper comes from outside an app store", sideloaded.summary)
         assertEquals("installed from outside an app store", sideloaded.evidence.single { it.packageName == stranger }.note)
+    }
+
+    @Test
+    fun `while Shizuku runs as root every allowed app is a warning`() = runTest {
+        val outcome = check(granted(canta), server = value(ShizukuServer(0))).outcome()
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(Severity.WARNING, outcome.escalation)
+        assertEquals("1 app may use Shizuku: Canta; Shizuku runs as root, so it may do what root can", outcome.summary)
+        assertEquals("root (uid 0)", outcome.evidence.single { it.label == "Shizuku runs as" }.value)
+
+        val adb = check(granted(canta)).outcome()
+        assertNull(adb.escalation)
+        assertEquals("adb's shell user (uid 2000)", adb.evidence.single { it.label == "Shizuku runs as" }.value)
+
+        val stopped = check(granted(canta), server = value(null)).outcome()
+        assertNull(stopped.escalation)
+        assertEquals("not running", stopped.evidence.single { it.label == "Shizuku runs as" }.value)
+
+        val unreadable = check(granted(canta), server = unavailable("Shizuku didn't say")).outcome()
+        assertEquals(Status.FAIL, unreadable.status)
+        assertNull(unreadable.escalation)
     }
 
     @Test

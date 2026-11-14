@@ -27,6 +27,8 @@ how each one reads its value is in the KDoc of its class.
 | Shizuku's usual API wraps hidden interfaces. | Droynis runs its own `ShellService` through Shizuku, with one AIDL method per allowed read and no general "run" method. |
 | An app sees only the user or profile it runs in. | APPS-4017 says so: it counts the other profiles of this user (work profile, Private Space), which `UserManager.getUserProfiles()` tells any app, and never passes on what it can't see. |
 | `isAutoRevokeWhitelisted(package)` answers only the installer or a privileged app. | "Pause app activity if unused" is read in the ADB tier instead (APPS-4109): its app-op is allowed by default, so the exempt apps are the ones set to `ignore`. |
+| Termux's `allow-external-apps` and Tasker's Allow External Access live in those apps' private storage. | APPS-4019 reads only who holds their permissions, so a listed app *may* run commands. |
+| Premium SMS access is kept in `/data/misc/sms`, which only the phone service and root can read. | APPS-4303 is in the root tier; the root command converts Android 12's binary XML back to text with `abx2xml`. |
 | A saved Wi-Fi network doesn't record which cipher its access point uses. | NETW-3105 fails only on WEP, which has its own security type. WPA with TKIP shares a type with WPA2 and is not judged. |
 | An app's network security config is private to it. | APPS-4018 reads only the manifest's cleartext flag on apps that hold INTERNET: a sign in both directions, so information only. |
 | A blocking binder call can't be interrupted. | Each check runs detached and races a timeout: a hang costs one thread, not the scan. |
