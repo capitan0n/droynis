@@ -19,17 +19,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - uses: actions/setup-java@v6
+      - name: This version has a changelog
+        run: bash ci/check-changelog.sh
+
+      - uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
         with:
           distribution: temurin
           java-version: 21
 
       # Also validates gradle-wrapper.jar against the official checksums.
-      - uses: gradle/actions/setup-gradle@v6
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
         with:
           cache-provider: basic # MIT-licensed cache instead of the proprietary default
 
@@ -37,18 +40,12 @@ jobs:
       - name: Unit tests, lint and builds
         run: ./gradlew --stacktrace check assembleDebug assembleRelease assembleDebugAndroidTest
 
-      - name: Release APK must not request network access
-        run: |
-          aapt2="$(printf '%s\n' "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -n 1)aapt2"
-          apk=app/build/outputs/apk/release/app-release-unsigned.apk
-          "$aapt2" dump permissions "$apk" | tee permissions.txt
-          if grep -q "android.permission.INTERNET" permissions.txt; then
-            echo "::error::$apk requests android.permission.INTERNET"
-            exit 1
-          fi
+      # No INTERNET, and nothing else that ci/release-permissions.txt doesn't list.
+      - name: Release APK requests only the listed permissions
+        run: bash ci/check-permissions.sh app/build/outputs/apk/release/app-release-unsigned.apk
 
       - name: Upload the debug APK
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: droynis-debug
           path: app/build/outputs/apk/debug/app-debug.apk
@@ -57,7 +54,7 @@ jobs:
 
       - name: Upload reports
         if: failure()
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: reports
           path: "**/build/reports/"

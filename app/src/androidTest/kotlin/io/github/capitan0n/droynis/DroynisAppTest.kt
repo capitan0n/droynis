@@ -73,6 +73,8 @@ class DroynisAppTest {
         waitForScan()
 
         compose.onNodeWithText(text(R.string.tab_device)).performClick()
+        // Device details first, then the network inspector.
+        compose.onNodeWithText(text(R.string.tools_device)).assertExists()
         compose.onNodeWithText(text(R.string.tools_network)).assertExists()
         // IP addresses start hidden; the eye shows them and hides them again.
         compose.onNodeWithContentDescription(text(R.string.net_show_addresses)).performClick()

@@ -56,6 +56,13 @@ class SpecialAccessCheck(
          * that only adb can give, which on a user app is a sign of stalkerware.
          */
         val category: Category = Category.APPS,
+        /**
+         * The app-op modes that count. Most switches are off by default, so being allowed is the
+         * finding; "Pause app activity if unused" is on by default, so there it is `ignore`.
+         */
+        val modes: Set<String> = AppOpModes.ALLOWING,
+        /** Label of the evidence row that counts system apps. */
+        val systemLabel: String = "System apps allowed",
     ) {
         OVERLAY(
             id = "APPS-4102",
@@ -168,6 +175,33 @@ class SpecialAccessCheck(
             failsWhen = "a user app may change or delete media without asking (information only)",
             severity = Severity.INFO,
         ),
+        UNUSED_APPS(
+            // APPS-4108 was screen capture and is retired, so this is 4109.
+            id = "APPS-4109",
+            op = "AUTO_REVOKE_PERMISSIONS_IF_UNUSED",
+            label = "Keeps permissions while unused",
+            title = "Apps that keep their permissions while unused",
+            phrase = "can keep permissions while unused",
+            explanation = "Android takes permissions back from an app you haven't opened for a few months " +
+                "and stops its background work, so a forgotten app can't go on reading your location, " +
+                "contacts or files. Turning off \"Pause app activity if unused\" for an app (\"Remove " +
+                "permissions if app isn't used\" on Android 11, \"Manage app if unused\" on newer " +
+                "releases) exempts it. Apps that must work unattended, such as a tracker for a lost phone, " +
+                "need the exemption; an app you no longer use shouldn't have it. This check is for your " +
+                "information and doesn't count in the score.",
+            remediation = Remediation(
+                text = "Open Settings › Apps › the app and turn \"Pause app activity if unused\" (or " +
+                    "\"Manage app if unused\") back on for apps that don't need to work while you never " +
+                    "open them. Uninstall apps you no longer use.",
+                settingsActions = listOf(SettingsActions.APPS),
+            ),
+            // Unused-app permission reset arrived with Android 11.
+            minSdk = 30,
+            failsWhen = "a user app is exempt from having its permissions removed while unused (information only)",
+            severity = Severity.INFO,
+            modes = setOf("ignore"),
+            systemLabel = "System apps exempt",
+        ),
         SCREEN_CAPTURE(
             // APPS-4108 until it moved to Suspicious apps.
             id = "SUSP-5103",
@@ -221,7 +255,7 @@ class SpecialAccessCheck(
             )
         }
         val source = dump.source
-        val parsed = when (val result = AppOpModes.allowed(dump.value, setOf(access.op))) {
+        val parsed = when (val result = AppOpModes.inModes(dump.value, setOf(access.op), access.modes)) {
             is AppOpModes.Result.Failed -> return Outcome.unknown(
                 "App-op modes are in a format Droynis doesn't recognize (${result.reason})",
                 listOf(Evidence("App-op modes", null, source, note = result.reason)),
@@ -266,7 +300,7 @@ class SpecialAccessCheck(
             val notCounted = { pkg: String? -> Trust.NOT_COUNTED.takeIf { pkg != null } }
             expected.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "an app store; not counted", trust = notCounted(pkg))) }
             own.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "Droynis itself; not counted", trust = notCounted(pkg))) }
-            if (system.isNotEmpty()) add(Evidence("System apps allowed", system.size.toString(), source))
+            if (system.isNotEmpty()) add(Evidence(access.systemLabel, system.size.toString(), source))
         }
         if (flagged.isEmpty() && trusted.isNotEmpty()) {
             return Outcome.pass(onlyTrusted(access.phrase, trusted.mapNotNull { it.first?.let(packages::label) }), evidence)

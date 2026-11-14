@@ -7,6 +7,7 @@ import android.telephony.TelephonyManager
 import io.github.capitan0n.droynis.checks.base.BackgroundLocationCheck
 import io.github.capitan0n.droynis.checks.base.NetworkTypes
 import io.github.capitan0n.droynis.checks.base.BluetoothCheck
+import io.github.capitan0n.droynis.checks.base.CleartextAppsCheck
 import io.github.capitan0n.droynis.checks.base.DeveloperOptionsCheck
 import io.github.capitan0n.droynis.checks.base.PasswordVisibilityCheck
 import io.github.capitan0n.droynis.checks.base.ScreenTimeoutCheck
@@ -78,6 +79,7 @@ class SdkConstantsTest {
     @Test
     fun permissionNamesMatchTheSdk() {
         assertEquals(Manifest.permission.ACCESS_BACKGROUND_LOCATION, BackgroundLocationCheck.BACKGROUND)
+        assertEquals(Manifest.permission.INTERNET, CleartextAppsCheck.INTERNET)
         assertEquals(
             setOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
             BackgroundLocationCheck.FOREGROUND,

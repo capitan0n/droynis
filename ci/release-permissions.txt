@@ -1,0 +1,25 @@
+# Every permission the release APK may request, one per line. CI (ci/check-permissions.sh) fails
+# when the built APK requests anything else, or no longer requests one of these: a new permission,
+# from Droynis' own manifests or merged in from a library, has to be added here on purpose.
+# android.permission.INTERNET must never appear.
+
+# app: scheduled scans
+android.permission.POST_NOTIFICATIONS
+android.permission.RECEIVE_BOOT_COMPLETED
+
+# platform/android: base tier (all normal, install-time permissions)
+android.permission.ACCESS_NETWORK_STATE
+android.permission.QUERY_ADVANCED_PROTECTION_MODE
+android.permission.QUERY_ALL_PACKAGES
+android.permission.REQUEST_PASSWORD_COMPLEXITY
+android.permission.USE_BIOMETRIC
+
+# platform/android: ADB tier, granted only by `adb shell pm grant`
+android.permission.DUMP
+android.permission.PACKAGE_USAGE_STATS
+
+# Shizuku library: defined by the Shizuku app, granted there by the user
+moe.shizuku.manager.permission.API_V23
+
+# androidx.core: Droynis' own signature permission for receivers that are not exported
+io.github.capitan0n.droynis.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION

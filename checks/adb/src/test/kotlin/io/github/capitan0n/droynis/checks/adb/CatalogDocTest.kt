@@ -10,7 +10,6 @@ import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.Tier
-import io.github.capitan0n.droynis.core.adbGrantCommand
 import io.github.capitan0n.droynis.report.HardeningIndex
 import java.io.File
 import java.lang.reflect.Proxy
@@ -84,69 +83,32 @@ class CatalogDocTest {
 }
 
 /**
- * Renders the check catalog as Markdown: a table of contents, the privilege tiers with their setup,
- * then one section per category with a table grouped by tier and every check in full.
+ * Renders the check catalog as Markdown: the tier counts, then one table per category. Each check's
+ * full explanation and fix live in the app, so the file stays short enough to skim.
  */
 object CatalogDoc {
-
-    private const val APP_ID = "io.github.capitan0n.droynis"
-
-    private val INTRO = mapOf(
-        Tier.BASE to "Public Android APIs only. These checks run on every phone, with no setup and no extra permissions.",
-        Tier.ADB to "Two read-only permissions, granted once from a computer with adb, unlock checks that public " +
-            "Android APIs can't do. Until then these checks show as N/A and don't change the score. The " +
-            "Shizuku tier covers them too, without the grants.",
-        Tier.SHIZUKU to "[Shizuku](https://github.com/RikkaApps/Shizuku) is an open-source app that gives other apps " +
-            "the rights adb has, without a computer once it runs. Through it Droynis starts a small shell that " +
-            "runs only a fixed list of read-only commands. It reads what Android hides from apps, such as the " +
-            "real USB debugging state on Android 17, the SIM PIN lock and the Allow 2G switch, and also runs " +
-            "every ADB-tier check.",
-        Tier.ROOT to "For phones that are already rooted. Once you turn it on, Droynis asks the root manager " +
-            "(Magisk, KernelSU, APatch…) for a root shell at each scan and runs only a fixed list of read-only " +
-            "commands. Root also runs every ADB and Shizuku check. Rooting weakens Android's security model, so " +
-            "don't root a phone just to audit it; root access (INTG-1050) stays a critical finding.",
-    )
 
     private val ANDROID = mapOf(
         26 to "8.0", 27 to "8.1", 28 to "9", 29 to "10", 30 to "11", 31 to "12", 32 to "12L",
         33 to "13", 34 to "14", 35 to "15", 36 to "16", 37 to "17",
     )
 
-    private const val TIERS_HEADING = "Privilege tiers"
-
     fun render(specs: List<CheckSpec>): String = buildString {
         val byCategory = specs.groupBy { it.category }
         val categories = Category.entries.filter { byCategory[it].orEmpty().isNotEmpty() }
+        val weights = Severity.entries.sortedDescending().joinToString { "${it.name.lowercase()} ${HardeningIndex.weight(it)}" }
         appendLine("# Droynis checks")
         appendLine()
         appendLine("<!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after")
         appendLine("     changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->")
         appendLine()
-        appendLine("Every check Droynis runs, by category and privilege tier: ${specs.size} checks.")
+        appendLine("${specs.size} checks. Each one's full explanation and fix are in the app: tap the check.")
         appendLine()
-        val weights = Severity.entries.sortedDescending().joinToString { "${it.name.lowercase()} ${HardeningIndex.weight(it)}" }
-        appendLine("A check passes only after reading a passing value; anything it can't establish is Unknown or")
-        appendLine("N/A, never Passed.")
+        appendLine("- A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.")
+        appendLine("- A failure weighs by severity ($weights); any critical failure caps the score at ${HardeningIndex.CRITICAL_CAP}.")
+        appendLine("- Higher tiers need setup ([README](../README.md#tiers)) and also run every check of the tiers before them.")
         appendLine()
-        appendLine("Severity sets a failed check's weight in the score: $weights.")
-        appendLine("Any critical failure caps the score at ${HardeningIndex.CRITICAL_CAP}, and muted checks don't count.")
-        appendLine("You can trust an app that needs a lot of access, such as a watch app: every check that lists apps")
-        appendLine("still lists it, but none counts it.")
-        appendLine()
-        appendLine("## Contents")
-        appendLine()
-        appendLine("- [$TIERS_HEADING](#${anchor(TIERS_HEADING)})")
-        for (tier in Tier.entries) appendLine("  - [${tierName(tier)}](#${tierAnchor(tier)})")
-        for (category in categories) {
-            appendLine("- [${category.label}](#${anchor(category.label)}): ${byCategory.getValue(category).size} checks")
-        }
-
-        appendLine()
-        appendLine("## $TIERS_HEADING")
-        appendLine()
-        appendLine("Checks per category and tier. Each tier also runs the checks of the tiers before it.")
-        appendLine()
-        appendLine("| Category | " + Tier.entries.joinToString(" | ") { "[${tierName(it)}](#${tierAnchor(it)})" } + " | All |")
+        appendLine("| Category | " + Tier.entries.joinToString(" | ") { tierName(it) } + " | All |")
         appendLine("|---|" + "---|".repeat(Tier.entries.size) + "---|")
         for (category in categories) {
             val inCategory = byCategory.getValue(category)
@@ -160,89 +122,26 @@ object CatalogDoc {
             "| **All** | " + Tier.entries.joinToString(" | ") { tier -> count(specs.count { it.requiredTier == tier }) } +
                 " | ${specs.size} |",
         )
-        for (tier in Tier.entries) {
-            val inTier = specs.filter { it.requiredTier == tier }
-            appendLine()
-            appendLine("### ${tierName(tier)} tier")
-            appendLine()
-            appendLine(INTRO.getValue(tier))
-            if (tier == Tier.ADB) appendSetup(inTier)
-            if (tier == Tier.SHIZUKU && inTier.isNotEmpty()) appendShizukuSetup()
-            if (tier == Tier.ROOT && inTier.isNotEmpty()) appendRootSetup()
-        }
 
         for (category in categories) {
-            // Same order in the table and the sections below: by tier, then by id.
             val inCategory = byCategory.getValue(category).sortedWith(compareBy({ it.requiredTier.ordinal }, { it.id }))
             appendLine()
             appendLine("## ${category.label}")
             appendLine()
-            appendLine("| ID | Check | Severity | Fails when |")
-            appendLine("|---|---|---|---|")
-            for ((tier, inTier) in inCategory.groupBy { it.requiredTier }) {
-                appendLine("| **[${tierName(tier)}](#${tierAnchor(tier)})** | | | |")
-                for (spec in inTier) {
-                    val since = if (spec.minSdk > CheckSpec.MIN_SDK) " (Android ${android(spec.minSdk)}+)" else ""
-                    appendLine(
-                        "| [${spec.id}](#${anchor(heading(spec))}) | ${spec.title}$since | ${severity(spec.severity)} | " +
-                            "${spec.failsWhen} |",
-                    )
-                }
+            appendLine("| ID | Check | Tier | Severity | Fails when |")
+            appendLine("|---|---|---|---|---|")
+            for (spec in inCategory) {
+                val since = if (spec.minSdk > CheckSpec.MIN_SDK) " (Android ${android(spec.minSdk)}+)" else ""
+                appendLine(
+                    "| ${spec.id} | ${spec.title}$since | ${tierName(spec.requiredTier)} | ${severity(spec.severity)} | " +
+                        "${spec.failsWhen} |",
+                )
             }
-            for (spec in inCategory) appendCheck(spec)
         }
     }.trimEnd() + "\n"
 
     /** GitHub's heading anchor: lower case, punctuation dropped, spaces to hyphens. */
     fun anchor(heading: String): String = heading.lowercase().replace(Regex("[^a-z0-9 _-]"), "").replace(' ', '-')
-
-    private fun StringBuilder.appendSetup(specs: List<CheckSpec>) {
-        val commands = specs.flatMap { it.requires }.filter { it.tier == Tier.ADB }.distinct()
-            .mapNotNull { it.adbGrantCommand(APP_ID) }
-        if (commands.isEmpty()) return
-        appendLine()
-        appendLine("Turn on USB debugging, connect the phone to a computer with adb, run:")
-        appendLine()
-        appendLine("```sh")
-        commands.forEach { appendLine(it) }
-        appendLine("```")
-        appendLine()
-        appendLine("Then tap Scan again. The grants stay until `adb shell pm revoke …` or an uninstall.")
-    }
-
-    private fun StringBuilder.appendShizukuSetup() {
-        appendLine()
-        appendLine("1. Install Shizuku and start it: with Wireless debugging on Android 11 and later, or from a")
-        appendLine("   computer with adb. Shizuku's own guide shows each step.")
-        appendLine("2. In Droynis open ⋮ › Check catalog › Shizuku and tap Allow access.")
-        appendLine("3. Tap Scan again. After a reboot, start Shizuku again; to take access back, turn Droynis off in")
-        appendLine("   Shizuku's list of authorized apps.")
-    }
-
-    private fun StringBuilder.appendRootSetup() {
-        appendLine()
-        appendLine("1. In Droynis open ⋮ › Check catalog › Root and tap Allow root access.")
-        appendLine("2. Allow Droynis when the root manager asks. Droynis scans again by itself.")
-        appendLine("3. To stop, tap Turn off in the same tab, and revoke Droynis in the root manager's Superuser list.")
-    }
-
-    private fun StringBuilder.appendCheck(spec: CheckSpec) {
-        appendLine()
-        appendLine("### ${heading(spec)}")
-        appendLine()
-        appendLine(
-            "${severity(spec.severity)} · ${tierName(spec.requiredTier)} tier · Android ${android(spec.minSdk)} and later · " +
-                "fails when ${spec.failsWhen}",
-        )
-        appendLine()
-        appendLine(spec.explanation)
-        appendLine()
-        appendLine("**What to do:** ${spec.remediation.text}")
-    }
-
-    private fun heading(spec: CheckSpec) = "${spec.id} ${spec.title}"
-
-    private fun tierAnchor(tier: Tier) = anchor("${tierName(tier)} tier")
 
     private fun count(n: Int) = if (n == 0) "–" else "$n"
 

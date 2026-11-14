@@ -133,6 +133,8 @@ fun AboutScreen(appVersion: String, onOpenLink: (String) -> Unit, onFeedback: ()
 
         SectionCard(title = stringResource(R.string.about_license_title), icon = Icons.Rounded.Gavel) {
             Text(stringResource(R.string.about_license), style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.about_license_indicators), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

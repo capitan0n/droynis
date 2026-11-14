@@ -53,7 +53,7 @@ class SpecialAccessCheckTest {
     fun `every access is an adb-tier app check with its own settings screen`() {
         val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4107).map { "APPS-$it" } + "SUSP-5103", specs.values.map { it.id })
+        assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
         // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
         assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
@@ -236,5 +236,46 @@ class SpecialAccessCheckTest {
             "org.example.files" to "Files",
             "org.fdroid.fdroid" to "F-Droid",
         )
+    }
+
+    @Test
+    fun `an app exempt from unused-app permission removal is listed for information`() = runTest {
+        val spec = check(Access.UNUSED_APPS, dump()).spec
+        assertEquals(Severity.INFO, spec.severity)
+        assertEquals(30, spec.minSdk)
+
+        // Settings sets a uid mode, the installer API a package mode; `ignore` is the exemption either way.
+        val uidWide = "  Uid u0a201:\n    state=cch\n      AUTO_REVOKE_PERMISSIONS_IF_UNUSED: mode=ignore\n    Package org.example.tracker:"
+        val outcome = check(
+            Access.UNUSED_APPS,
+            dump(
+                uidWide,
+                app("u0a202", "org.example.notes", "AUTO_REVOKE_PERMISSIONS_IF_UNUSED", "ignore"),
+                app("u0a203", "org.example.other", "AUTO_REVOKE_PERMISSIONS_IF_UNUSED", "allow"),
+            ),
+            apps = Reading.Value(
+                listOf("org.example.tracker" to 10201, "org.example.notes" to 10202, "org.example.other" to 10203).map { (pkg, uid) ->
+                    InstalledApp(pkg, isSystem = false, isDebuggable = false, installer = "org.fdroid.fdroid", targetSdk = 35, uid = uid)
+                },
+                Source("fake"),
+            ),
+        ).run(context)
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(
+            "2 apps can keep permissions while unused: org.example.tracker and org.example.notes",
+            outcome.summary,
+        )
+        val rows = outcome.evidence.filter { it.label == "Keeps permissions while unused" }
+        assertEquals(listOf("org.example.tracker", "org.example.notes"), rows.map { it.packageName })
+        assertTrue(rows.all { it.trust == Trust.COUNTED })
+    }
+
+    @Test
+    fun `apps left at the default keep their permission removal and pass`() = runTest {
+        val outcome = check(Access.UNUSED_APPS, dump(app("u0a203", "org.example.other", "SYSTEM_ALERT_WINDOW", "allow"))).run(context)
+
+        assertEquals(Status.PASS, outcome.status)
+        assertEquals("No app can keep permissions while unused", outcome.summary)
     }
 }

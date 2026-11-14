@@ -43,6 +43,7 @@ internal class AndroidPackages(private val context: Context) : PackageInventory 
                         targetSdk = info.targetSdkVersion,
                         isEnabled = info.enabled,
                         uid = info.uid,
+                        usesCleartextTraffic = (info.flags and ApplicationInfo.FLAG_USES_CLEARTEXT_TRAFFIC) != 0,
                     )
                 }
             Reading.Value(apps, source)
