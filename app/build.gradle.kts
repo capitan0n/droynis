@@ -128,4 +128,7 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
+    // Compose UI tests pull in Espresso 3.5.0, which reflects on InputManager.getInstance(), a method
+    // newer Android removed: every UI test then fails in Espresso.onIdle. 3.6.1 and later don't.
+    androidTestImplementation(libs.androidx.test.espresso.core)
 }
