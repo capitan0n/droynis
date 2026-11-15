@@ -13,6 +13,7 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.platform.ShellAccess
 import io.github.capitan0n.droynis.platform.TelephonyReader
+import io.github.capitan0n.droynis.platform.UsageReader
 import io.github.capitan0n.droynis.platform.readDumpsys
 import java.io.File
 import java.io.IOException
@@ -181,6 +182,11 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
 
+    override fun magiskStrings(): Reading<String> =
+        read("magisk --sqlite (strings)", MAGISK_STRINGS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+
     override fun bootScripts(): Reading<String> =
         read("stat boot scripts", BOOT_SCRIPTS) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
@@ -253,6 +259,19 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         }
         val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main"
         return read("app_process (telephony service)", command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+    }
+
+    /** Runs [UsageReader] the way [telephony] runs its reader; the start time is a number Droynis made. */
+    override fun usage(sinceMillis: Long): Reading<String> {
+        val apk = app.applicationInfo.sourceDir.orEmpty()
+        val main = UsageReader::class.java.name
+        if (!APK_PATH.matches(apk) || !CLASS_NAME.matches(main) || sinceMillis < 0) {
+            return Reading.Unavailable("unexpected app path", Source("su: app_process", Grant.ROOT))
+        }
+        val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main $sinceMillis"
+        return read("app_process (usage stats service)", command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
     }
@@ -384,6 +403,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             "else echo other; fi"
         const val MAGISK_POLICIES = "magisk --sqlite 'SELECT uid, policy, until FROM policies'"
         const val MAGISK_SETTINGS = "magisk --sqlite 'SELECT key, value FROM settings'"
+        const val MAGISK_STRINGS = "magisk --sqlite 'SELECT key, value FROM strings'"
 
         /**
          * Stats the boot scripts root runs and the folders that hold them, one per line as
@@ -430,7 +450,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         val TABLES = setOf("global", "secure", "system")
         val KEY = Regex("[a-z0-9_.-]{1,100}")
         /** Run as `dumpsys <command>`: fixed strings only, never text from elsewhere. */
-        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services", "telephony.registry")
+        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services", "telephony.registry", "user")
 
         /** Manager apps by package; a hidden (renamed) Magisk app is not among them. */
         val MANAGER_APPS = linkedMapOf(

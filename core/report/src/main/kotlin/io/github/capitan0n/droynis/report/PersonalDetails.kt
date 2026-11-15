@@ -19,6 +19,10 @@ object PersonalDetails {
     const val DESCRIPTION =
         "IP addresses, DNS and proxy servers, the Private DNS host, computers trusted for USB debugging, saved Wi-Fi network names and the local time zone"
 
+    /** What a report still says with personal details hidden, in the words reports use. */
+    const val KEPT =
+        "Still included: the names of installed apps, file names a check found, the device model and the Android version"
+
     fun hide(findings: List<Finding>): List<Finding> = findings.map { it.hidden() }
 
     private fun Finding.hidden(): Finding {

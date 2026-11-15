@@ -5,6 +5,7 @@ import io.github.capitan0n.droynis.checks.base.AppFootprintProbe.Companion.REQUE
 import io.github.capitan0n.droynis.checks.base.AppFootprintProbe.Companion.SYSTEM_ALERT_WINDOW
 import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Status
 import io.github.capitan0n.droynis.core.Trust
 import java.time.Instant
@@ -138,6 +139,29 @@ class SuspiciousAppsTest {
         )
         assertEquals(listOf("new.app"), sightings.map { it.packageName })
         assertEquals(AppOrigin.UNKNOWN, sightings.single().origin)
+    }
+
+    @Test
+    fun `disabled user apps are kept apart, never judged for hiding, and counted in the evidence`() {
+        val footprints = listOf(
+            footprint("off.app", entries = emptyList()),
+            footprint("frozen.app").copy(enabled = false),
+            footprint("sys.app"),
+            footprint("new.app"),
+        )
+        val inventory = mapOf("off.app" to app("off.app", enabled = false), "sys.app" to app("sys.app", system = true))
+        val disabled = AppPresence.disabled(footprints, inventory)
+
+        assertEquals(listOf("off.app", "frozen.app"), disabled.map { it.packageName })
+        assertTrue(disabled.all { it.disabled && !it.hiding })
+        assertEquals(listOf("new.app"), AppPresence.sightings(footprints, inventory).map { it.packageName })
+
+        val apps = Sightings(AppPresence.sightings(footprints, inventory), Source("test"), disabled)
+        assertEquals("1", apps.inspected().value)
+        assertEquals("2 disabled apps left out: a disabled app can't run or show an icon", apps.inspected().note)
+        assertEquals("3", apps.inspected(withDisabled = true).value)
+        assertEquals("2 disabled apps included", apps.inspected(withDisabled = true).note)
+        assertNull(Sightings(emptyList(), Source("test")).inspected().note)
     }
 
     // SUSP-5001 Apps hiding from the app drawer
@@ -404,6 +428,6 @@ class SuspiciousAppsTest {
     @Test
     fun `the registry runs the base suspicious apps checks in id order`() {
         val ids = baseChecks(FakeProbes()).filter { it.spec.category == Category.SUSPICIOUS_APPS }.map { it.spec.id }
-        assertEquals((5001..5007).map { "SUSP-$it" }, ids)
+        assertEquals((5001..5008).map { "SUSP-$it" }, ids)
     }
 }

@@ -29,7 +29,7 @@ fun originOf(packageName: String, apps: Map<String, InstalledApp>?): AppOrigin {
     return when {
         app.isSystem -> AppOrigin.PREINSTALLED
         app.installer in UnknownSourceAppsCheck.OS_INSTALLERS && apps[app.installer]?.isSystem == true -> AppOrigin.PREINSTALLED
-        app.installer in UnknownSourceAppsCheck.KNOWN_STORES -> AppOrigin.STORE
+        UnknownSourceAppsCheck.isStoreInstaller(app.installer) -> AppOrigin.STORE
         else -> AppOrigin.SIDELOADED
     }
 }

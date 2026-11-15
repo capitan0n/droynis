@@ -47,7 +47,9 @@ class InstalledByAppCheck(private val packages: PackageInventory) : Check {
         }
         val inventory = apps.value.associateBy { it.packageName }
         val user = apps.value.filter { !it.isSystem && it.isEnabled }
-        val evidence = mutableListOf(Evidence("User apps inspected", user.size.toString(), apps.source))
+        val disabled = apps.value.count { !it.isSystem && !it.isEnabled }
+        val leftOut = if (disabled == 0) null else "${count(disabled, "disabled app")} left out: a disabled app can't run"
+        val evidence = mutableListOf(Evidence("User apps inspected", user.size.toString(), apps.source, leftOut))
 
         val found = user.mapNotNull { app ->
             val installer = app.installer ?: return@mapNotNull null
@@ -109,7 +111,7 @@ class InstalledByAppCheck(private val packages: PackageInventory) : Check {
          */
         fun isOtherApp(packageName: String, installer: String, inventory: Map<String, InstalledApp>): Boolean =
             installer != packageName &&
-                installer !in UnknownSourceAppsCheck.KNOWN_STORES &&
+                !UnknownSourceAppsCheck.isStoreInstaller(installer) &&
                 installer !in UnknownSourceAppsCheck.OS_INSTALLERS &&
                 installer !in INSTALLER_TOOLS &&
                 inventory[installer]?.isSystem != true

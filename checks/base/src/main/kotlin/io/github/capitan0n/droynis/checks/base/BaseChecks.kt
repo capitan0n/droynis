@@ -10,7 +10,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     PlaySystemUpdateCheck(probes.modules),
     StorageEncryptionCheck(probes.policy),
     BootloaderCheck(probes.attestation, probes.properties, probes.files, probes.packages),
-    OemUnlockingCheck(probes.properties),
+    OemUnlockingCheck(probes.properties, probes.attestation),
     RootAccessCheck(probes.files, probes.packages),
     AndroidBuildCheck(probes.build, probes.properties),
     WebViewCheck(probes.webView),
@@ -63,6 +63,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     TrojanPermissionsCheck(probes.footprints, probes.packages, probes.accessibility),
     TestKeyAppsCheck(probes.footprints, probes.packages),
     StalkerwareCheck(probes.footprints, probes.packages),
+    SystemNameAppsCheck(probes.packages),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),

@@ -38,7 +38,7 @@ class SecurityPatchAgeCheck(private val build: BuildInfo) : Check {
         val patch = build.securityPatch()
         val today = context.startedAt.toLocalDate()
         val evidence = listOf(
-            patch.toEvidence("Security patch level") { "\"$it\"" },
+            patch.toEvidence("Security patch level"),
             Evidence("Reference date", today.toString(), Source("device clock at scan start")),
         )
         return patch.evaluate("Security patch level", evidence) { raw ->
@@ -47,12 +47,12 @@ class SecurityPatchAgeCheck(private val build: BuildInfo) : Check {
             val age = ChronoUnit.DAYS.between(date, today)
             when {
                 age < -MAX_DAYS_AHEAD ->
-                    Outcome.unknown("Patch level $date is ${-age} days ahead of the device clock", evidence)
+                    Outcome.unknown("Patch level $date is ${days(-age)} ahead of the device clock", evidence)
                 age <= 0 -> Outcome.pass("Patch level $date is current", evidence)
-                age <= CURRENT_DAYS -> Outcome.pass("Patch level $date is $age days old", evidence)
-                age <= STALE_DAYS -> Outcome.fail("Patch level $date is $age days old", evidence)
+                age <= CURRENT_DAYS -> Outcome.pass("Patch level $date is ${days(age)} old", evidence)
+                age <= STALE_DAYS -> Outcome.fail("Patch level $date is ${days(age)} old", evidence)
                 else -> Outcome.fail(
-                    "Patch level $date is $age days old, over a year",
+                    "Patch level $date is ${days(age)} old, over a year",
                     evidence,
                     escalation = Severity.CRITICAL,
                 )

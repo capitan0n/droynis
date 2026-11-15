@@ -27,4 +27,10 @@ interface IShellService {
 
     /** The kernel command line (`/proc/cmdline`): the boot parameters the bootloader passed. */
     String kernelCmdline() = 5;
+
+    /**
+     * How often each app brought a screen to the front since [sinceMillis] (epoch milliseconds), in
+     * UsageDump's format: one line per app, never the events themselves.
+     */
+    String usage(long sinceMillis) = 6;
 }

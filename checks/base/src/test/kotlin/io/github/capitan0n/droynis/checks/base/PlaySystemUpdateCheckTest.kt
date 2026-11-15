@@ -48,6 +48,21 @@ class PlaySystemUpdateCheckTest {
     }
 
     @Test
+    fun `a date followed by the Android release it was built for is read`() = runTest {
+        // Both are version names real phones report.
+        val suffixed = outcome(google("2026-09-01S+"))
+        assertEquals(Status.PASS, suffixed.status)
+        assertEquals("Google Play system update 2026-09-01 is 30 days old", suffixed.summary)
+
+        val spaced = outcome(google("2023-04-01 R"))
+        assertEquals(Status.FAIL, spaced.status)
+        assertEquals(Severity.WARNING, spaced.escalation)
+
+        // A date that is no date stays unknown.
+        assertEquals(Status.UNKNOWN, outcome(google("2026-13-45S+")).status)
+    }
+
+    @Test
     fun `a phone without Google's modules is not applicable, never passed`() = runTest {
         val none = outcome(value(null))
         assertEquals(Status.UNSUPPORTED, none.status)

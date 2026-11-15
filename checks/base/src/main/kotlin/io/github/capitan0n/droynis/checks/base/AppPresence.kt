@@ -28,6 +28,8 @@ data class AppSighting(
     val footprint: AppFootprint,
     val origin: AppOrigin,
     val signs: List<HidingSign>,
+    /** Installed but disabled: it can't run or show an icon, so it carries no [signs]. */
+    val disabled: Boolean = false,
 ) {
     val packageName: String get() = footprint.packageName
 
@@ -75,6 +77,7 @@ data class AppSighting(
         showVisibility: Boolean = true,
     ): Evidence {
         val visibility = when {
+            disabled -> "disabled"
             hiding -> signs.joinToString("; ") { it.note }
             showVisibility -> "no app drawer icon"
             else -> null
@@ -121,8 +124,20 @@ object AppPresence {
      */
     fun sightings(footprints: List<AppFootprint>, inventory: Map<String, InstalledApp>): List<AppSighting> =
         footprints
-            .filter { footprint -> inventory[footprint.packageName]?.let { !it.isSystem && it.isEnabled } ?: true }
+            .filter { footprint -> inventory[footprint.packageName]?.isSystem != true && !isDisabled(footprint, inventory) }
             .map { AppSighting(it, originOf(it.packageName, inventory), signs(it)) }
+
+    /**
+     * The disabled user apps among [footprints]: left out of [sightings], since a disabled app can't
+     * run, hide or show an icon, but still installed, so what they are is still worth matching.
+     */
+    fun disabled(footprints: List<AppFootprint>, inventory: Map<String, InstalledApp>): List<AppSighting> =
+        footprints
+            .filter { footprint -> inventory[footprint.packageName]?.isSystem != true && isDisabled(footprint, inventory) }
+            .map { AppSighting(it, originOf(it.packageName, inventory), signs = emptyList(), disabled = true) }
+
+    private fun isDisabled(footprint: AppFootprint, inventory: Map<String, InstalledApp>): Boolean =
+        !footprint.enabled || inventory[footprint.packageName]?.isEnabled == false
 }
 
 /**
@@ -146,9 +161,27 @@ private fun isInvisibleCodePoint(codePoint: Int): Boolean =
  */
 private val BLANK_LETTERS = setOf(0x115F, 0x1160, 0x3164, 0xFFA0, 0x2800)
 
-/** The user apps as sightings, and the source they were read from. */
-class Sightings(val all: List<AppSighting>, val source: Source) {
-    fun inspected() = Evidence("User apps inspected", all.size.toString(), source)
+/**
+ * The user apps as sightings, and the source they were read from. [all] are the enabled ones, which
+ * the checks about hiding and running judge; [disabled] ones are installed but can't run.
+ */
+class Sightings(val all: List<AppSighting>, val source: Source, val disabled: List<AppSighting> = emptyList()) {
+
+    /** Every installed user app, disabled ones included: for checks that match what an app is. */
+    val installed: List<AppSighting> get() = all + disabled
+
+    /**
+     * How many apps the check looked at, saying how many disabled ones it left out or, with
+     * [withDisabled], counted in: the number must not differ from another check's without a reason.
+     */
+    fun inspected(withDisabled: Boolean = false): Evidence {
+        val note = when {
+            disabled.isEmpty() -> null
+            withDisabled -> "${count(disabled.size, "disabled app")} included"
+            else -> "${count(disabled.size, "disabled app")} left out: a disabled app can't run or show an icon"
+        }
+        return Evidence("User apps inspected", (if (withDisabled) installed.size else all.size).toString(), source, note)
+    }
 
     val outOfSight: List<AppSighting> get() = all.filter { it.outOfSight }
 }
@@ -180,7 +213,7 @@ inline fun readSightings(
                 listOf(installed.toEvidence("Installed apps") { "${it.size} apps" }),
             ),
         )
-    return Sightings(AppPresence.sightings(apps, inventory), read.source)
+    return Sightings(AppPresence.sightings(apps, inventory), read.source, AppPresence.disabled(apps, inventory))
 }
 
 /**

@@ -127,6 +127,13 @@ class NetworkChecksTest {
         val unread = check(value("0"), unavailable("access denied")).outcome()
         assertEquals(Status.UNKNOWN, unread.status)
         assertEquals("Could not tell whether Bluetooth scanning is on", unread.summary)
-        assertEquals(Status.UNKNOWN, check(value(null), value("0")).status())
+        assertEquals(Status.UNKNOWN, check(value("2"), value("0")).status())
+
+        // Never written, as the Bluetooth key is on Samsung phones: Android reads it as off.
+        val unset = check(value("0"), value(null)).outcome()
+        assertEquals(Status.PASS, unset.status)
+        assertEquals("not set, which Android treats as off", unset.evidence[1].note)
+        assertEquals(Status.PASS, check(value(null), value(null)).status())
+        assertEquals(Status.FAIL, check(value(null), value("1")).status())
     }
 }

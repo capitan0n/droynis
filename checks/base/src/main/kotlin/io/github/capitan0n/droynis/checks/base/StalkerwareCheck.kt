@@ -53,10 +53,11 @@ class StalkerwareCheck(
         val list = indicators ?: StalkerwareIndicators.bundled
         val apps = readSightings(footprints, packages) { return it }
         val evidence = mutableListOf(
-            apps.inspected(),
+            apps.inspected(withDisabled = true),
             Evidence("Indicator list", "${count(list.size, "app")}, updated ${list.date}", list.source),
         )
-        val found = apps.all.mapNotNull { app -> list.match(app.packageName, app.footprint.signerSha1)?.let { app to it } }
+        // A disabled app is still installed, and whoever put it there can turn it back on.
+        val found = apps.installed.mapNotNull { app -> list.match(app.packageName, app.footprint.signerSha1)?.let { app to it } }
         if (found.isEmpty()) return Outcome.pass(NONE, evidence)
 
         val (trusted, counted) = context.splitTrusted(found) { it.first.packageName }

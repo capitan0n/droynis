@@ -47,10 +47,10 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
                 val isTrusted = it in trusted
                 add(
                     Evidence(
-                        "Installed by",
-                        "${packages.label(it.packageName)}: ${it.installer ?: "unknown (adb or file)"}",
+                        "From outside an app store",
+                        "${packages.label(it.packageName)} (${it.packageName})",
                         apps.source,
-                        note = withTrustNote(null, isTrusted),
+                        note = withTrustNote(installedBy(it, byPackage.orEmpty()), isTrusted),
                         packageName = it.packageName,
                         trust = trustOf(counted = true, trusted = isTrusted),
                     ),
@@ -66,6 +66,17 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
                 val names = sideloaded.map { packages.label(it.packageName) }.joinNames()
                 Outcome.fail("${count(sideloaded.size, "app")} from outside an app store: $names", evidence)
             }
+        }
+    }
+
+    /** Who installed [app], in words: the app is the evidence's value, so this is its note. */
+    private fun installedBy(app: InstalledApp, inventory: Map<String, InstalledApp>): String {
+        val installer = app.installer
+        return when {
+            installer == null -> "installed from a file or over adb"
+            installer == app.packageName -> "installed and updated by itself"
+            installer in inventory -> "installed by ${packages.label(installer)} ($installer)"
+            else -> "installed by $installer, which is not installed"
         }
     }
 
@@ -86,6 +97,18 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
             "com.xiaomi.mipicks", // Xiaomi GetApps
             "foundation.e.apps", // App Lounge (/e/OS)
         )
+
+        /**
+         * A phone maker's companion apps that fetch their own plug-ins, and their own updates, from
+         * that maker's store servers and install them themselves. What they install counts as coming
+         * from an app store. They are no general app store, so APPS-4104 still counts them.
+         */
+        val PLUGIN_INSTALLERS = setOf(
+            "com.samsung.android.app.watchmanager", // Galaxy Wearable: watch and earbuds plug-ins
+        )
+
+        /** Every installer whose apps count as coming from an app store. */
+        fun isStoreInstaller(installer: String?): Boolean = installer in KNOWN_STORES || installer in PLUGIN_INSTALLERS
 
         /**
          * System apps that install apps shipped with the OS as removable user apps. Their apps came

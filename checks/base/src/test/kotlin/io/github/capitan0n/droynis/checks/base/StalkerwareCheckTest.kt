@@ -56,6 +56,19 @@ class StalkerwareCheckTest {
     }
 
     @Test
+    fun `a disabled copy of a listed app is still found`() = runTest {
+        val frozen = footprint("com.systemservice", spyKey).copy(enabled = false)
+        val outcome = check(frozen, footprint("org.fdroid.fdroid")).outcome()
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(Severity.CRITICAL, outcome.escalation)
+        val inspected = outcome.evidence.single { it.label == "User apps inspected" }
+        assertEquals("2", inspected.value)
+        assertEquals("1 disabled app included", inspected.note)
+        assertTrue("disabled" in outcome.evidence.single { it.label == "Listed app" }.note.orEmpty())
+    }
+
+    @Test
     fun `no listed app passes and names the list`() = runTest {
         val outcome = check(footprint("org.fdroid.fdroid")).outcome()
         assertEquals(Status.PASS, outcome.status)

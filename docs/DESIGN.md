@@ -55,9 +55,11 @@ probes. The cost: a check that needs a new framework call also needs a probe met
 
 **Shizuku.** Droynis never sends Shizuku a command. Shizuku starts `ShellService`, a class from
 Droynis' own APK, as the shell user. Its methods: `settings get` (fixed tables, key checked against
-`[a-z0-9_.-]`), `getenforce`, `dumpsys` for a fixed list of services with fixed arguments, and a
+`[a-z0-9_.-]`), `getenforce`, `dumpsys` for a fixed list of services with fixed arguments, a
 fixed set of telephony getters (SIM PIN lock, Allow 2G, null-cipher and identifier-disclosure
-settings). Commands run without a shell, with absolute paths, a timeout and an output cap. The
+settings), and the usage history since a given time, returned as one count per app (SUSP-5003, so
+Droynis needs no Usage access of its own and never grants itself any). Commands run without a
+shell, with absolute paths, a timeout and an output cap. The
 `SHIZUKU` grant is held only while that service is connected, and it covers the ADB-tier checks.
 
 **Root.** Off until the user turns it on. Each scan opens one `su` session, checks `id -u` is 0,
@@ -126,6 +128,12 @@ are looked at, since system apps without an icon are normal. Every finding names
   against Echap's Stalkerware Indicators (CC BY 4.0), bundled and regenerated with
   `scripts/update-stalkerware-indicators.py`. A key match beats a package name anyone can copy. It
   finds known apps only.
+- **Disabled apps:** an app that is installed but disabled can't run or show an icon, so the hiding
+  and behaviour checks leave it out and say how many they left out. The checks that match what an
+  app is (SUSP-5006, SUSP-5007) read it too.
+- **Borrowed names (SUSP-5008):** a user app showing the same name as a system app, compared without
+  case, extra space or invisible characters. Counted only from outside an app store; a warning when
+  the name is a core app's, such as Settings, which is what a hidden Magisk app is called.
 - **Not covered:** hidden root (DenyList, Shamiko), ad SDKs inside normal apps, apps posing as
   system apps by name and icon, and any code scanning.
 

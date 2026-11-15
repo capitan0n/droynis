@@ -8,3 +8,8 @@
 -keep class io.github.capitan0n.droynis.platform.TelephonyReader {
     public static void main(java.lang.String[]);
 }
+
+# The root shell starts UsageReader.main the same way.
+-keep class io.github.capitan0n.droynis.platform.UsageReader {
+    public static void main(java.lang.String[]);
+}

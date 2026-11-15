@@ -144,8 +144,10 @@ class ListeningAppsCheck(
         val src = Source("su: cat " + read.joinToString { "/proc/net/${it.file}" }, grant)
 
         val apps = (packages.installedApps() as? Reading.Value)?.value.orEmpty().filter { it.uid != null }.groupBy { it.uid }
+        // One port open on several addresses (IPv4 and IPv6, say) is one open port.
+        val open = ports.distinctBy { listOf(it.protocol, it.port, it.uid) }
         // System services (uids below 10000) and system apps are part of the OS: listed, not counted.
-        val byUid = ports.distinctBy { listOf(it.protocol, it.port, it.uid) }.groupBy { it.uid }
+        val byUid = open.groupBy { it.uid }
         val listening = byUid.filterKeys { uid -> uid % PER_USER_RANGE >= FIRST_APP && apps[uid]?.all { it.isSystem } != true }
         val system = byUid - listening.keys
         // A shared uid names several apps; only a single app gets its own Settings link, and can be trusted.
@@ -155,7 +157,7 @@ class ListeningAppsCheck(
         val user = userEntries.associate { it.key to it.value }
 
         val evidence = buildList {
-            add(Evidence("Open ports", ports.size.toString(), src))
+            add(Evidence("Open ports", open.size.toString(), src))
             listening.forEach { (uid, open) ->
                 val pkg = appOf(uid)
                 val isTrusted = uid in trusted

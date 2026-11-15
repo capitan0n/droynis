@@ -239,8 +239,10 @@ class FakeModules(private val metadata: Reading<ModuleMetadata?> = value(null)) 
 class FakeProfiles(
     private val state: Reading<ProfileState> = value(ProfileState(profiles = 1, isSystemUser = true)),
     private val organizationOwned: Reading<Boolean> = value(false),
+    private val users: Reading<String> = unavailable("Permission Denial"),
 ) : ProfileProbe {
     override fun state() = state
+    override fun usersDump() = users
     override fun organizationOwned() = organizationOwned
 }
 

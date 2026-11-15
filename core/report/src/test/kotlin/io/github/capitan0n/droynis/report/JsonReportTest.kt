@@ -64,7 +64,7 @@ class JsonReportTest {
         assertEquals("droynis-report", root["schema"])
         assertEquals(1L, root["schemaVersion"])
         val scan = root["scan"] as Map<*, *>
-        assertEquals("2026-10-05T14:02:00+03:00", scan["startedAt"])
+        assertEquals("2026-10-05T14:02:00.000+03:00", scan["startedAt"])
         assertEquals("BASE", scan["tier"])
         assertEquals(emptyList<Any>(), scan["grants"])
         assertEquals(mapOf("model" to "FP6"), root["device"])
@@ -95,6 +95,10 @@ class JsonReportTest {
         assertEquals(100L, score["value"])
         assertEquals(listOf("INTG-1040"), score["muted"])
         assertEquals(0L, (root["verdicts"] as Map<*, *>)["CRITICAL"])
+        // The muted check has a count of its own, so the verdict counts add up to the findings.
+        val verdicts = root["verdicts"] as Map<*, *>
+        assertEquals(1L, verdicts["MUTED"])
+        assertEquals(findings.size.toLong(), verdicts.values.sumOf { it as Long })
         val muted = (root["findings"] as List<*>).map { (it as Map<*, *>)["muted"] }
         assertEquals(listOf(true, false), muted) // still reported, with its real result
     }

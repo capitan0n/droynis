@@ -70,12 +70,12 @@ class PlaySystemUpdateCheck(private val modules: ModuleProbe) : Check {
             val age = ChronoUnit.DAYS.between(date, today)
             when {
                 age < -SecurityPatchAgeCheck.MAX_DAYS_AHEAD ->
-                    Outcome.unknown("Google Play system update $date is ${-age} days ahead of the device clock", evidence)
+                    Outcome.unknown("Google Play system update $date is ${days(-age)} ahead of the device clock", evidence)
                 age <= 0 -> Outcome.pass("Google Play system update $date is current", evidence)
-                age <= CURRENT_DAYS -> Outcome.pass("Google Play system update $date is $age days old", evidence)
-                age <= STALE_DAYS -> Outcome.fail("Google Play system update $date is $age days old", evidence)
+                age <= CURRENT_DAYS -> Outcome.pass("Google Play system update $date is ${days(age)} old", evidence)
+                age <= STALE_DAYS -> Outcome.fail("Google Play system update $date is ${days(age)} old", evidence)
                 else -> Outcome.fail(
-                    "Google Play system update $date is $age days old, over a year",
+                    "Google Play system update $date is ${days(age)} old, over a year",
                     evidence,
                     escalation = Severity.WARNING,
                 )
@@ -83,12 +83,18 @@ class PlaySystemUpdateCheck(private val modules: ModuleProbe) : Check {
         }
     }
 
-    private fun parse(raw: String): LocalDate? =
-        try {
-            LocalDate.parse(raw.trim())
+    /**
+     * The date the version name starts with. Phones add the Android release it was built for after
+     * it: "2026-09-01S+" and "2023-04-01 R" are real version names.
+     */
+    private fun parse(raw: String): LocalDate? {
+        val date = LEADING_DATE.find(raw.trim())?.value ?: return null
+        return try {
+            LocalDate.parse(date)
         } catch (e: DateTimeParseException) {
             null
         }
+    }
 
     companion object {
         /** Google's module metadata package; its version name is the update's date. */
@@ -99,5 +105,7 @@ class PlaySystemUpdateCheck(private val modules: ModuleProbe) : Check {
 
         /** Beyond a year the FAIL escalates to a warning. */
         const val STALE_DAYS = 365L
+
+        private val LEADING_DATE = Regex("""^\d{4}-\d{2}-\d{2}""")
     }
 }

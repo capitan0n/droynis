@@ -4,6 +4,7 @@ import android.app.admin.DevicePolicyManager
 import android.content.Context
 import android.os.Build
 import android.os.UserManager
+import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.ProfileState
 import io.github.capitan0n.droynis.core.Reading
@@ -15,7 +16,13 @@ import io.github.capitan0n.droynis.core.Source
  * profiles such as a Private Space included, and DevicePolicyManagerService checks no caller for
  * `isOrganizationOwnedDeviceWithManagedProfile` (both read in AOSP's main branch, November 2026).
  */
-internal class AndroidProfiles(private val context: Context) : ProfileProbe {
+internal class AndroidProfiles(
+    private val context: Context,
+    private val dumpsys: Dumpsys,
+) : ProfileProbe {
+
+    /** As Droynis with the adb grants, else through Shizuku or root; an app without them is refused. */
+    override fun usersDump(): Reading<String> = dumpsys.dump("user")
 
     override fun state(): Reading<ProfileState> {
         val source = Source("UserManager.getUserProfiles()")

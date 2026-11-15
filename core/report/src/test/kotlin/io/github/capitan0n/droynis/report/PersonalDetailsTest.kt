@@ -97,6 +97,10 @@ class PersonalDetailsTest {
 
         val markdown = MarkdownReport.render(context, findings, index, emptyList(), "0.12.0", hidePersonal = true)
         assertTrue("Personal details hidden: ${PersonalDetails.DESCRIPTION}" in markdown)
+        // The report says what it still tells about the phone, in both formats.
+        assertTrue("- ${PersonalDetails.KEPT}" in markdown)
+        assertTrue("\"personalDetailsNote\": \"Left out: ${PersonalDetails.DESCRIPTION}. ${PersonalDetails.KEPT}.\"" in hidden)
+        assertTrue("\"personalDetailsNote\": null" in included)
         assertFalse("alexandros" in markdown)
         assertFalse("Personal details hidden" in MarkdownReport.render(context, findings, index, emptyList(), "0.12.0"))
     }
@@ -111,11 +115,11 @@ class PersonalDetailsTest {
         val index = HardeningIndex.of(findings)
 
         val hiddenJson = JsonReport.render(context, findings, index, emptyList(), "0.13.0", hidePersonal = true)
-        assertTrue("\"startedAt\": \"2026-10-24T16:52:38.578152Z\"" in hiddenJson)
+        assertTrue("\"startedAt\": \"2026-10-24T16:52:38.578Z\"" in hiddenJson)
         assertFalse("+03:00" in hiddenJson)
 
         val includedJson = JsonReport.render(context, findings, index, emptyList(), "0.13.0")
-        assertTrue("\"startedAt\": \"2026-10-24T19:52:38.578152+03:00\"" in includedJson)
+        assertTrue("\"startedAt\": \"2026-10-24T19:52:38.578+03:00\"" in includedJson)
 
         val hiddenMd = MarkdownReport.render(context, findings, index, emptyList(), "0.13.0", hidePersonal = true)
         assertTrue("- Scanned: 2026-10-24 16:52 Z" in hiddenMd)

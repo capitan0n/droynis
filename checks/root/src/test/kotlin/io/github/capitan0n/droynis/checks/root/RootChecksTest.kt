@@ -35,6 +35,7 @@ class RootChecksTest {
         var manager: Reading<RootManager> = Reading.Value(RootManager.MAGISK, Source("su")),
         var policies: Reading<String> = Reading.Value("", Source("su")),
         var settings: Reading<String> = Reading.Value("", Source("su")),
+        var strings: Reading<String> = Reading.Value("", Source("su")),
         var bootScripts: Reading<String> = Reading.Value("", Source("su")),
         var tempFiles: Reading<String> = Reading.Value("", Source("su")),
         var net: Map<ProcNet, Reading<String>> = ProcNet.entries.associateWith { Reading.Value(HEADER, Source("su")) },
@@ -45,6 +46,7 @@ class RootChecksTest {
         override fun manager() = manager
         override fun magiskPolicies() = policies
         override fun magiskSettings() = settings
+        override fun magiskStrings() = strings
         override fun bootScripts() = bootScripts
         override fun tempFiles() = tempFiles
         override fun procNet(table: ProcNet) = net.getValue(table)
@@ -122,8 +124,32 @@ class RootChecksTest {
 
         assertEquals(Status.FAIL, outcome.status)
         // 10131 is denied, 10133's grant expired in 1970, 10132 is Droynis.
-        assertEquals("2 apps can get root: Termux and adb shell", outcome.summary)
+        // adb's shell is named, but it is no app.
+        assertEquals("adb shell and 1 app can get root: Termux", outcome.summary)
         assertTrue(outcome.evidence.any { it.value == "Droynis" && it.note!!.startsWith("this app") })
+
+        val shellOnly = RootAppsCheck(FakeRoot(policies = v("uid=2000|policy=2|until=0")), packages).run(context)
+        assertEquals("adb shell can get root", shellOnly.summary)
+    }
+
+    @Test
+    fun `a Magisk app hidden under another name is pointed out`() = runTest {
+        assertEquals("org.kde.kdeconnect_tp", MagiskStrings.hiddenManager("key=requester|value=org.kde.kdeconnect_tp\n"))
+        assertNull(MagiskStrings.hiddenManager(""))
+        assertNull(MagiskStrings.hiddenManager("key=other|value=x\nrequester"))
+
+        val table = v("uid=10130|policy=2|until=0")
+        val hidden = RootAppsCheck(FakeRoot(policies = table, strings = v("key=requester|value=org.kde.kdeconnect_tp")), packages).run(context)
+        val row = hidden.evidence.single { it.label == "Magisk app" }
+        assertEquals("KDE Connect (org.kde.kdeconnect_tp)", row.value)
+        assertEquals("org.kde.kdeconnect_tp", row.packageName)
+
+        // Not hidden, a package that isn't installed, or a table that can't be read: nothing is added, nothing breaks.
+        for (strings in listOf(v(""), v("key=requester|value=gone.app"), Reading.Unavailable("no such table", source))) {
+            val outcome = RootAppsCheck(FakeRoot(policies = table, strings = strings), packages).run(context)
+            assertEquals(Status.FAIL, outcome.status)
+            assertTrue(outcome.evidence.none { it.label == "Magisk app" })
+        }
     }
 
     @Test

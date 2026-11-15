@@ -436,12 +436,19 @@ data class AppFootprint(
     val signerSubjects: List<String> = emptyList(),
     /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
     val signerSha1: List<String> = emptyList(),
+    /**
+     * False for an app that is installed but disabled (`pm disable-user`, an app freezer). It can't run
+     * or show an icon, so the checks about hiding leave it out; the checks that match what an app is
+     * (a listed package, a signing key) still read it.
+     */
+    val enabled: Boolean = true,
 )
 
 interface AppFootprintProbe {
     /**
-     * Every enabled app that isn't part of the system image (updates of system apps excluded too),
-     * except Droynis itself. Draws each enabled app drawer icon once, so it is cached for a scan.
+     * Every app that isn't part of the system image (updates of system apps excluded too), except
+     * Droynis itself; disabled apps are included and say so ([AppFootprint.enabled]). Draws each
+     * enabled app drawer icon once, so it is cached for a scan.
      */
     fun userApps(): Reading<List<AppFootprint>>
 
@@ -473,7 +480,8 @@ data class ScreenUse(val packageName: String, val times: Int, val lastShown: Ins
 interface UsageHistoryProbe {
     /**
      * Droynis may read the usage history: its usage-access app-op is allowed (Settings › Usage access),
-     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb. Without it
+     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb, or its Shizuku
+     * or root shell is connected, which reads the history as the shell user. Without any of them
      * Android returns an empty history rather than an error, so ask this first.
      */
     fun hasAccess(): Reading<Boolean>
@@ -515,6 +523,13 @@ data class ProfileState(
 interface ProfileProbe {
     /** Needs no permission: Android answers any app about its own profile group. */
     fun state(): Reading<ProfileState>
+
+    /**
+     * What `dumpsys user` prints, which lists every user and profile of the phone, the ones outside
+     * this user's group included ([UserDump] reads it). Apps may not run it: it is read with the adb
+     * grants or through Shizuku or root, and is `Unavailable` without them.
+     */
+    fun usersDump(): Reading<String>
 
     /**
      * `DevicePolicyManager.isOrganizationOwnedDeviceWithManagedProfile()` (Android 11+): an

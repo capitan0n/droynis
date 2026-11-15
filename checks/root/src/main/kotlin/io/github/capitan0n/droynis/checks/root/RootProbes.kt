@@ -39,6 +39,13 @@ interface RootShellProbe {
     fun magiskSettings(): Reading<String>
 
     /**
+     * `magisk --sqlite "SELECT key, value FROM strings"`, one `key=…|value=…` per line; Magisk only.
+     * Its `requester` row holds the package name the Magisk app was hidden under ("Hide the Magisk
+     * app"); there is no such row while the app keeps its own name.
+     */
+    fun magiskStrings(): Reading<String>
+
+    /**
      * The boot scripts root runs under `/data/adb` and the directories that hold them, each as a
      * line `D|F <octal-perms> <owner> <path>` ([BootScripts] reads it). Covers `service.d`,
      * `post-fs-data.d` and each module's `post-fs-data.sh`/`service.sh`.

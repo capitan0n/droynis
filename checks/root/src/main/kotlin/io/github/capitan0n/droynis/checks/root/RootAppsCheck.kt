@@ -45,6 +45,18 @@ object MagiskPolicies {
     }
 }
 
+/** Magisk's `strings` table, one `key=…|value=…` per line. */
+object MagiskStrings {
+    private val REQUESTER = Regex("""^key=requester\|value=([A-Za-z0-9_.]+)$""")
+
+    /**
+     * The package name the Magisk app was hidden under, or null: the app keeps its own name, or the
+     * output is in another shape. It only adds a name to the evidence, so nothing depends on it.
+     */
+    fun hiddenManager(text: String): String? =
+        text.lines().firstNotNullOfOrNull { REQUESTER.find(it.trim())?.groupValues?.get(1) }
+}
+
 class RootAppsCheck(
     private val root: RootShellProbe,
     private val packages: PackageInventory,
@@ -101,8 +113,25 @@ class RootAppsCheck(
         fun appOf(policy: SuPolicy, apps: List<String>) = apps.singleOrNull()?.takeIf { policy.uid % PER_USER_RANGE != SHELL_UID }
         val (trusted, others) = context.splitTrusted(holders - own.toSet()) { (policy, apps) -> appOf(policy, apps) }
 
+        // Hidden, the Magisk app has a random package name and is called "Settings" unless the user
+        // chose otherwise: say which app that is, since every other check lists it by that name.
+        val strings = root.magiskStrings()
+        val hidden = (strings as? Reading.Value)?.value?.let(MagiskStrings::hiddenManager)
+            ?.takeIf { pkg -> installed.any { it.packageName == pkg } }
+
         val evidence = buildList {
             add(managerEvidence)
+            if (hidden != null) {
+                add(
+                    Evidence(
+                        "Magisk app",
+                        "${packages.label(hidden)} ($hidden)",
+                        strings.source,
+                        note = "the root manager, hidden under another name with \"Hide the Magisk app\"",
+                        packageName = hidden,
+                    ),
+                )
+            }
             add(Evidence("Root grants", count(granted.size, "uid"), table.source))
             (holders - own.toSet()).forEach { (policy, apps) ->
                 val pkg = appOf(policy, apps)
@@ -127,8 +156,12 @@ class RootAppsCheck(
         if (others.isEmpty()) {
             return Outcome.pass(if (own.isEmpty()) "No app has root access" else "Only Droynis has root access", evidence)
         }
-        val names = others.map { (policy, apps) -> describe(policy.uid, apps, withPackage = false) }
-        return Outcome.fail("${count(names.size, "app")} can get root: ${names.joinNames()}", evidence)
+        // adb's shell is no app: "adb shell and 1 app can get root: Shizuku".
+        val (shell, apps) = others.partition { (policy, _) -> policy.uid % PER_USER_RANGE == SHELL_UID }
+        val names = apps.map { (policy, held) -> describe(policy.uid, held, withPackage = false) }
+        val who = listOfNotNull("adb shell".takeIf { shell.isNotEmpty() }, count(names.size, "app").takeIf { names.isNotEmpty() })
+        val summary = "${who.joinToString(" and ")} can get root" + if (names.isEmpty()) "" else ": ${names.joinNames()}"
+        return Outcome.fail(summary, evidence)
     }
 
     private fun appsFor(uid: Int, installed: List<InstalledApp>): List<String> =

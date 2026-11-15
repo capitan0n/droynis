@@ -37,7 +37,8 @@ class HiddenScreensCheck(
             "one anyway, it usually opened it by itself: that is how adware shows full-screen ads over other apps. " +
             "Droynis reads Android's usage history for the last ${WINDOW.inWholeDays} days and lists hidden apps that " +
             "brought a screen of their own to the front. It needs usage access: give it to Droynis in Settings › " +
-            "Apps › Special app access › Usage access, or with the ADB tier.",
+            "Apps › Special app access › Usage access, or with the ADB tier. With Shizuku or root connected, " +
+            "Droynis reads the history through its shell and needs neither.",
         remediation = Remediation(
             text = "Uninstall apps listed here unless you opened them yourself, for example a plugin's settings from " +
                 "the app it belongs to. Droynis only reads the history while it scans; to stop that, turn Usage " +

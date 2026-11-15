@@ -34,10 +34,14 @@ class ScanningCheck(private val settings: SystemSettings) : Check {
             "Bluetooth scanning" to settings.global(BLE_SCAN_ALWAYS_AVAILABLE),
         )
         val evidence = listOf(
-            switches[0].second.settingEvidence(WIFI_SCAN_ALWAYS_AVAILABLE),
-            switches[1].second.settingEvidence(BLE_SCAN_ALWAYS_AVAILABLE),
+            switches[0].second.scanEvidence(WIFI_SCAN_ALWAYS_AVAILABLE),
+            switches[1].second.scanEvidence(BLE_SCAN_ALWAYS_AVAILABLE),
         )
-        val states = switches.map { (name, reading) -> name to (reading as? Reading.Value)?.let { switchState(it.value) } }
+        // A key that was read but never written is off: Android's Wi-Fi and Bluetooth services both
+        // read these with 0 as the default. Samsung phones leave the Bluetooth one unset.
+        val states = switches.map { (name, reading) ->
+            name to (reading as? Reading.Value)?.let { switchState(it.value).let { state -> if (state == SwitchState.UNSET) SwitchState.OFF else state } }
+        }
 
         val on = states.filter { it.second == SwitchState.ON }.map { it.first }
         if (on.isNotEmpty()) {
@@ -48,6 +52,10 @@ class ScanningCheck(private val settings: SystemSettings) : Check {
         }
         val unclear = states.filter { it.second != SwitchState.OFF }.map { it.first }
         return Outcome.unknown("Could not tell whether ${unclear.joinToString(" or ")} is on", evidence)
+    }
+
+    private fun Reading<String?>.scanEvidence(key: String) = settingEvidence(key).let {
+        if (this is Reading.Value && value == null) it.copy(note = "not set, which Android treats as off") else it
     }
 
     companion object {
