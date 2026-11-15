@@ -46,7 +46,7 @@ Most checks need nothing. More access unlocks more checks; each tier also runs t
 | Base | none | everything public Android APIs can read |
 | ADB | two grants from a computer, once | `dumpsys` checks: special app access, Smart Lock, background camera, microphone and location use, Wi-Fi privacy, hotspot security, call forwarding |
 | Shizuku | the [Shizuku](https://github.com/RikkaApps/Shizuku) app | settings Android hides from apps: SELinux, SIM PIN, always-on VPN lockdown, passkey providers, mobile network encryption |
-| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network, premium SMS access |
+| Root | opt-in switch in the app | trusted computers, apps with root, root modules, apps listening on the network, premium SMS access, Quick Share visibility |
 
 **⋮ › Check catalog** shows which tiers are active and how to set up the rest. Shizuku and root run
 only a fixed set of read-only commands, and root stays off until you turn it on.
@@ -90,13 +90,15 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 
 ## In the media
 
-- English: [Android Authority](…)
-- Russian: [AndroidInsider.ru](…) · [Trashbox.ru](…)
-- Chinese: [驱动中国 (Qudong)](…) · [Tencent News](…)
-- Turkish: [Teknoblog](…)
-- Czech: [ITTB.cz](…)
-- Lithuanian: [iBlog.lt](…)
-- Video (German, English subtitles): [CH3 on YouTube](…)
+- English: [Android Authority](https://www.androidauthority.com/droynis-open-source-android-security-app-3731115/)
+- Russian: [AndroidInsider.ru](https://androidinsider.ru/obzory-prilozhenij/nashyol-prilozhenie-dlya-proverki-android-ono-obnaruzhilo-5-opasnyh-nastroek.html) · [Trashbox.ru](https://trashbox.ru/topics/222847/droynis-0.17.0)
+- Ukrainian: [Mezha.net](https://mezha.net/eng/news/mezha-1ba92eaa6e0246c5f1b9dab6)
+- Portuguese: [GD Eurisko](https://gd.eurisko.com.br/2026/11/08/droynis-o-app-gratuito-que-revela-falhas-de-seguranca-no-seu-android)
+- Chinese: [驱动中国 (Qudong)](https://m.qudong.com/index.php/article/529105.html) · [Tencent News](https://news.qq.com/rain/a/20261109A0B0JO00)
+- Turkish: [Teknoblog](https://www.teknoblog.com/droynis-android-guvenlik-90-kontrol)
+- Czech: [ITTB.cz](https://ittb.cz/2026/11/08/mate-android-opravdu-zabezpeceny-bezplatna-aplikace-proveri-90-veci-ktere-mozna-prehlizite/)
+- Lithuanian: [iBlog.lt](https://iblog.lt/gidai/droynis-tikrina-telefono-sauguma-bet-nustatymu-nekeicia/)
+- Video (German, English subtitles): [CH3 on YouTube](https://www.youtube.com/watch?v=pE8tvQCQzJ0)
 
 ## More
 
