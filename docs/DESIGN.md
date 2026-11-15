@@ -171,7 +171,8 @@ several model numbers is one entry.
   `INTERNET`) and the current version has a changelog. Tags run the signed, attested release, which
   refuses an unexpected signing certificate. The reproducible-build check runs on tags, weekly and
   on pull requests that touch the build; the emulator tests run weekly and by hand.
-- Supply chain: every GitHub Action is pinned to a commit. zizmor audits the workflows and OpenSSF
-  Scorecard the repository; dependency review checks pull requests. Gradle dependency verification
+- Supply chain: every GitHub Action is pinned to a commit. zizmor audits the workflows, CodeQL the
+  code and OpenSSF Scorecard the repository; dependency review checks pull requests, and
+  Dependabot proposes only releases at least a week old. Gradle dependency verification
   is off until `gradle/verification-metadata.xml` is committed
   ([RELEASING.md](RELEASING.md#dependency-verification)).
