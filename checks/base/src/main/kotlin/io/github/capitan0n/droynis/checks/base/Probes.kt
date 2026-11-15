@@ -35,7 +35,22 @@ interface BuildInfo {
 
     /** Descriptive facts for the device card and reports. Never includes hardware identifiers. */
     fun device(): DeviceSummary
+
+    /** What the public `Build` fields say about the processor. Names a chip model, never one phone. */
+    fun chip(): ChipInfo
 }
+
+/** The processor as `Build` names it; a field is null when Android doesn't fill it in. */
+data class ChipInfo(
+    /** `Build.SOC_MANUFACTURER` (Android 12+), e.g. "Mediatek" or "QTI". */
+    val socManufacturer: String?,
+    /** `Build.SOC_MODEL` (Android 12+), e.g. "MT6878" or "SM8450". */
+    val socModel: String?,
+    /** `Build.HARDWARE` (`ro.hardware`): the chip on MediaTek and Exynos phones ("mt6765"), "qcom" on Qualcomm's. */
+    val hardware: String?,
+    /** `Build.BOARD` (`ro.product.board`): the board, such as Samsung's "universal8890" or a device codename. */
+    val board: String?,
+)
 
 data class DeviceSummary(
     val manufacturer: String,
@@ -286,6 +301,23 @@ interface AttestationProbe {
     fun attest(): Reading<KeyAttestation>
 }
 
+/** StrongBox: a separate security chip that keeps keys, such as the Titan M in Pixels. */
+interface StrongBoxProbe {
+    /**
+     * `PackageManager.FEATURE_STRONGBOX_KEYSTORE` (Android 9+): its version when the phone declares it
+     * (0 on Keymaster-era StrongBox, the KeyMint version after), `Value(null)` when it doesn't.
+     * Unsupported below Android 9.
+     */
+    fun feature(): Reading<Int?>
+
+    /**
+     * Creates a throwaway key in StrongBox (`setIsStrongBoxBacked(true)`) with an attestation
+     * certificate and reports what it says. Unsupported when Android answers there is no StrongBox
+     * (`StrongBoxUnavailableException`) and below Android 9.
+     */
+    fun attest(): Reading<KeyAttestation>
+}
+
 data class WebViewInfo(
     val packageName: String,
     val versionName: String,
@@ -436,19 +468,12 @@ data class AppFootprint(
     val signerSubjects: List<String> = emptyList(),
     /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
     val signerSha1: List<String> = emptyList(),
-    /**
-     * False for an app that is installed but disabled (`pm disable-user`, an app freezer). It can't run
-     * or show an icon, so the checks about hiding leave it out; the checks that match what an app is
-     * (a listed package, a signing key) still read it.
-     */
-    val enabled: Boolean = true,
 )
 
 interface AppFootprintProbe {
     /**
-     * Every app that isn't part of the system image (updates of system apps excluded too), except
-     * Droynis itself; disabled apps are included and say so ([AppFootprint.enabled]). Draws each
-     * enabled app drawer icon once, so it is cached for a scan.
+     * Every enabled app that isn't part of the system image (updates of system apps excluded too),
+     * except Droynis itself. Draws each enabled app drawer icon once, so it is cached for a scan.
      */
     fun userApps(): Reading<List<AppFootprint>>
 
@@ -480,8 +505,7 @@ data class ScreenUse(val packageName: String, val times: Int, val lastShown: Ins
 interface UsageHistoryProbe {
     /**
      * Droynis may read the usage history: its usage-access app-op is allowed (Settings › Usage access),
-     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb, or its Shizuku
-     * or root shell is connected, which reads the history as the shell user. Without any of them
+     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb. Without it
      * Android returns an empty history rather than an error, so ask this first.
      */
     fun hasAccess(): Reading<Boolean>
@@ -523,13 +547,6 @@ data class ProfileState(
 interface ProfileProbe {
     /** Needs no permission: Android answers any app about its own profile group. */
     fun state(): Reading<ProfileState>
-
-    /**
-     * What `dumpsys user` prints, which lists every user and profile of the phone, the ones outside
-     * this user's group included ([UserDump] reads it). Apps may not run it: it is read with the adb
-     * grants or through Shizuku or root, and is `Unavailable` without them.
-     */
-    fun usersDump(): Reading<String>
 
     /**
      * `DevicePolicyManager.isOrganizationOwnedDeviceWithManagedProfile()` (Android 11+): an
@@ -600,6 +617,7 @@ interface BaseProbes {
     val properties: SystemProperties
     val files: FileProbe
     val attestation: AttestationProbe
+    val strongBox: StrongBoxProbe
     val webView: WebViewProbe
     val permissions: PermissionProbe
     val defaultApps: DefaultAppsProbe

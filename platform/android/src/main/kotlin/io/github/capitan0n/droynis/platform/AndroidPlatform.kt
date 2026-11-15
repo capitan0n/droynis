@@ -29,6 +29,7 @@ import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
 import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
+import io.github.capitan0n.droynis.checks.base.StrongBoxProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
@@ -77,6 +78,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val properties: SystemProperties = AndroidSystemProperties
     override val files: FileProbe = AndroidFiles
     override val attestation: AttestationProbe = AndroidAttestation
+    override val strongBox: StrongBoxProbe = AndroidStrongBox(app)
     override val webView: WebViewProbe = AndroidWebView
     private val androidPermissions = AndroidPermissions(app)
     override val permissions: PermissionProbe = androidPermissions
@@ -90,12 +92,12 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val packageDetails: PackageDetailsProbe = AndroidPackageDetails(app)
     private val appFootprints = AndroidAppFootprint(app)
     override val footprints: AppFootprintProbe = appFootprints
-    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
+    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
     override val modules: ModuleProbe = AndroidModules(app)
+    override val profiles: ProfileProbe = AndroidProfiles(app)
     override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
-    override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells
 
     /** Not a check: feeds the permission overview on the Tools screen. */
