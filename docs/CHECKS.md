@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-104 checks. Each one's full explanation and fix are in the app: tap the check.
+105 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -14,9 +14,9 @@
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
 | [Apps and permissions](#apps-and-permissions) | 20 | 7 | 2 | 3 | 32 |
-| [Suspicious apps](#suspicious-apps) | 7 | 4 | – | – | 11 |
+| [Suspicious apps](#suspicious-apps) | 8 | 4 | – | – | 12 |
 | [Network and radios](#network-and-radios) | 12 | 6 | 3 | 1 | 22 |
-| **All** | 69 | 18 | 9 | 8 | 104 |
+| **All** | 70 | 18 | 9 | 8 | 105 |
 
 ## Device integrity
 
@@ -31,8 +31,8 @@
 | INTG-1030 | Advanced Protection (Android 16+) | Base | Info | Advanced Protection is off |
 | INTG-1031 | Managed by an organization | Base | Info | a device or profile owner manages this user, or an organization owns the phone (information only; a warning when the owner came from outside an app store) |
 | INTG-1040 | Bootloader lock | Base | Critical | the bootloader is unlocked or verified boot isn't passing (hardware key attestation, boot properties as a fallback) |
-| INTG-1041 | OEM unlocking | Base | Notice | the OEM unlocking switch is on |
-| INTG-1050 | Root access | Base | Critical | an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found |
+| INTG-1041 | OEM unlocking | Base | Notice | the OEM unlocking switch is on (not applicable once the bootloader is unlocked) |
+| INTG-1050 | Root access | Base | Critical | an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found, or Droynis itself was given a root shell |
 | INTG-1060 | Android build | Base | Warning | it's a userdebug or eng build, signed with the public test keys, or ro.debuggable=1 (critical when ro.adb.secure=0 lets adb in without authorization) |
 | INTG-1070 | WebView updates | Base | Warning | WebView hasn't been updated for more than 60 days, or its Chromium version is older than that |
 | INTG-1080 | Time since restart | Base | Notice | the phone hasn't restarted for more than 7 days |
@@ -85,9 +85,9 @@
 | APPS-4012 | Apps with location all the time (Android 10+) | Base | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
 | APPS-4013 | Apps that skip battery optimization | Base | Info | an app you installed may skip battery optimization (information only) |
 | APPS-4014 | Google Play services | Base | Info | Google Play services is built into the system, with privileged access (information only) |
-| APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier (Play Protect) is turned off |
+| APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier is turned off, or Play Protect's "Scan apps" switch is |
 | APPS-4016 | Apps with Shizuku access | Base | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store, or Shizuku runs as root) |
-| APPS-4017 | Profiles this scan doesn't cover | Base | Info | another profile shares this user, or Droynis doesn't run in the phone's main user (information only) |
+| APPS-4017 | Profiles this scan doesn't cover | Base | Info | another profile shares this user, Droynis doesn't run in the phone's main user, or (ADB tier and up) the phone has another user or profile (information only) |
 | APPS-4018 | Apps that allow unencrypted connections | Base | Info | an app you installed has network access and declares that it may connect without encryption (information only) |
 | APPS-4019 | Apps that can run commands through Termux or Tasker | Base | Notice | another app may run commands in Termux or start Tasker tasks (a warning when it came from outside an app store) |
 | APPS-4020 | Apps with system permissions granted over adb | Base | Warning | an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS, which only adb, Shizuku or root can grant |
@@ -115,6 +115,7 @@
 | SUSP-5005 | Apps with banking-trojan permissions | Base | Warning | an installed app declares an accessibility service and asks for SMS and to draw over other apps (critical when it came from outside an app store or its accessibility service is on) |
 | SUSP-5006 | Apps signed with a debug or test key | Base | Notice | a user app is signed with Android's debug key or a public test key (warning for a test key, or a debug key on an app that isn't debuggable) |
 | SUSP-5007 | Known stalkerware and monitoring apps | Base | Warning | an app you installed has the package name or signing key of an app on Echap's Stalkerware Indicators list (critical for stalkerware, warning for a monitoring app that doesn't hide) |
+| SUSP-5008 | Apps using a built-in app's name | Base | Notice | an app from outside an app store shows the same name as an app that came with the phone (a warning when that app is a core one, such as Settings or Google Play services) |
 | SUSP-5101 | Hidden apps running in the background (Android 10+) | ADB | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
 | SUSP-5102 | Background camera, microphone and location use (Android 10+) | ADB | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
 | SUSP-5103 | Apps that can record the screen without asking (Android 10+) | ADB | Warning | a user app may record or cast the screen without asking |

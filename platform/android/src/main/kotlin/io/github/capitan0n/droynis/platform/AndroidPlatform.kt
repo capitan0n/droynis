@@ -92,12 +92,12 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val packageDetails: PackageDetailsProbe = AndroidPackageDetails(app)
     private val appFootprints = AndroidAppFootprint(app)
     override val footprints: AppFootprintProbe = appFootprints
-    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
+    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
     override val modules: ModuleProbe = AndroidModules(app)
-    override val profiles: ProfileProbe = AndroidProfiles(app)
     override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
+    override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells
 
     /** Not a check: feeds the permission overview on the Tools screen. */
