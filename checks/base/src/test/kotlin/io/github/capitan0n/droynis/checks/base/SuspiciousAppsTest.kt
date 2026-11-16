@@ -428,6 +428,6 @@ class SuspiciousAppsTest {
     @Test
     fun `the registry runs the base suspicious apps checks in id order`() {
         val ids = baseChecks(FakeProbes()).filter { it.spec.category == Category.SUSPICIOUS_APPS }.map { it.spec.id }
-        assertEquals((5001..5008).map { "SUSP-$it" }, ids)
+        assertEquals((5001..5010).map { "SUSP-$it" }, ids)
     }
 }

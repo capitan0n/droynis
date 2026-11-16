@@ -27,8 +27,10 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.ScreenCaptureProbe
 import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
+import io.github.capitan0n.droynis.checks.base.StoreKeys
 import io.github.capitan0n.droynis.checks.base.StrongBoxProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
@@ -65,7 +67,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val settings: SystemSettings = ShellBackedSettings(AndroidSettings(app.contentResolver), shells)
     override val keyguard: Keyguard = AndroidKeyguard(app)
     override val build: BuildInfo = AndroidBuildInfo
-    private val androidPackages = AndroidPackages(app)
+    private val androidPackages = AndroidPackages(app, signersOf = StoreKeys.PACKAGES)
     override val packages: PackageInventory = androidPackages
     private val devicePolicy = AndroidDevicePolicy(app, packages::label)
     override val policy: DevicePolicy = devicePolicy
@@ -95,6 +97,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
     override val modules: ModuleProbe = AndroidModules(app)
     override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
+    override val screenCapture: ScreenCaptureProbe = AndroidScreenCapture(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)

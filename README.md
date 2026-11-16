@@ -116,6 +116,10 @@ Droynis is GPL-3.0-or-later ([LICENSE](LICENSE)), by Alexandros (capitan0n) ·
 It is an independent project, not affiliated with, endorsed by or connected to
 [Lynis](https://cisofy.com/lynis/) or CISOfy, and shares no code with it.
 
+SUSP-5009 compares app stores with the signing keys they publish. The keys of the Samsung, Huawei,
+Xiaomi, OPPO, vivo and Amazon stores come from [Ruam Mij](https://github.com/akexorcist/ruam-mij-android)
+(Apache-2.0), whose screen-sharing check also inspired SUSP-5010.
+
 The stalkerware check uses [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators)
 by [Echap](https://echap.eu.org/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 Only app names, package names and signing-certificate fingerprints are kept

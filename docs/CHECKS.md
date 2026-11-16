@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-106 checks. Each one's full explanation and fix are in the app: tap the check.
+108 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -14,9 +14,9 @@
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
 | [Apps and permissions](#apps-and-permissions) | 20 | 7 | 2 | 3 | 32 |
-| [Suspicious apps](#suspicious-apps) | 8 | 4 | – | – | 12 |
+| [Suspicious apps](#suspicious-apps) | 10 | 4 | – | – | 14 |
 | [Network and radios](#network-and-radios) | 12 | 6 | 3 | 2 | 23 |
-| **All** | 70 | 18 | 9 | 9 | 106 |
+| **All** | 72 | 18 | 9 | 9 | 108 |
 
 ## Device integrity
 
@@ -116,6 +116,8 @@
 | SUSP-5006 | Apps signed with a debug or test key | Base | Notice | a user app is signed with Android's debug key or a public test key (warning for a test key, or a debug key on an app that isn't debuggable) |
 | SUSP-5007 | Known stalkerware and monitoring apps | Base | Warning | an app you installed has the package name or signing key of an app on Echap's Stalkerware Indicators list (critical for stalkerware, warning for a monitoring app that doesn't hide) |
 | SUSP-5008 | Apps using a built-in app's name | Base | Notice | an app from outside an app store shows the same name as an app that came with the phone (a warning when that app is a core one, such as Settings or Google Play services) |
+| SUSP-5009 | Apps posing as an app store | Base | Warning | a user app uses the package name of an app store whose signing keys Droynis knows, but none of them (critical when it has installed other apps) |
+| SUSP-5010 | Screen being recorded or shared | Base | Warning | the screen is being recorded or shared while Droynis scans (Android 15+), or an app you installed shows the screen on a display of its own (critical when that app came from outside an app store) |
 | SUSP-5101 | Hidden apps running in the background (Android 10+) | ADB | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
 | SUSP-5102 | Background camera, microphone and location use (Android 10+) | ADB | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
 | SUSP-5103 | Apps that can record the screen without asking (Android 10+) | ADB | Warning | a user app may record or cast the screen without asking |

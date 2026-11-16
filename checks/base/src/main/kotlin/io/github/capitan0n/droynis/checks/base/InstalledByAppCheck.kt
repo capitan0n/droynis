@@ -107,11 +107,11 @@ class InstalledByAppCheck(private val packages: PackageInventory) : Check {
          * [installer] is another app the user installed: not the app itself (self-updates), not an
          * app store or installer tool, and not part of the system (the package installer, the shell
          * for adb, a vendor's store). An installer missing from the list counts: a dropper can remove
-         * itself once its payload is in.
+         * itself once its payload is in. An app that uses a store's name without its key counts too.
          */
         fun isOtherApp(packageName: String, installer: String, inventory: Map<String, InstalledApp>): Boolean =
             installer != packageName &&
-                !UnknownSourceAppsCheck.isStoreInstaller(installer) &&
+                (!UnknownSourceAppsCheck.isStoreInstaller(installer) || StoreKeys.isImpostor(installer, inventory)) &&
                 installer !in UnknownSourceAppsCheck.OS_INSTALLERS &&
                 installer !in INSTALLER_TOOLS &&
                 inventory[installer]?.isSystem != true

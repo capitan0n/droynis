@@ -75,13 +75,18 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
         return when {
             installer == null -> "installed from a file or over adb"
             installer == app.packageName -> "installed and updated by itself"
+            StoreKeys.isImpostor(installer, inventory) ->
+                "installed by ${packages.label(installer)} ($installer), which uses an app store's name without its signing key"
             installer in inventory -> "installed by ${packages.label(installer)} ($installer)"
             else -> "installed by $installer, which is not installed"
         }
     }
 
     companion object {
-        /** Installer packages of app stores and FOSS updaters treated as known sources. */
+        /**
+         * Installer packages of app stores and FOSS updaters treated as known sources. Each has an
+         * entry in [StoreKeys]: a user-installed copy counts only when its signing key checks out.
+         */
         val KNOWN_STORES = setOf(
             "com.android.vending", // Google Play
             "org.fdroid.fdroid", // F-Droid
@@ -95,6 +100,10 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
             "com.huawei.appmarket", // AppGallery
             "com.amazon.venezia", // Amazon Appstore
             "com.xiaomi.mipicks", // Xiaomi GetApps
+            "com.xiaomi.market", // Xiaomi App Store
+            "com.heytap.market", // OPPO, OnePlus and realme App Market
+            "com.vivo.appstore", // vivo App Store
+            "com.bbk.appstore", // vivo App Store, older name
             "foundation.e.apps", // App Lounge (/e/OS)
         )
 

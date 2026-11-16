@@ -35,6 +35,8 @@ how each one reads its value is in the KDoc of its class.
 | A saved Wi-Fi network doesn't record which cipher its access point uses. | NETW-3105 fails only on WEP, which has its own security type. WPA with TKIP shares a type with WPA2 and is not judged. |
 | An app's network security config is private to it. | APPS-4018 reads only the manifest's cleartext flag on apps that hold INTERNET: a sign in both directions, so information only. |
 | A blocking binder call can't be interrupted. | Each check runs detached and races a timeout: a hang costs one thread, not the scan. |
+| Android records an app's installer by package name only, and any app can take a store's package name on a phone where that store isn't installed. | `StoreKeys` holds the SHA-256 signing keys each store publishes, with their sources. A store installed as a user app counts as a store only when its key matches, or a genuine store installed it; one that came with the phone counts as it is. A store that also ships builds signed by others (F-Droid's own build of Aurora Store or Droid-ify) is unverified, not fake, and counts as before. SUSP-5009 lists the fakes. |
+| Android 15+ tells an app only whether its *own* screen is in a recording or screen share, and only while it is on screen. It never says who records, and older releases say nothing. A private virtual display, the default for screen recorders, is visible only to the app that made it. | SUSP-5010 asks while Droynis is on screen, so a scheduled scan is UNKNOWN. Displays other apps made public name the likely app through `Display.getOwnerPackageName()`, a hidden method read by reflection or from `Display.toString()`. Before Android 15 such a display can fail the check, but nothing can pass it: N/A. |
 | Calling an API newer than the phone crashes. | `CheckSpec.minSdk` decides whether a check runs; runtime probing handles missing settings and OEM differences. Probes return a `Reading`, never throw. |
 
 ## Modules
@@ -137,6 +139,12 @@ are looked at, since system apps without an icon are normal. Every finding names
 - **Borrowed names (SUSP-5008):** a user app showing the same name as a system app, compared without
   case, extra space or invisible characters. Counted only from outside an app store; a warning when
   the name is a core app's, such as Settings, which is what a hidden Magisk app is called.
+- **Fake app stores (SUSP-5009):** a user app with an app store's package name whose signing key is
+  none of that store's published keys (`StoreKeys`), when Droynis knows all of them. Apps it installed
+  count as sideloaded everywhere, and SUSP-5004 lists them; critical once it has installed any.
+- **Screen capture (SUSP-5010):** Android 15's answer for Droynis' own screen while it scans, and
+  the apps that made a display Droynis can see. Displays the system made, and physical screens,
+  don't count; with Android's answer at hand, a display counts only while the screen is recorded.
 - **Not covered:** hidden root (DenyList, Shamiko), ad SDKs inside normal apps, apps posing as
   system apps by name and icon, and any code scanning.
 
