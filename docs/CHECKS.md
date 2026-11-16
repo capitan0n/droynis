@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-105 checks. Each one's full explanation and fix are in the app: tap the check.
+106 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -15,8 +15,8 @@
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
 | [Apps and permissions](#apps-and-permissions) | 20 | 7 | 2 | 3 | 32 |
 | [Suspicious apps](#suspicious-apps) | 8 | 4 | – | – | 12 |
-| [Network and radios](#network-and-radios) | 12 | 6 | 3 | 1 | 22 |
-| **All** | 70 | 18 | 9 | 8 | 105 |
+| [Network and radios](#network-and-radios) | 12 | 6 | 3 | 2 | 23 |
+| **All** | 70 | 18 | 9 | 9 | 106 |
 
 ## Device integrity
 
@@ -147,3 +147,4 @@
 | NETW-3202 | Mobile network encryption (Android 14+) | Shizuku | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
 | NETW-3203 | Mobile network security alerts (Android 15+) | Shizuku | Notice | the phone doesn't warn about signs of a fake cell tower (Network notifications are off) |
 | NETW-3301 | Apps listening on the network | Root | Notice | a user app accepts connections from the network |
+| NETW-3302 | Quick Share visibility | Root | Notice | Quick Share (Nearby Share) is visible to everyone nearby |

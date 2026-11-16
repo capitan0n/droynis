@@ -4,6 +4,8 @@ import android.content.Context
 import android.os.Process
 import io.github.capitan0n.droynis.checks.root.PremiumSmsCheck
 import io.github.capitan0n.droynis.checks.root.ProcNet
+import io.github.capitan0n.droynis.checks.root.QuickShareCheck
+import io.github.capitan0n.droynis.checks.root.QuickSharePrefs
 import io.github.capitan0n.droynis.checks.root.RootManager
 import io.github.capitan0n.droynis.checks.root.RootModules
 import io.github.capitan0n.droynis.checks.root.RootShellProbe
@@ -216,6 +218,17 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
                 else -> failed(exit, output, source)
             }
         }
+
+    override fun quickShareSettings(): Reading<String?> {
+        val user = Process.myUid() / PER_USER_RANGE
+        return read("cat Quick Share settings (${QuickShareCheck.GMS})", quickShare(user)) { exit, output, source ->
+            when (exit) {
+                0 -> Reading.Value(output, source)
+                MISSING -> Reading.Value(null, source)
+                else -> failed(exit, output, source)
+            }
+        }
+    }
 
     override fun readSetting(table: String, key: String): Reading<String?> {
         if (table !in TABLES || !KEY.matches(key)) {
@@ -437,6 +450,17 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
          */
         val PREMIUM_SMS = "( f=${PremiumSmsCheck.POLICY_FILE}; [ -e \"\$f\" ] || exit $MISSING; " +
             "if [ \"\$(head -c 3 \"\$f\")\" = ABX ]; then abx2xml \"\$f\" -; else cat \"\$f\"; fi )"
+
+        /**
+         * Prints Play services' Quick Share settings files for [user], each after a
+         * [QuickSharePrefs.FILE] line with its name. Paths are fixed; the user id is a number Android
+         * gave Droynis, and the only variable part is the shell glob. Binary XML is turned back into
+         * text, as for [PREMIUM_SMS].
+         */
+        fun quickShare(user: Int) = "( d=/data/user/$user/${QuickShareCheck.GMS}/shared_prefs; " +
+            "[ -d \"\$d\" ] || exit $MISSING; for f in \"\$d\"/nearbysharing*.xml; do [ -f \"\$f\" ] || continue; " +
+            "echo \"${QuickSharePrefs.FILE}\${f##*/}\"; " +
+            "if [ \"\$(head -c 3 \"\$f\")\" = ABX ]; then abx2xml \"\$f\" -; else cat \"\$f\"; fi; echo; done; true )"
 
         fun ifExists(path: String) = "( [ -e $path ] || exit $MISSING; cat $path )"
 

@@ -19,4 +19,5 @@ fun rootChecks(probes: RootProbes): List<Check> = listOf(
     PremiumSmsCheck(probes.root, probes.packages),
     // Network
     ListeningAppsCheck(probes.root, probes.packages),
+    QuickShareCheck(probes.root, probes.packages),
 )

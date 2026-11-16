@@ -40,6 +40,7 @@ class RootChecksTest {
         var tempFiles: Reading<String> = Reading.Value("", Source("su")),
         var net: Map<ProcNet, Reading<String>> = ProcNet.entries.associateWith { Reading.Value(HEADER, Source("su")) },
         var premiumSms: Reading<String?> = Reading.Value(null, Source("su")),
+        var quickShare: Reading<String?> = Reading.Value(null, Source("su")),
     ) : RootShellProbe {
         override fun adbKeys() = keys
         override fun modules() = modules
@@ -51,6 +52,7 @@ class RootChecksTest {
         override fun tempFiles() = tempFiles
         override fun procNet(table: ProcNet) = net.getValue(table)
         override fun premiumSmsPolicy() = premiumSms
+        override fun quickShareSettings() = quickShare
     }
 
     private val packages = object : PackageInventory {
@@ -68,7 +70,7 @@ class RootChecksTest {
         ).map { it.spec }
 
         assertEquals(
-            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "APPS-4303", "NETW-3301"),
+            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "APPS-4303", "NETW-3301", "NETW-3302"),
             specs.map { it.id },
         )
         assertEquals(setOf(Tier.ROOT), specs.map { it.requiredTier }.toSet())

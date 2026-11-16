@@ -66,6 +66,14 @@ interface RootShellProbe {
      * format [PremiumSmsPolicies.parse] reads; `Value(null)` when the file doesn't exist.
      */
     fun premiumSmsPolicy(): Reading<String?>
+
+    /**
+     * Google Play services' Quick Share settings for this user: each
+     * `/data/user/<user>/com.google.android.gms/shared_prefs/nearbysharing*.xml` as text after a
+     * [QuickSharePrefs.FILE] line, in the format [QuickSharePrefs.parse] reads; `Value(null)` when Play
+     * services has no settings folder.
+     */
+    fun quickShareSettings(): Reading<String?>
 }
 
 /** Everything the root-tier checks read. Implemented by :platform-android. */
