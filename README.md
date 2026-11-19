@@ -5,6 +5,8 @@ A read-only security and privacy audit for Android, inspired by Lynis (Android +
 checks the phone it runs on, explains every finding, shows the evidence and opens the Settings
 screen that fixes it. It never changes anything itself.
 
+[Visit the Droynis website](https://capitan0n.github.io/droynis/)
+
 - **100+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
   apps, network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
 - **Private:** no `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the
@@ -116,13 +118,6 @@ Droynis is GPL-3.0-or-later ([LICENSE](LICENSE)), by Alexandros (capitan0n) ·
 It is an independent project, not affiliated with, endorsed by or connected to
 [Lynis](https://cisofy.com/lynis/) or CISOfy, and shares no code with it.
 
-SUSP-5009 compares app stores with the signing keys they publish. The keys of the Samsung, Huawei,
-Xiaomi, OPPO, vivo and Amazon stores come from [Ruam Mij](https://github.com/akexorcist/ruam-mij-android)
-(Apache-2.0), whose screen-sharing check also inspired SUSP-5010.
-
-The stalkerware check uses [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators)
-by [Echap](https://echap.eu.org/), under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
-Only app names, package names and signing-certificate fingerprints are kept
-([scripts/update-stalkerware-indicators.py](scripts/update-stalkerware-indicators.py)). Echap gives
-no guarantee that the list is accurate, and asks those who find it useful to consider donating to an
-organization that supports women facing violence in their country.
+The stalkerware check uses [Echap](https://echap.eu.org/)’s [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+The [import script](scripts/update-stalkerware-indicators.py) keeps only app names, package names and signing-certificate fingerprints.
+Echap gives no accuracy guarantee and encourages donations to local groups supporting women facing violence.
