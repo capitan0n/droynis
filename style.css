@@ -175,3 +175,38 @@ body{background:var(--bg);color:var(--ink)}
 .author-email .text-link { color: var(--accent) }
 .author-email button { background: transparent; border: 0; padding: .25em 0; font: inherit; cursor: pointer }
 .author-email button[hidden] { display: none }
+
+/* The button text names the control for screen readers. Draw its mobile icon
+   from the same expanded state that controls the navigation. */
+@media (max-width: 760px) {
+  .js .menu-button {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 0;
+    flex-shrink: 0;
+  }
+  .js .menu-button::before,
+  .js .menu-button::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 22px;
+    border-top: 2px solid currentColor;
+    transform: translate(-50%, -50%);
+  }
+  .js .menu-button[aria-expanded="false"]::before {
+    height: 16px;
+    box-sizing: border-box;
+    border-bottom: 2px solid currentColor;
+  }
+  .js .menu-button[aria-expanded="true"]::before {
+    transform: translate(-50%, -50%) rotate(45deg);
+  }
+  .js .menu-button[aria-expanded="true"]::after {
+    transform: translate(-50%, -50%) rotate(-45deg);
+  }
+}
