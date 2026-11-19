@@ -133,3 +133,17 @@ const dialog=document.getElementById('screenshot-dialog');let lastScreenshotButt
   document.addEventListener('visibilitychange', updateCycle);
   updateCycle();
 })();
+
+const revealEmail = document.getElementById('reveal-email');
+if (revealEmail) {
+  revealEmail.hidden = false;
+  revealEmail.addEventListener('click', () => {
+    const address = atob(revealEmail.dataset.contact);
+    const link = document.createElement('a');
+    link.className = 'text-link';
+    link.href = 'mailto:' + address;
+    link.textContent = address;
+    revealEmail.replaceWith(link);
+    link.focus();
+  }, { once: true });
+}
