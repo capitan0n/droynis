@@ -1,0 +1,19 @@
+Download provider logos
+
+github.svg — GitHub mark from Primer Octicons, by GitHub Inc.
+Upstream file: https://github.com/primer/octicons/blob/main/icons/mark-github-24.svg
+Git blob: 81949e7b460a7bbf1cb2431462f6bd947e32f0ce
+License: MIT, reproduced in octicons-LICENSE.txt. SVG supplied unchanged.
+
+fdroid.svg — F-Droid artwork from the Simple Icons collection, based on the F-Droid project logo.
+Upstream file: https://github.com/simple-icons/simple-icons/blob/develop/icons/fdroid.svg
+Git blob: 9e4e7204d0e9fcd1cd22eaaffe66c9af3de7c32b
+The collection identifies the F-Droid design as CC BY-SA 3.0.
+License: https://creativecommons.org/licenses/by-sa/3.0/
+Project: https://f-droid.org/
+SVG supplied unchanged.
+
+obtainium.png — Official app icon from the Obtainium project.
+Upstream file: https://github.com/ImranR98/Obtainium/blob/main/assets/graphics/icon_small.png
+Git blob: 6e6a126972dbb6b587e13827ca4bb486e58bf2a2
+Project license: GPLv3, reproduced in obtainium-LICENSE.txt. PNG supplied unchanged.
