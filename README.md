@@ -17,6 +17,8 @@ screen that fixes it. It never changes anything itself.
 > hides its icon. The one exception is a fixed list: it flags apps that match known stalkerware or
 > monitoring apps (SUSP-5007).
 
+> **Play Protect warning for Droynis 1.0.0.** Google Play Protect may block the F-Droid update with the message “Harmful app blocked.” I suspect the new stalkerware detection feature is triggering a false positive because it includes a list of known stalkerware identifiers. The exact cause is still unconfirmed. See [issue #17](https://github.com/capitan0n/droynis/issues/17) for the VirusTotal results and appeal status.
+
 ## Install
 
 Android 8.0 or later.
