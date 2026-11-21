@@ -48,7 +48,6 @@
     <string name="about_body">專為 Android 設計的安全性與隱私權稽核工具。它能讀取並解釋您的設定，且絕不會自行變更任何設定。</string>
     <string name="about_independent">Droynis 是一個獨立專案，與 Lynis 或 CISOfy 無任何關聯、未獲其認可亦無附屬關係；Lynis 僅作為具備強化評分且易於閱讀之稽核概念的靈感來源。</string>
     <string name="about_license">採用 GNU GPL v3.0 或後續版本授權的自由暨開源軟體。</string>
-    <string name="about_license_indicators">跟蹤軟體檢查（SUSP-5007）使用 Echap 的 Stalkerware Indicators（github.com/AssoEchap/stalkerware-indicators），採用 CC BY 4.0 授權。僅保留應用程式名稱、套件名稱與簽署金鑰指紋。Echap 不保證該清單的準確性。</string>
     <string name="about_what">Droynis 的功能</string>
     <string name="help_about_link">版本 %1$s · 開發者、原始碼與意見反應</string>
     <string name="about_author_title">開發者</string>

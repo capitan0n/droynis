@@ -64,7 +64,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     InstalledByAppCheck(probes.packages),
     TrojanPermissionsCheck(probes.footprints, probes.packages, probes.accessibility),
     TestKeyAppsCheck(probes.footprints, probes.packages),
-    StalkerwareCheck(probes.footprints, probes.packages),
+    StalkerwareCheck,
     SystemNameAppsCheck(probes.packages),
     StoreImpostorCheck(probes.packages),
     ScreenCaptureCheck(probes.screenCapture, probes.packages),

@@ -473,12 +473,9 @@ data class AppFootprint(
      * empty when they can't be read.
      */
     val signerSubjects: List<String> = emptyList(),
-    /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
-    val signerSha1: List<String> = emptyList(),
     /**
      * False for an app that is installed but disabled (`pm disable-user`, an app freezer). It can't run
-     * or show an icon, so the checks about hiding leave it out; the checks that match what an app is
-     * (a listed package, a signing key) still read it.
+     * or show an icon, so the checks about hiding leave it out; the debug/test signing-key check still reads it.
      */
     val enabled: Boolean = true,
 )

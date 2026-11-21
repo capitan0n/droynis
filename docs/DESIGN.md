@@ -6,8 +6,7 @@ how each one reads its value is in the KDoc of its class.
 ## Principles
 
 - **Read-only.** No check changes a setting. Shizuku and root run a fixed list of read commands.
-- **No network.** The APK has no `INTERNET` permission; CI fails the build if it ever does. Data
-  that would normally be downloaded, such as the stalkerware list, ships inside the app.
+- **No network.** The APK has no `INTERNET` permission; CI fails the build if it ever does.
 - **Never a false PASS.** A check passes only on a value it read. A value it can't read is UNKNOWN,
   a feature the phone lacks is UNSUPPORTED (N/A). Both are left out of the score.
 - **No identifiers.** No IMEI, serial, phone number or account names in evidence. Values that point
@@ -129,13 +128,10 @@ are looked at, since system apps without an icon are normal. Every finding names
   without an icon is only listed; a sideloaded app that hides is critical.
 - **Behaviour (ADB tier):** what out-of-sight apps did in the last 7 days, from `dumpsys activity
   services` and the app-ops history.
-- **Known stalkerware (SUSP-5007):** exact matches of package names and signing-certificate SHA-1s
-  against Echap's Stalkerware Indicators (CC BY 4.0), bundled and regenerated with
-  `scripts/update-stalkerware-indicators.py`. A key match beats a package name anyone can copy. It
-  finds known apps only.
+- **Known stalkerware (SUSP-5007)** stays in the catalog for continuity. It returns N/A without
+  reading packages or comparing indicators.
 - **Disabled apps:** an app that is installed but disabled can't run or show an icon, so the hiding
-  and behaviour checks leave it out and say how many they left out. The checks that match what an
-  app is (SUSP-5006, SUSP-5007) read it too.
+  and behaviour checks leave it out and say how many they left out. The debug/test signing-key check (SUSP-5006) includes disabled apps.
 - **Borrowed names (SUSP-5008):** a user app showing the same name as a system app, compared without
   case, extra space or invisible characters. Counted only from outside an app store; a warning when
   the name is a core app's, such as Settings, which is what a hidden Magisk app is called.

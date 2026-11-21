@@ -16,12 +16,20 @@ screen that fixes it. It never changes anything itself.
 
 > **Not an antivirus.** Droynis doesn't scan apps for malicious code or remove anything. It audits
 > how the phone is set up, and points out risky access and signs adware leaves, such as an app that
-> hides its icon. The one exception is a fixed list: it flags apps that match known stalkerware or
-> monitoring apps (SUSP-5007).
+> hides its icon.
 
 ## Install
 
 Android 8.0 or later.
+
+**Play Protect warning for 1.0.0.** Google Play Protect can block the F-Droid update with the
+message “Harmful app blocked.” We suspect the bundled stalkerware indicators may have triggered
+the warning. The cause is unconfirmed. See [issue #17](https://github.com/capitan0n/droynis/issues/17)
+for the VirusTotal results and appeal status.
+
+**Stalkerware detection in beta.** The catalog still lists SUSP-5007 as inactive. Its scan result
+reads “Currently not running by design.” This beta omits the detector and its list of package
+names and signing-certificate fingerprints. The check reports N/A and has no effect on the score.
 
 | Source | |
 |---|---|
@@ -117,7 +125,3 @@ Droynis is GPL-3.0-or-later ([LICENSE](LICENSE)), by Alexandros (capitan0n) ·
 
 It is an independent project, not affiliated with, endorsed by or connected to
 [Lynis](https://cisofy.com/lynis/) or CISOfy, and shares no code with it.
-
-The stalkerware check uses [Echap](https://echap.eu.org/)’s [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators) ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
-The [import script](scripts/update-stalkerware-indicators.py) keeps only app names, package names and signing-certificate fingerprints.
-Echap gives no accuracy guarantee and encourages donations to local groups supporting women facing violence.

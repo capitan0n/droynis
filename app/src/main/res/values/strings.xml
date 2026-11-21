@@ -48,7 +48,6 @@
     <string name="about_body">A security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
     <string name="about_independent">Droynis is an independent project. It is not affiliated with, endorsed by or connected to Lynis or CISOfy; Lynis was only the inspiration for a readable audit with a hardening score.</string>
     <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
-    <string name="about_license_indicators">The stalkerware check (SUSP-5007) uses Stalkerware Indicators by Echap (github.com/AssoEchap/stalkerware-indicators), licensed under CC BY 4.0. Only app names, package names and signing-key fingerprints are kept. Echap gives no guarantee that the list is accurate.</string>
     <string name="about_what">What Droynis does</string>
     <string name="help_about_link">Version %1$s · author, source code and feedback</string>
     <string name="about_author_title">Author</string>

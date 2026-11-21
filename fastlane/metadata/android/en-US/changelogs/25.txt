@@ -1,0 +1,1 @@
+The known stalkerware and monitoring apps check (SUSP-5007) is inactive by design in this beta. It appears as N/A in scan results and has no effect on the score. The detector and its package names and signing-certificate fingerprints have been removed.
