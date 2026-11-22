@@ -51,6 +51,9 @@ object SettingsActions {
     /** System API (`Settings.ACTION_TETHER_SETTINGS`): Hotspot & tethering. The AOSP Settings app exports it. */
     const val TETHERING = "android.settings.TETHER_SETTINGS"
 
+    /** `TelecomManager.ACTION_SHOW_CALL_SETTINGS`: the phone app's call settings, with Call forwarding. */
+    const val CALL_SETTINGS = "android.telecom.action.SHOW_CALL_SETTINGS"
+
     /** `Settings.ACTION_DATA_ROAMING_SETTINGS`: the Mobile network page, with network mode and Allow 2G. */
     const val MOBILE_NETWORK = "android.settings.DATA_ROAMING_SETTINGS"
 

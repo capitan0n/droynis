@@ -24,6 +24,9 @@ interface ShellAccess {
 
     /** [TelephonyReader]'s read, run as this shell's user. */
     fun telephony(): Reading<String>
+
+    /** [UsageReader]'s read since [sinceMillis] (epoch milliseconds), run as this shell's user. */
+    fun usage(sinceMillis: Long): Reading<String>
 }
 
 /**
@@ -49,4 +52,7 @@ internal class ShellRouter(
 
     fun telephony(): Reading<String> =
         active()?.telephony() ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("telephony service"))
+
+    fun usage(sinceMillis: Long): Reading<String> =
+        active()?.usage(sinceMillis) ?: Reading.Unavailable("neither Shizuku nor root is connected", Source("usage stats service"))
 }

@@ -168,7 +168,26 @@ class AppsChecksTest {
 
         assertEquals(Status.FAIL, outcome.status)
         assertEquals("2 apps from outside an app store: com.example.apk and com.example.adb", outcome.summary)
+        // The app is the value, who installed it the note.
+        val listed = outcome.evidence.filter { it.label == "From outside an app store" }
+        assertEquals(listOf("com.example.apk (com.example.apk)", "com.example.adb (com.example.adb)"), listed.map { it.value })
+        assertEquals("installed from a file or over adb", listed.last().note)
         assertEquals(Status.PASS, UnknownSourceAppsCheck(FakePackages(value(apps.take(3)))).status())
+    }
+
+    @Test
+    fun `Galaxy Wearable and the plug-ins it installs are not sideloaded`() = runTest {
+        // From a Galaxy A71: Galaxy Wearable updates itself and installs the earbuds plug-in.
+        val wearable = InstalledApp("com.samsung.android.app.watchmanager", isSystem = false, isDebuggable = false, installer = "com.samsung.android.app.watchmanager", targetSdk = 35)
+        val buds = InstalledApp("com.samsung.accessory.popcornmgr", isSystem = false, isDebuggable = false, installer = wearable.packageName, targetSdk = 35)
+        val apps = mapOf(wearable.packageName to wearable, buds.packageName to buds)
+
+        assertEquals(AppOrigin.STORE, originOf(wearable.packageName, apps))
+        assertEquals(AppOrigin.STORE, originOf(buds.packageName, apps))
+        assertEquals(Status.PASS, UnknownSourceAppsCheck(FakePackages(value(listOf(wearable, buds)))).status())
+        assertEquals(Status.PASS, InstalledByAppCheck(FakePackages(value(listOf(wearable, buds)))).status())
+        // It is no general app store: install-unknown-apps access (APPS-4104) still counts it.
+        assertEquals(false, wearable.packageName in UnknownSourceAppsCheck.KNOWN_STORES)
     }
 
     @Test

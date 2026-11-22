@@ -97,13 +97,40 @@ class DeviceStateChecksTest {
 
     @Test
     fun `oem unlocking`() = runTest {
-        suspend fun status(vararg props: Pair<String, String>) = OemUnlockingCheck(FakeProperties(*props)).status()
+        suspend fun status(vararg props: Pair<String, String>) = OemUnlockingCheck(FakeProperties(*props), FakeAttestation()).status()
 
         assertEquals(Status.FAIL, status("sys.oem_unlock_allowed" to "1"))
         assertEquals(Status.PASS, status("sys.oem_unlock_allowed" to "0"))
         assertEquals(Status.PASS, status("ro.oem_unlock_supported" to "0"))
         assertEquals(Status.UNKNOWN, status("ro.oem_unlock_supported" to "1"))
-        assertEquals(Status.UNKNOWN, OemUnlockingCheck(FakeProperties(unavailable())).status())
+        assertEquals(Status.UNKNOWN, OemUnlockingCheck(FakeProperties(unavailable()), FakeAttestation()).status())
+    }
+
+    @Test
+    fun `oem unlocking does not apply once the bootloader is unlocked`() = runTest {
+        // A rooted phone: the switch's property reads "0" and the boot properties are faked as locked.
+        val faked = FakeProperties(
+            "sys.oem_unlock_allowed" to "0",
+            "ro.boot.flash.locked" to "1",
+            "ro.boot.vbmeta.device_state" to "locked",
+        )
+        val unlocked = OemUnlockingCheck(faked, FakeAttestation(attested(locked = false))).outcome()
+        assertEquals(Status.UNSUPPORTED, unlocked.status)
+        assertEquals("The bootloader is already unlocked (INTG-1040), so this switch no longer protects anything", unlocked.summary)
+        assertEquals("false", unlocked.evidence.single { it.label == "Device locked (attested)" }.value)
+
+        // A locked bootloader leaves the switch to decide, whatever the properties say.
+        assertEquals(Status.PASS, OemUnlockingCheck(faked, FakeAttestation(attested(locked = true))).status())
+        assertEquals(
+            Status.FAIL,
+            OemUnlockingCheck(FakeProperties("sys.oem_unlock_allowed" to "1"), FakeAttestation(attested(locked = true))).status(),
+        )
+
+        // Without hardware attestation a property saying "unlocked" is believed, one saying "locked" is not.
+        val software = FakeAttestation(attested(locked = false, level = SecurityLevel.SOFTWARE))
+        assertEquals(Status.PASS, OemUnlockingCheck(faked, software).status())
+        val byProperty = FakeProperties("sys.oem_unlock_allowed" to "1", "ro.boot.vbmeta.device_state" to "unlocked")
+        assertEquals(Status.UNSUPPORTED, OemUnlockingCheck(byProperty, FakeAttestation()).status())
     }
 
     @Test
@@ -124,6 +151,16 @@ class DeviceStateChecksTest {
         assertEquals("Signs of root: Magisk installed", magisk.summary)
 
         assertEquals(Status.UNKNOWN, RootAccessCheck(FakeFiles(unavailable()), clean).status())
+
+        // The root tier is on: nothing else needs to be found, such as a Magisk app hidden under another name.
+        val rooted = scanContext().copy(capabilities = Capabilities(setOf(Grant.ROOT)))
+        val shell = RootAccessCheck(FakeFiles(), clean).run(rooted)
+        assertEquals(Status.FAIL, shell.status)
+        assertEquals("Signs of root: Droynis was given a root shell", shell.summary)
+        assertEquals("granted to Droynis", shell.evidence.first().value)
+        assertEquals(Status.FAIL, RootAccessCheck(FakeFiles(unavailable()), clean).run(rooted).status)
+        // Shizuku alone is no root.
+        assertEquals(Status.PASS, RootAccessCheck(FakeFiles(), clean).run(scanContext().copy(capabilities = Capabilities(setOf(Grant.SHIZUKU)))).status)
         assertEquals(Status.FAIL, RootAccessCheck(FakeFiles(value(listOf("/sbin/su"))), FakePackages(unavailable())).status())
     }
 

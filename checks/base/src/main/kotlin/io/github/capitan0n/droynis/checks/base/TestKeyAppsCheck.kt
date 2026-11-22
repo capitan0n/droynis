@@ -40,8 +40,8 @@ class TestKeyAppsCheck(
 
     override suspend fun run(context: ScanContext): Outcome {
         val apps = readSightings(footprints, packages) { return it }
-        val evidence = mutableListOf(apps.inspected())
-        val found = apps.all.mapNotNull { app -> keyOf(app.footprint.signerSubjects)?.let { app to it } }
+        val evidence = mutableListOf(apps.inspected(withDisabled = true))
+        val found = apps.installed.mapNotNull { app -> keyOf(app.footprint.signerSubjects)?.let { app to it } }
         if (found.isEmpty()) return Outcome.pass(NONE, evidence)
 
         val inventory = packages.byPackage().orEmpty()

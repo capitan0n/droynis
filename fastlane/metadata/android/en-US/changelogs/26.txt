@@ -1,0 +1,3 @@
+I removed the known-stalkerware check after Google Play Protect flagged Droynis 1.0.0. I believe the warning was a false alarm. The check now shows N/A and no longer affects your score.
+
+Droynis 1.1.0 adds 11 checks, including fake app stores and screen recording, and fixes misleading results for some installers and VPNs. Stay tuned for the next version!

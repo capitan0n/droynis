@@ -53,10 +53,14 @@ class FakeBuildInfo(
     private val type: String = "user",
     private val tags: String = "release-keys",
     private val built: Reading<Instant> = value(Instant.parse("2026-09-01T00:00:00Z")),
+    private val chip: ChipInfo = ChipInfo("QTI", "QCM6490", "qcom", "FP6"),
+    private val manufacturer: String = "Fairphone",
+    private val model: String = "FP6",
 ) : BuildInfo {
     override fun securityPatch() = patch
     override fun builtAt() = built
-    override fun device() = DeviceSummary("Fairphone", "FP6", "17", 37, "2026-09-05", "TEST.1", "6.6.0", type, tags)
+    override fun device() = DeviceSummary(manufacturer, model, "17", 37, "2026-09-05", "TEST.1", "6.6.0", type, tags)
+    override fun chip() = chip
 }
 
 class FakePolicy(
@@ -149,11 +153,27 @@ class FakeUptime(private val sinceBoot: Reading<Duration> = value(5.hours)) : Up
     override fun sinceBoot() = sinceBoot
 }
 
-/** By default a 128 GB phone with 64 GB free. */
+/** By default a 128 GB phone with 64 GB free and no SD card. */
 class FakeStorage(
     private val space: Reading<StorageSpace> = value(StorageSpace(totalBytes = 128_000_000_000, freeBytes = 64_000_000_000)),
+    private val removable: Reading<List<RemovableVolume>> = value(emptyList()),
 ) : StorageProbe {
     override fun internal() = space
+    override fun removableVolumes() = removable
+}
+
+/** By default Shizuku isn't running. */
+class FakeShizukuServer(private val server: Reading<ShizukuServer?> = value(null)) : ShizukuServerProbe {
+    override fun server() = server
+}
+
+/** By default Android 15+ says the screen isn't recorded, and there is no other display. */
+class FakeScreenCapture(
+    private val recording: Reading<ScreenRecording> = value(ScreenRecording.NOT_RECORDED),
+    private val displays: Reading<List<ExtraDisplay>> = value(emptyList()),
+) : ScreenCaptureProbe {
+    override fun recording() = recording
+    override fun extraDisplays() = displays
 }
 
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
@@ -187,6 +207,19 @@ fun attested(
     level: SecurityLevel = SecurityLevel.TRUSTED_ENVIRONMENT,
 ) = value(KeyAttestation(300, level, RootOfTrust(locked, state), osPatchLevel = 202609))
 
+/** By default a phone without StrongBox. */
+class FakeStrongBox(
+    private val feature: Reading<Int?> = value(null),
+    private val attestation: Reading<KeyAttestation> = unsupported("this phone has no StrongBox"),
+) : StrongBoxProbe {
+    /** How often a check asked for a StrongBox key: making one is slow. */
+    var attested = 0
+        private set
+
+    override fun feature() = feature
+    override fun attest() = attestation.also { attested++ }
+}
+
 class FakeWebView(private val info: Reading<WebViewInfo?> = value(null)) : WebViewProbe {
     override fun provider() = info
 }
@@ -206,6 +239,7 @@ class FakeProbes(
     override val properties: SystemProperties = FakeProperties(),
     override val files: FileProbe = FakeFiles(),
     override val attestation: AttestationProbe = FakeAttestation(),
+    override val strongBox: StrongBoxProbe = FakeStrongBox(),
     override val webView: WebViewProbe = FakeWebView(),
     override val permissions: PermissionProbe = FakePermissions(),
     override val defaultApps: DefaultAppsProbe = FakeDefaultApps(),
@@ -220,6 +254,8 @@ class FakeProbes(
     override val usageHistory: UsageHistoryProbe = FakeUsageHistory(),
     override val modules: ModuleProbe = FakeModules(),
     override val profiles: ProfileProbe = FakeProfiles(),
+    override val shizukuServer: ShizukuServerProbe = FakeShizukuServer(),
+    override val screenCapture: ScreenCaptureProbe = FakeScreenCapture(),
 ) : BaseProbes
 
 /** By default the phone has no module metadata package, like a ROM without Google's modules. */
@@ -231,8 +267,10 @@ class FakeModules(private val metadata: Reading<ModuleMetadata?> = value(null)) 
 class FakeProfiles(
     private val state: Reading<ProfileState> = value(ProfileState(profiles = 1, isSystemUser = true)),
     private val organizationOwned: Reading<Boolean> = value(false),
+    private val users: Reading<String> = unavailable("Permission Denial"),
 ) : ProfileProbe {
     override fun state() = state
+    override fun usersDump() = users
     override fun organizationOwned() = organizationOwned
 }
 

@@ -18,7 +18,6 @@ import io.github.capitan0n.droynis.checks.base.LauncherEntry
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 import java.io.ByteArrayInputStream
-import java.security.MessageDigest
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 
@@ -42,7 +41,7 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
     fun clearCache() = cache.clear()
 
     private fun read(): Reading<List<AppFootprint>> {
-        val source = Source("PackageManager.queryIntentActivities(MAIN, LAUNCHER)")
+        val source = Source("PackageManager.getInstalledPackages(), queryIntentActivities(MAIN, LAUNCHER)")
         return probe(source) {
             // Every launcher entry, disabled ones included, and the ones the app drawer shows now.
             val declared = launcherActivities(PackageManager.MATCH_DISABLED_COMPONENTS).groupBy { it.activityInfo.packageName }
@@ -57,7 +56,6 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
                 val app = info.applicationInfo ?: return@mapNotNull null
                 if (!isUserApp(app) || info.packageName == context.packageName) return@mapNotNull null
                 val requested = info.requestedPermissions.orEmpty().toSet()
-                val signers = signers(info)
                 AppFootprint(
                     packageName = info.packageName,
                     appLabel = packageManager.getApplicationLabel(app).toString(),
@@ -65,16 +63,19 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
                     startsAtBoot = info.packageName in atBoot && RECEIVE_BOOT_COMPLETED in requested,
                     requested = requested intersect AppFootprintProbe.WATCHED,
                     accessibilityService = info.packageName in accessibility,
-                    signerSubjects = signers.mapNotNull(::subject),
-                    signerSha1 = signers.map(::sha1),
+                    signerSubjects = signers(info).mapNotNull(::subject),
+                    enabled = app.enabled,
                 )
             }
             Reading.Value(footprints, source)
         }
     }
 
-    /** Enabled and not part of the system image; updated system apps keep FLAG_SYSTEM, like [AndroidPackages] reads it. */
-    private fun isUserApp(app: ApplicationInfo): Boolean = app.enabled && (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0
+    /**
+     * Not part of the system image; updated system apps keep FLAG_SYSTEM, like [AndroidPackages] reads
+     * it. Disabled apps are user apps too: the footprint says so, and the checks decide what to make of it.
+     */
+    private fun isUserApp(app: ApplicationInfo): Boolean = (app.flags and ApplicationInfo.FLAG_SYSTEM) == 0
 
     private fun entry(info: ResolveInfo, enabled: Boolean): LauncherEntry {
         val component = info.component()
@@ -170,10 +171,6 @@ internal class AndroidAppFootprint(private val context: Context) : AppFootprintP
         } catch (e: Exception) {
             null
         }
-
-    /** SHA-1 of the encoded certificate, as `keytool -printcert` and Echap's indicator list give it: upper-case hex. */
-    private fun sha1(signature: Signature): String =
-        MessageDigest.getInstance("SHA-1").digest(signature.toByteArray()).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }.uppercase()
 
     @Suppress("DEPRECATION") // the ResolveInfoFlags overload needs API 33
     private fun legacyActivities(intent: Intent, flags: Int): List<ResolveInfo> = packageManager.queryIntentActivities(intent, flags)

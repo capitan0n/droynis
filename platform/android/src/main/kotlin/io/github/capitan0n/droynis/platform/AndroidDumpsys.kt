@@ -1,6 +1,8 @@
 package io.github.capitan0n.droynis.platform
 
+import android.os.Process
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
+import io.github.capitan0n.droynis.checks.adb.appOpsForProfile
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
@@ -64,7 +66,9 @@ internal class RoutedDumpsys(
         val ownGrants = grants.detect().containsAll(setOf(Grant.DUMP, Grant.PACKAGE_USAGE_STATS))
         // The shells take the whole command, such as "activity services", and refuse any they don't list.
         val shell = if (ownGrants) null else shells.active()
-        return shell?.dumpsys((listOf(service) + args).joinToString(" ")) ?: AndroidDumpsys.dump(service, *args)
+        val dump = shell?.dumpsys((listOf(service) + args).joinToString(" ")) ?: AndroidDumpsys.dump(service, *args)
+        // Filter once, on the app side of the shell boundary, before caching the shared snapshot.
+        return if (service == "appops" && dump is Reading.Value) appOpsForProfile(dump, Process.myUid()) else dump
     }
 
     private companion object {

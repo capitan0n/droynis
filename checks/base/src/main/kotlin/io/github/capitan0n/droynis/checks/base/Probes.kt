@@ -35,7 +35,22 @@ interface BuildInfo {
 
     /** Descriptive facts for the device card and reports. Never includes hardware identifiers. */
     fun device(): DeviceSummary
+
+    /** What the public `Build` fields say about the processor. Names a chip model, never one phone. */
+    fun chip(): ChipInfo
 }
+
+/** The processor as `Build` names it; a field is null when Android doesn't fill it in. */
+data class ChipInfo(
+    /** `Build.SOC_MANUFACTURER` (Android 12+), e.g. "Mediatek" or "QTI". */
+    val socManufacturer: String?,
+    /** `Build.SOC_MODEL` (Android 12+), e.g. "MT6878" or "SM8450". */
+    val socModel: String?,
+    /** `Build.HARDWARE` (`ro.hardware`): the chip on MediaTek and Exynos phones ("mt6765"), "qcom" on Qualcomm's. */
+    val hardware: String?,
+    /** `Build.BOARD` (`ro.product.board`): the board, such as Samsung's "universal8890" or a device codename. */
+    val board: String?,
+)
 
 data class DeviceSummary(
     val manufacturer: String,
@@ -99,6 +114,13 @@ data class InstalledApp(
      * app can override it either way, and no other app can read that.
      */
     val usesCleartextTraffic: Boolean = false,
+    /**
+     * SHA-256 fingerprints of its signing certificates, lowercase hex, past keys included where
+     * Android keeps them. Read only for user apps that use an app store's package name
+     * ([StoreKeys.PACKAGES]), the only ones whose key Droynis compares; null for every other app.
+     * Empty when they can't be read.
+     */
+    val signerSha256: Set<String>? = null,
 )
 
 interface PackageInventory {
@@ -212,6 +234,13 @@ interface StorageProbe {
      * shows the same two numbers.
      */
     fun internal(): Reading<StorageSpace>
+
+    /**
+     * Removable volumes Android uses as portable storage: SD cards and USB drives that are not
+     * formatted as internal storage (`isRemovable()` and not `isEmulated()`), in any state. Empty when
+     * there are none. An SD card formatted as internal storage (adopted) is encrypted and isn't listed.
+     */
+    fun removableVolumes(): Reading<List<RemovableVolume>>
 }
 
 /** An enabled input method; [isSystem] is true for keyboards that are part of the system image. */
@@ -276,6 +305,23 @@ data class KeyAttestation(
 
 interface AttestationProbe {
     /** Creates a throwaway key with an attestation certificate and reports what it says. */
+    fun attest(): Reading<KeyAttestation>
+}
+
+/** StrongBox: a separate security chip that keeps keys, such as the Titan M in Pixels. */
+interface StrongBoxProbe {
+    /**
+     * `PackageManager.FEATURE_STRONGBOX_KEYSTORE` (Android 9+): its version when the phone declares it
+     * (0 on Keymaster-era StrongBox, the KeyMint version after), `Value(null)` when it doesn't.
+     * Unsupported below Android 9.
+     */
+    fun feature(): Reading<Int?>
+
+    /**
+     * Creates a throwaway key in StrongBox (`setIsStrongBoxBacked(true)`) with an attestation
+     * certificate and reports what it says. Unsupported when Android answers there is no StrongBox
+     * (`StrongBoxUnavailableException`) and below Android 9.
+     */
     fun attest(): Reading<KeyAttestation>
 }
 
@@ -427,14 +473,18 @@ data class AppFootprint(
      * empty when they can't be read.
      */
     val signerSubjects: List<String> = emptyList(),
-    /** SHA-1 fingerprints of the same certificates: upper-case hex, no colons; empty when they can't be read. */
-    val signerSha1: List<String> = emptyList(),
+    /**
+     * False for an app that is installed but disabled (`pm disable-user`, an app freezer). It can't run
+     * or show an icon, so the checks about hiding leave it out; the debug/test signing-key check still reads it.
+     */
+    val enabled: Boolean = true,
 )
 
 interface AppFootprintProbe {
     /**
-     * Every enabled app that isn't part of the system image (updates of system apps excluded too),
-     * except Droynis itself. Draws each enabled app drawer icon once, so it is cached for a scan.
+     * Every app that isn't part of the system image (updates of system apps excluded too), except
+     * Droynis itself; disabled apps are included and say so ([AppFootprint.enabled]). Draws each
+     * enabled app drawer icon once, so it is cached for a scan.
      */
     fun userApps(): Reading<List<AppFootprint>>
 
@@ -466,7 +516,8 @@ data class ScreenUse(val packageName: String, val times: Int, val lastShown: Ins
 interface UsageHistoryProbe {
     /**
      * Droynis may read the usage history: its usage-access app-op is allowed (Settings › Usage access),
-     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb. Without it
+     * or left at default while it holds the PACKAGE_USAGE_STATS permission from adb, or its Shizuku
+     * or root shell is connected, which reads the history as the shell user. Without any of them
      * Android returns an empty history rather than an error, so ask this first.
      */
     fun hasAccess(): Reading<Boolean>
@@ -510,10 +561,97 @@ interface ProfileProbe {
     fun state(): Reading<ProfileState>
 
     /**
+     * What `dumpsys user` prints, which lists every user and profile of the phone, the ones outside
+     * this user's group included ([UserDump] reads it). Apps may not run it: it is read with the adb
+     * grants or through Shizuku or root, and is `Unavailable` without them.
+     */
+    fun usersDump(): Reading<String>
+
+    /**
      * `DevicePolicyManager.isOrganizationOwnedDeviceWithManagedProfile()` (Android 11+): an
      * organization owns the phone and manages a work profile on it. Unsupported on older releases.
      */
     fun organizationOwned(): Reading<Boolean>
+}
+
+/** The Shizuku service, as it tells any app that asks; Sui, its root-only variant, answers the same way. */
+data class ShizukuServer(
+    /** `Shizuku.getUid()`: 0 when Shizuku was started with root, 2000 (adb's shell user) when started over adb. */
+    val uid: Int,
+) {
+    val asRoot: Boolean get() = uid == ROOT_UID
+
+    val runsAs: String get() = when (uid) {
+        ROOT_UID -> "root (uid 0)"
+        SHELL_UID -> "adb's shell user (uid 2000)"
+        else -> "uid $uid"
+    }
+
+    private companion object {
+        const val ROOT_UID = 0
+        const val SHELL_UID = 2000
+    }
+}
+
+interface ShizukuServerProbe {
+    /**
+     * The running Shizuku service; `Value(null)` while neither Shizuku nor Sui runs. Shizuku 13 tells
+     * every app its uid when the app connects, before and without any permission.
+     */
+    fun server(): Reading<ShizukuServer?>
+}
+
+/** A removable volume: an SD card or USB drive as `StorageManager.getStorageVolumes()` lists it. */
+data class RemovableVolume(
+    /** What Settings calls it, such as "SanDisk SD card" or "USB drive"; never its serial or UUID. */
+    val description: String,
+    /** `StorageVolume.getState()`, such as "mounted", "mounted_ro", "unmounted" or "removed". */
+    val state: String,
+) {
+    /** Its files can be read right now: mounted, read-write or read-only. */
+    val mounted: Boolean get() = state == MOUNTED || state == MOUNTED_READ_ONLY
+
+    companion object {
+        /** `Environment.MEDIA_MOUNTED` */
+        const val MOUNTED = "mounted"
+
+        /** `Environment.MEDIA_MOUNTED_READ_ONLY` */
+        const val MOUNTED_READ_ONLY = "mounted_ro"
+    }
+}
+
+/** Whether the screen Droynis is shown on is in a recording or screen share, as Android tells the app itself. */
+enum class ScreenRecording { RECORDED, NOT_RECORDED }
+
+/** A display other than the phone's own screen, as `DisplayManager` shows it to Droynis. */
+data class ExtraDisplay(
+    val displayId: Int,
+    /** The name its creator gave it, such as "ScreenRecorder"; can be empty. */
+    val name: String,
+    /**
+     * The app that created it, for a virtual display; null for a physical screen (HDMI, USB-C) or
+     * when Android doesn't say.
+     */
+    val ownerPackage: String?,
+    /** `Display.FLAG_PRESENTATION`: meant for an app's own content, such as slides, rather than a copy of the screen. */
+    val presentation: Boolean = false,
+)
+
+interface ScreenCaptureProbe {
+    /**
+     * `WindowManager.addScreenRecordingCallback` (Android 15+): whether Droynis' own screen is in a
+     * recording or screen share right now, whoever records it. Unsupported below Android 15.
+     * Unavailable while Droynis isn't on screen, such as in a scheduled scan: Android answers only
+     * for the app's own windows.
+     */
+    fun recording(): Reading<ScreenRecording>
+
+    /**
+     * `DisplayManager.getDisplays()` without the built-in screen: external screens and the virtual
+     * displays other apps made public, for casting or remote control. A private virtual display, the
+     * default for screen recorders, is visible only to the app that made it and isn't listed.
+     */
+    fun extraDisplays(): Reading<List<ExtraDisplay>>
 }
 
 /** Everything the base-tier checks read. Implemented by :platform-android. */
@@ -532,6 +670,7 @@ interface BaseProbes {
     val properties: SystemProperties
     val files: FileProbe
     val attestation: AttestationProbe
+    val strongBox: StrongBoxProbe
     val webView: WebViewProbe
     val permissions: PermissionProbe
     val defaultApps: DefaultAppsProbe
@@ -546,4 +685,6 @@ interface BaseProbes {
     val usageHistory: UsageHistoryProbe
     val modules: ModuleProbe
     val profiles: ProfileProbe
+    val shizukuServer: ShizukuServerProbe
+    val screenCapture: ScreenCaptureProbe
 }

@@ -16,7 +16,9 @@ class NetworkChecksTest {
         assertEquals("Private DNS is active: dns.quad9.net", privateDns(wifi(true, "dns.quad9.net")).summary)
         assertEquals("Private DNS is active (automatic mode)", privateDns(wifi(true)).summary)
         assertEquals(Status.FAIL, privateDns(wifi(false)).status)
-        assertEquals(Status.PASS, privateDns(wifi(false, vpn = true)).status) // DNS rides the tunnel
+        assertEquals(Status.UNKNOWN, privateDns(wifi(false, vpn = true)).status)
+        assertEquals(Status.UNKNOWN, privateDns(wifi(null, vpn = true)).status)
+        assertEquals(Status.PASS, privateDns(wifi(true, vpn = true)).status)
         assertEquals(Status.UNKNOWN, privateDns(null).status) // offline
         assertEquals(Status.UNKNOWN, privateDns(wifi(null)).status) // not reported
         assertEquals(Status.UNKNOWN, PrivateDnsCheck(FakeNetwork(unavailable())).status())
@@ -46,7 +48,12 @@ class NetworkChecksTest {
         assertEquals(Status.PASS, outcome(wifi(security = WifiSecurity.OWE)).status)
         assertEquals(Status.FAIL, outcome(wifi(security = WifiSecurity.OPEN)).status)
         assertEquals(Status.FAIL, outcome(wifi(security = WifiSecurity.WEP)).status)
-        assertEquals(Status.PASS, outcome(wifi(security = WifiSecurity.OPEN, vpn = true)).status) // tunnelled
+        assertEquals(Status.FAIL, outcome(wifi(security = WifiSecurity.OPEN, vpn = true)).status)
+        assertEquals(Status.FAIL, outcome(wifi(security = WifiSecurity.WEP, vpn = true)).status)
+        assertEquals(Status.PASS, outcome(wifi(security = WifiSecurity.WPA3_PERSONAL, vpn = true)).status)
+        assertEquals(Status.UNKNOWN, outcome(wifi(security = null, vpn = true)).status)
+        assertEquals(Status.UNKNOWN, outcome(wifi().copy(transports = setOf(Transport.VPN))).status)
+        assertEquals(Status.UNSUPPORTED, outcome(cellular().copy(transports = setOf(Transport.VPN, Transport.CELLULAR))).status)
         assertEquals(Status.UNKNOWN, outcome(wifi(security = null)).status)
         assertEquals(Status.UNKNOWN, outcome(wifi(security = WifiSecurity.UNKNOWN)).status)
         assertEquals(Status.UNSUPPORTED, outcome(cellular()).status)
@@ -127,6 +134,13 @@ class NetworkChecksTest {
         val unread = check(value("0"), unavailable("access denied")).outcome()
         assertEquals(Status.UNKNOWN, unread.status)
         assertEquals("Could not tell whether Bluetooth scanning is on", unread.summary)
-        assertEquals(Status.UNKNOWN, check(value(null), value("0")).status())
+        assertEquals(Status.UNKNOWN, check(value("2"), value("0")).status())
+
+        // Never written, as the Bluetooth key is on Samsung phones: Android reads it as off.
+        val unset = check(value("0"), value(null)).outcome()
+        assertEquals(Status.PASS, unset.status)
+        assertEquals("not set, which Android treats as off", unset.evidence[1].note)
+        assertEquals(Status.PASS, check(value(null), value(null)).status())
+        assertEquals(Status.FAIL, check(value(null), value("1")).status())
     }
 }

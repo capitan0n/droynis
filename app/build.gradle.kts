@@ -57,8 +57,8 @@ android {
         minSdk = 26
         targetSdk = 37
         // Written out: the release workflow and F-Droid read both from this file.
-        versionCode = 24
-        versionName = "1.0.0"
+        versionCode = 26
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // This version's changelog, which the app shows once after an update ("What's new").
         buildConfigField("String", "WHATS_NEW", javaString(changelog(versionCode ?: 0)))

@@ -34,8 +34,10 @@ class BootloaderCheck(
         remediation = Remediation(
             text = "Relock the bootloader only if the installed OS supports it: stock firmware, or an OS with " +
                 "its own verified-boot key such as GrapheneOS or CalyxOS. Relocking wipes the phone, and " +
-                "relocking with an unsupported custom OS can leave it unbootable. With the phone in fastboot " +
-                "mode, run this from a computer:",
+                "relocking with an unsupported custom OS, or with a rooted or otherwise modified system, can " +
+                "leave it unbootable: go back to the unmodified system first. Samsung phones have no fastboot " +
+                "and relock from Download mode instead. On other phones, with the phone in fastboot mode, run " +
+                "this from a computer:",
             command = "fastboot flashing lock",
         ),
         // Generating an attested key in secure hardware can take a few seconds.

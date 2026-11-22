@@ -47,7 +47,9 @@ class InstalledByAppCheck(private val packages: PackageInventory) : Check {
         }
         val inventory = apps.value.associateBy { it.packageName }
         val user = apps.value.filter { !it.isSystem && it.isEnabled }
-        val evidence = mutableListOf(Evidence("User apps inspected", user.size.toString(), apps.source))
+        val disabled = apps.value.count { !it.isSystem && !it.isEnabled }
+        val leftOut = if (disabled == 0) null else "${count(disabled, "disabled app")} left out: a disabled app can't run"
+        val evidence = mutableListOf(Evidence("User apps inspected", user.size.toString(), apps.source, leftOut))
 
         val found = user.mapNotNull { app ->
             val installer = app.installer ?: return@mapNotNull null
@@ -101,17 +103,25 @@ class InstalledByAppCheck(private val packages: PackageInventory) : Check {
             "com.apkmirror.helper.prod", // APKMirror Installer
         )
 
+        private val SKIT_PACKAGES = setOf("com.pavelrekun.skit", "com.pavelrekun.skit.premium")
+
         /**
          * [installer] is another app the user installed: not the app itself (self-updates), not an
          * app store or installer tool, and not part of the system (the package installer, the shell
          * for adb, a vendor's store). An installer missing from the list counts: a dropper can remove
-         * itself once its payload is in.
+         * itself once its payload is in. An app that uses a store's name without its key counts too.
          */
-        fun isOtherApp(packageName: String, installer: String, inventory: Map<String, InstalledApp>): Boolean =
-            installer != packageName &&
-                installer !in UnknownSourceAppsCheck.KNOWN_STORES &&
+        fun isOtherApp(packageName: String, installer: String, inventory: Map<String, InstalledApp>): Boolean {
+            val installerApp = inventory[installer]
+            // Recognize both Skit editions when their installation source corroborates their identity.
+            if (installer in SKIT_PACKAGES && installerApp != null && StoreKeys.installedByGenuineStore(installerApp, inventory)) {
+                return false
+            }
+            return installer != packageName &&
+                (!UnknownSourceAppsCheck.isStoreInstaller(installer) || StoreKeys.isImpostor(installer, inventory)) &&
                 installer !in UnknownSourceAppsCheck.OS_INSTALLERS &&
                 installer !in INSTALLER_TOOLS &&
-                inventory[installer]?.isSystem != true
+                installerApp?.isSystem != true
+        }
     }
 }

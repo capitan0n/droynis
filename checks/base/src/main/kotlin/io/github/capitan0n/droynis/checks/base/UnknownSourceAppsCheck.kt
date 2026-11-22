@@ -47,10 +47,10 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
                 val isTrusted = it in trusted
                 add(
                     Evidence(
-                        "Installed by",
-                        "${packages.label(it.packageName)}: ${it.installer ?: "unknown (adb or file)"}",
+                        "From outside an app store",
+                        "${packages.label(it.packageName)} (${it.packageName})",
                         apps.source,
-                        note = withTrustNote(null, isTrusted),
+                        note = withTrustNote(installedBy(it, byPackage.orEmpty()), isTrusted),
                         packageName = it.packageName,
                         trust = trustOf(counted = true, trusted = isTrusted),
                     ),
@@ -69,8 +69,24 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
         }
     }
 
+    /** Who installed [app], in words: the app is the evidence's value, so this is its note. */
+    private fun installedBy(app: InstalledApp, inventory: Map<String, InstalledApp>): String {
+        val installer = app.installer
+        return when {
+            installer == null -> "installed from a file or over adb"
+            installer == app.packageName -> "installed and updated by itself"
+            StoreKeys.isImpostor(installer, inventory) ->
+                "installed by ${packages.label(installer)} ($installer), which uses an app store's name without its signing key"
+            installer in inventory -> "installed by ${packages.label(installer)} ($installer)"
+            else -> "installed by $installer, which is not installed"
+        }
+    }
+
     companion object {
-        /** Installer packages of app stores and FOSS updaters treated as known sources. */
+        /**
+         * Installer packages of app stores and FOSS updaters treated as known sources. Each has an
+         * entry in [StoreKeys]: a user-installed copy counts only when its signing key checks out.
+         */
         val KNOWN_STORES = setOf(
             "com.android.vending", // Google Play
             "org.fdroid.fdroid", // F-Droid
@@ -84,8 +100,24 @@ class UnknownSourceAppsCheck(private val packages: PackageInventory) : Check {
             "com.huawei.appmarket", // AppGallery
             "com.amazon.venezia", // Amazon Appstore
             "com.xiaomi.mipicks", // Xiaomi GetApps
+            "com.xiaomi.market", // Xiaomi App Store
+            "com.heytap.market", // OPPO, OnePlus and realme App Market
+            "com.vivo.appstore", // vivo App Store
+            "com.bbk.appstore", // vivo App Store, older name
             "foundation.e.apps", // App Lounge (/e/OS)
         )
+
+        /**
+         * A phone maker's companion apps that fetch their own plug-ins, and their own updates, from
+         * that maker's store servers and install them themselves. What they install counts as coming
+         * from an app store. They are no general app store, so APPS-4104 still counts them.
+         */
+        val PLUGIN_INSTALLERS = setOf(
+            "com.samsung.android.app.watchmanager", // Galaxy Wearable: watch and earbuds plug-ins
+        )
+
+        /** Every installer whose apps count as coming from an app store. */
+        fun isStoreInstaller(installer: String?): Boolean = installer in KNOWN_STORES || installer in PLUGIN_INSTALLERS
 
         /**
          * System apps that install apps shipped with the OS as removable user apps. Their apps came

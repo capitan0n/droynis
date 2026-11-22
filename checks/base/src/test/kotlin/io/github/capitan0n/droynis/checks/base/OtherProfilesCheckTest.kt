@@ -31,6 +31,56 @@ class OtherProfilesCheckTest {
     }
 
     @Test
+    fun `with a privileged read the phone's other users are found`() = runTest {
+        // A Galaxy with a Secure Folder, which is a user of its own that getUserProfiles() doesn't list.
+        val dump = """
+            Users:
+              UserInfo{0:Owner:c13} serialNo=0 isPrimary=true
+                Type: android.os.usertype.full.SYSTEM
+              UserInfo{150:Secure Folder:10061030} serialNo=150 isPrimary=false
+            Owner name: Owner
+              UserInfo{0:Owner:c13}
+        """.trimIndent()
+        val main = value(ProfileState(profiles = 1, isSystemUser = true))
+        val outcome = OtherProfilesCheck(FakeProfiles(main, users = value(dump))).outcome()
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(
+            "1 other user or profile exists on this phone, such as a second user or a Secure Folder: its apps were not checked",
+            outcome.summary,
+        )
+        assertEquals("2", outcome.evidence.single { it.label == "Users and profiles of the phone" }.value)
+        // What kind of user it is stays readable when the name is hidden: it is in the label.
+        val folder = outcome.evidence.single { it.label == "User 150 (work or managed profile)" }
+        assertEquals("Secure Folder", folder.value)
+        assertNull(folder.note)
+        assertTrue(folder.personal) // a name its owner typed
+
+        val alone = OtherProfilesCheck(FakeProfiles(main, users = value("  UserInfo{0:null:c13} serialNo=0"))).outcome()
+        assertEquals(Status.PASS, alone.status)
+        assertEquals("This user is the only user and profile on the phone", alone.summary)
+        assertEquals("(no name)", alone.evidence.single { it.label == "User 0 (the phone's main user)" }.value)
+
+        // A dump that names no user, or fewer than Android itself listed, proves nothing.
+        for (odd in listOf("Permission Denial", "")) {
+            val fallback = OtherProfilesCheck(FakeProfiles(main, users = value(odd))).outcome()
+            assertEquals("Android lists no other profile for this user", fallback.summary)
+        }
+        val fewer = OtherProfilesCheck(FakeProfiles(value(ProfileState(2, true)), users = value("UserInfo{0:Owner:c13}"))).outcome()
+        assertTrue(fewer.evidence.none { it.label == "Users and profiles of the phone" })
+    }
+
+    @Test
+    fun `user lines are read whatever surrounds them`() {
+        val users = UserDump.parse("x UserInfo{10:Work: A:B:1030} y\nUserInfo{11:Guest:414}\nUserInfo{10:again:0}")!!
+        assertEquals(listOf(10, 11), users.map { it.id })
+        assertEquals("Work: A:B", users[0].name)
+        assertEquals("work or managed profile", users[0].kind)
+        assertEquals("guest", users[1].kind)
+        assertNull(UserDump.parse("no users here"))
+    }
+
+    @Test
     fun `another profile fails, with the count`() = runTest {
         val one = outcome(value(ProfileState(profiles = 2, isSystemUser = true)))
         assertEquals(Status.FAIL, one.status)

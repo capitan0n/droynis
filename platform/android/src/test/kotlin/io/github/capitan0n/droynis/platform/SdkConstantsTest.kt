@@ -2,7 +2,9 @@ package io.github.capitan0n.droynis.platform
 
 import android.Manifest
 import android.app.admin.DevicePolicyManager
+import android.os.Environment
 import android.provider.Settings
+import android.telecom.TelecomManager
 import android.telephony.TelephonyManager
 import io.github.capitan0n.droynis.checks.base.BackgroundLocationCheck
 import io.github.capitan0n.droynis.checks.base.NetworkTypes
@@ -10,6 +12,7 @@ import io.github.capitan0n.droynis.checks.base.BluetoothCheck
 import io.github.capitan0n.droynis.checks.base.CleartextAppsCheck
 import io.github.capitan0n.droynis.checks.base.DeveloperOptionsCheck
 import io.github.capitan0n.droynis.checks.base.PasswordVisibilityCheck
+import io.github.capitan0n.droynis.checks.base.RemovableVolume
 import io.github.capitan0n.droynis.checks.base.ScreenTimeoutCheck
 import io.github.capitan0n.droynis.checks.base.StayAwakeCheck
 import io.github.capitan0n.droynis.checks.base.UsbDebuggingCheck
@@ -29,6 +32,7 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_WIRELESS_SETTINGS, SettingsActions.NETWORK)
         assertEquals(Settings.ACTION_WIFI_SETTINGS, SettingsActions.WIFI)
         assertEquals(Settings.ACTION_DATA_ROAMING_SETTINGS, SettingsActions.MOBILE_NETWORK)
+        assertEquals(TelecomManager.ACTION_SHOW_CALL_SETTINGS, SettingsActions.CALL_SETTINGS)
         assertEquals(Settings.ACTION_APN_SETTINGS, SettingsActions.APN)
         assertEquals(Settings.ACTION_VPN_SETTINGS, SettingsActions.VPN)
         assertEquals(Settings.ACTION_BLUETOOTH_SETTINGS, SettingsActions.BLUETOOTH)
@@ -54,6 +58,12 @@ class SdkConstantsTest {
         assertEquals(Settings.ACTION_INTERNAL_STORAGE_SETTINGS, SettingsActions.INTERNAL_STORAGE)
         assertEquals(Settings.ACTION_DEVICE_INFO_SETTINGS, SettingsActions.DEVICE_INFO)
         assertEquals(Settings.ACTION_SETTINGS, SettingsActions.SETTINGS)
+    }
+
+    @Test
+    fun storageStatesMatchTheSdk() {
+        assertEquals(Environment.MEDIA_MOUNTED, RemovableVolume.MOUNTED)
+        assertEquals(Environment.MEDIA_MOUNTED_READ_ONLY, RemovableVolume.MOUNTED_READ_ONLY)
     }
 
     @Test

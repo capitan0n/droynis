@@ -27,7 +27,7 @@ class WifiSecurityCheck(private val network: NetworkProbe) : Check {
         ),
         // The security type of the connected network is public API from Android 12.
         minSdk = 31,
-        failsWhen = "the phone is on an open or WEP Wi-Fi network without a VPN",
+        failsWhen = "the phone is on an open or WEP Wi-Fi network",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -36,7 +36,8 @@ class WifiSecurityCheck(private val network: NetworkProbe) : Check {
         return snapshot.evaluate("Network state", evidence) { net ->
             when {
                 net == null -> Outcome.unknown("No active network to inspect", evidence)
-                net.usesVpn -> Outcome.pass("Traffic goes through a VPN, whatever the Wi-Fi", evidence)
+                net.usesVpn && net.transports.all { it == Transport.VPN || it == Transport.OTHER } ->
+                    Outcome.unknown("VPN active. The underlying network type was not reported", evidence)
                 Transport.WIFI !in net.transports -> Outcome.unsupported("Not connected to Wi-Fi right now", evidence)
                 else -> when (val security = net.wifiSecurity) {
                     null, WifiSecurity.UNKNOWN ->
