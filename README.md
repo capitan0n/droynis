@@ -112,7 +112,6 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 - [docs/CHECKS.md](docs/CHECKS.md): every check and when it fails
 - [docs/DESIGN.md](docs/DESIGN.md): how it works, and what Android allows
 - [CONTRIBUTING.md](CONTRIBUTING.md): report a wrong result, translate, add a check
-- [docs/RELEASING.md](docs/RELEASING.md): how a release is built, signed and checked
 - [SECURITY.md](SECURITY.md): report a vulnerability privately
 
 ## Credits and license
