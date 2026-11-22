@@ -161,9 +161,9 @@ object StoreKeys {
     }
 
     /** Another app store installed [store], and it is genuine itself; a chain of stores ends after a few. */
-    private fun installedByGenuineStore(store: InstalledApp, inventory: Map<String, InstalledApp>, depth: Int): Boolean {
-        val installer = inventory[store.installer ?: return false] ?: return false
-        if (installer.packageName == store.packageName || depth >= MAX_CHAIN) return false
+    internal fun installedByGenuineStore(app: InstalledApp, inventory: Map<String, InstalledApp>, depth: Int = 0): Boolean {
+        val installer = inventory[app.installer ?: return false] ?: return false
+        if (installer.packageName == app.packageName || depth >= MAX_CHAIN) return false
         val verdict = verify(installer, inventory, depth + 1) ?: return false
         return verdict == Verdict.PREINSTALLED || verdict == Verdict.KEY_MATCHES || verdict == Verdict.INSTALLED_BY_STORE
     }

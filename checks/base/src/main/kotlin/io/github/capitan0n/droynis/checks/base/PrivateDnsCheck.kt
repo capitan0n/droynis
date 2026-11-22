@@ -20,9 +20,8 @@ class PrivateDnsCheck(private val network: NetworkProbe) : Check {
         category = Category.NETWORK,
         title = "Private DNS",
         severity = Severity.WARNING,
-        explanation = "Without Private DNS, every website and app domain you look up is sent in plain text. " +
-            "The Wi-Fi owner or the mobile carrier can log those lookups or answer them with fake ones. " +
-            "Private DNS (DNS over TLS) encrypts them.",
+        explanation = "Android's Private DNS encrypts system DNS lookups. When it is off, the local network " +
+            "may see those lookups. A VPN can provide its own DNS protection, which this check cannot verify.",
         remediation = Remediation(
             text = "Open Private DNS (Settings › Network & internet; the location varies by vendor), choose " +
                 "\"Private DNS provider hostname\" and enter a privacy-respecting resolver such as " +
@@ -31,7 +30,7 @@ class PrivateDnsCheck(private val network: NetworkProbe) : Check {
             highlightKey = "private_dns_settings",
         ),
         minSdk = 28,
-        failsWhen = "DNS isn't encrypted and no VPN is active",
+        failsWhen = "Private DNS is inactive and no VPN is active",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -40,12 +39,13 @@ class PrivateDnsCheck(private val network: NetworkProbe) : Check {
         return snapshot.evaluate("Network state", evidence) { net ->
             when {
                 net == null -> Outcome.unknown("No active network to inspect", evidence)
-                net.usesVpn -> Outcome.pass("DNS goes through the VPN tunnel", evidence)
+                net.usesVpn && net.privateDnsActive != true ->
+                    Outcome.unknown("VPN active. DNS protection could not be verified", evidence)
                 net.privateDnsActive == null -> Outcome.unknown("The platform did not report Private DNS", evidence)
                 net.privateDnsActive && net.privateDnsServer != null ->
                     Outcome.pass("Private DNS is active: ${net.privateDnsServer}", evidence)
                 net.privateDnsActive -> Outcome.pass("Private DNS is active (automatic mode)", evidence)
-                else -> Outcome.fail("DNS lookups are not encrypted", evidence)
+                else -> Outcome.fail("Private DNS is inactive on the active network", evidence)
             }
         }
     }

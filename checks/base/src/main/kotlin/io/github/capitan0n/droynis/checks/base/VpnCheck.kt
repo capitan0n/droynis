@@ -17,9 +17,8 @@ class VpnCheck(private val network: NetworkProbe) : Check {
         category = Category.NETWORK,
         title = "VPN",
         severity = Severity.INFO,
-        explanation = "A VPN encrypts traffic between this phone and the VPN server, hiding it from the " +
-            "local network and the carrier. It moves that trust to the VPN provider, so pick one with an " +
-            "audited no-logs policy, or host your own.",
+        explanation = "Android reports whether this app's active network uses a VPN. Some VPN apps filter " +
+            "traffic locally. This check cannot verify encryption or which other apps use the VPN.",
         remediation = Remediation(
             text = "Use a trustworthy VPN, especially on public Wi-Fi. Under Settings › Network & internet " +
                 "› VPN you can also turn on \"Always-on VPN\" and \"Block connections without VPN\".",
@@ -34,7 +33,7 @@ class VpnCheck(private val network: NetworkProbe) : Check {
         return snapshot.evaluate("Network state", evidence) { net ->
             when {
                 net == null -> Outcome.unknown("No active network to inspect", evidence)
-                net.usesVpn -> Outcome.pass("Traffic goes through a VPN", evidence)
+                net.usesVpn -> Outcome.pass("A VPN is active for Droynis", evidence)
                 else -> Outcome.fail("No VPN is active", evidence)
             }
         }

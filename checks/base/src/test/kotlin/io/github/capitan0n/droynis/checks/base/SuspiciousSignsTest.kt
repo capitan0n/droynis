@@ -105,6 +105,17 @@ class SuspiciousSignsTest {
     }
 
     @Test
+    fun `store-installed Skit is an installer tool but its apps are still sideloaded`() = runTest {
+        for (skit in listOf("com.pavelrekun.skit", "com.pavelrekun.skit.premium")) {
+            val payload = app("org.example.chosen", installer = skit)
+            val apps = listOf(app(store, installer = null, system = true), app(skit, installer = store), payload)
+            assertEquals(Status.PASS, installedBy(*apps.toTypedArray()).outcome().status)
+            assertEquals(AppOrigin.SIDELOADED, originOf(payload.packageName, apps.associateBy { it.packageName }))
+            assertEquals(Status.FAIL, installedBy(payload, app(skit, installer = null)).outcome().status)
+        }
+    }
+
+    @Test
     fun `an app installed by another app counts, even when the installer is gone`() = runTest {
         val outcome = installedBy(
             app("com.flash.light", installer = store),

@@ -127,11 +127,11 @@
 
 | ID | Check | Tier | Severity | Fails when |
 |---|---|---|---|---|
-| NETW-3001 | Private DNS (Android 9+) | Base | Warning | DNS isn't encrypted and no VPN is active |
+| NETW-3001 | Private DNS (Android 9+) | Base | Warning | Private DNS is inactive and no VPN is active |
 | NETW-3002 | VPN | Base | Info | no VPN is active |
 | NETW-3003 | User CA certificates | Base | Warning | a user-installed CA certificate can intercept TLS |
 | NETW-3004 | Bluetooth | Base | Notice | Bluetooth is on |
-| NETW-3005 | Wi-Fi security (Android 12+) | Base | Warning | the phone is on an open or WEP Wi-Fi network without a VPN |
+| NETW-3005 | Wi-Fi security (Android 12+) | Base | Warning | the phone is on an open or WEP Wi-Fi network |
 | NETW-3006 | NFC | Base | Info | NFC is on |
 | NETW-3007 | HTTP proxy | Base | Warning | web traffic on Wi-Fi, mobile data or another network goes through an HTTP proxy |
 | NETW-3008 | Location | Base | Notice | Location is on |
