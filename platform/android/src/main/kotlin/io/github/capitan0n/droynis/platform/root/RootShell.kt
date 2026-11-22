@@ -2,7 +2,10 @@ package io.github.capitan0n.droynis.platform.root
 
 import android.content.Context
 import android.os.Process
+import io.github.capitan0n.droynis.checks.root.PremiumSmsCheck
 import io.github.capitan0n.droynis.checks.root.ProcNet
+import io.github.capitan0n.droynis.checks.root.QuickShareCheck
+import io.github.capitan0n.droynis.checks.root.QuickSharePrefs
 import io.github.capitan0n.droynis.checks.root.RootManager
 import io.github.capitan0n.droynis.checks.root.RootModules
 import io.github.capitan0n.droynis.checks.root.RootShellProbe
@@ -12,6 +15,7 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.platform.ShellAccess
 import io.github.capitan0n.droynis.platform.TelephonyReader
+import io.github.capitan0n.droynis.platform.UsageReader
 import io.github.capitan0n.droynis.platform.readDumpsys
 import java.io.File
 import java.io.IOException
@@ -180,6 +184,11 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
 
+    override fun magiskStrings(): Reading<String> =
+        read("magisk --sqlite (strings)", MAGISK_STRINGS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+
     override fun bootScripts(): Reading<String> =
         read("stat boot scripts", BOOT_SCRIPTS) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
@@ -196,6 +205,26 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             when (exit) {
                 0 -> Reading.Value(output, source)
                 MISSING -> Reading.Unsupported("this kernel has no $path", source)
+                else -> failed(exit, output, source)
+            }
+        }
+    }
+
+    override fun premiumSmsPolicy(): Reading<String?> =
+        read("cat ${PremiumSmsCheck.POLICY_FILE}", PREMIUM_SMS) { exit, output, source ->
+            when (exit) {
+                0 -> Reading.Value(output, source)
+                MISSING -> Reading.Value(null, source)
+                else -> failed(exit, output, source)
+            }
+        }
+
+    override fun quickShareSettings(): Reading<String?> {
+        val user = Process.myUid() / PER_USER_RANGE
+        return read("cat Quick Share settings (${QuickShareCheck.GMS})", quickShare(user)) { exit, output, source ->
+            when (exit) {
+                0 -> Reading.Value(output, source)
+                MISSING -> Reading.Value(null, source)
                 else -> failed(exit, output, source)
             }
         }
@@ -243,6 +272,19 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         }
         val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main"
         return read("app_process (telephony service)", command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
+        }
+    }
+
+    /** Runs [UsageReader] the way [telephony] runs its reader; the start time is a number Droynis made. */
+    override fun usage(sinceMillis: Long): Reading<String> {
+        val apk = app.applicationInfo.sourceDir.orEmpty()
+        val main = UsageReader::class.java.name
+        if (!APK_PATH.matches(apk) || !CLASS_NAME.matches(main) || sinceMillis < 0) {
+            return Reading.Unavailable("unexpected app path", Source("su: app_process", Grant.ROOT))
+        }
+        val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main $sinceMillis"
+        return read("app_process (usage stats service)", command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
     }
@@ -374,6 +416,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             "else echo other; fi"
         const val MAGISK_POLICIES = "magisk --sqlite 'SELECT uid, policy, until FROM policies'"
         const val MAGISK_SETTINGS = "magisk --sqlite 'SELECT key, value FROM settings'"
+        const val MAGISK_STRINGS = "magisk --sqlite 'SELECT key, value FROM strings'"
 
         /**
          * Stats the boot scripts root runs and the folders that hold them, one per line as
@@ -400,6 +443,25 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         /** Exit code [ifExists] uses for a missing file. */
         const val MISSING = 3
 
+        /**
+         * Prints the premium SMS settings as text. Android 12+ may keep the file as binary XML, which
+         * starts with "ABX"; `abx2xml` turns it back into text. Runs in a subshell, so its `exit` ends
+         * only this command.
+         */
+        val PREMIUM_SMS = "( f=${PremiumSmsCheck.POLICY_FILE}; [ -e \"\$f\" ] || exit $MISSING; " +
+            "if [ \"\$(head -c 3 \"\$f\")\" = ABX ]; then abx2xml \"\$f\" -; else cat \"\$f\"; fi )"
+
+        /**
+         * Prints Play services' Quick Share settings files for [user], each after a
+         * [QuickSharePrefs.FILE] line with its name. Paths are fixed; the user id is a number Android
+         * gave Droynis, and the only variable part is the shell glob. Binary XML is turned back into
+         * text, as for [PREMIUM_SMS].
+         */
+        fun quickShare(user: Int) = "( d=/data/user/$user/${QuickShareCheck.GMS}/shared_prefs; " +
+            "[ -d \"\$d\" ] || exit $MISSING; for f in \"\$d\"/nearbysharing*.xml; do [ -f \"\$f\" ] || continue; " +
+            "echo \"${QuickSharePrefs.FILE}\${f##*/}\"; " +
+            "if [ \"\$(head -c 3 \"\$f\")\" = ABX ]; then abx2xml \"\$f\" -; else cat \"\$f\"; fi; echo; done; true )"
+
         fun ifExists(path: String) = "( [ -e $path ] || exit $MISSING; cat $path )"
 
         fun managerOf(output: String): RootManager = when (output.trim()) {
@@ -412,7 +474,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         val TABLES = setOf("global", "secure", "system")
         val KEY = Regex("[a-z0-9_.-]{1,100}")
         /** Run as `dumpsys <command>`: fixed strings only, never text from elsewhere. */
-        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services")
+        val DUMPSYS_SERVICES = setOf("appops", "trust", "wifi", "activity services", "telephony.registry", "user")
 
         /** Manager apps by package; a hidden (renamed) Magisk app is not among them. */
         val MANAGER_APPS = linkedMapOf(

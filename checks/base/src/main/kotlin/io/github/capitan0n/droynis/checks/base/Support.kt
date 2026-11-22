@@ -73,6 +73,9 @@ internal fun Reading<UsbState?>.usbEvidence(): Evidence {
 fun count(n: Int, singular: String, plural: String = "${singular}s"): String =
     if (n == 1) "1 $singular" else "$n $plural"
 
+/** "1 day" or "30 days", for an age counted in whole days. */
+fun days(n: Long): String = if (n == 1L) "1 day" else "$n days"
+
 /** "Signal", "Signal and Tasker" or "Signal, Tasker and 3 more". */
 fun List<String>.joinNames(limit: Int = 2): String = when {
     size <= limit -> if (size <= 1) joinToString() else dropLast(1).joinToString() + " and " + last()

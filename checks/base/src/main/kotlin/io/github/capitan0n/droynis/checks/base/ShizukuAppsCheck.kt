@@ -22,10 +22,14 @@ import kotlin.time.Duration.Companion.seconds
  * and `ShizukuConfigManager`, Shizuku 13). So the granted flag is the stored answer, and reading it
  * needs no privilege. Not seen: "Allow this time", which lasts only while that app runs, and Sui,
  * the root-only variant, which keeps its own list and defines no permission.
+ *
+ * Shizuku started with root runs as root, and so does everything it does for an app: then each
+ * allowed app may do what root can, which [ShizukuServerProbe] tells while Shizuku runs.
  */
 class ShizukuAppsCheck(
     private val permissions: PermissionProbe,
     private val packages: PackageInventory,
+    private val shizuku: ShizukuServerProbe,
 ) : Check {
 
     override val spec = CheckSpec(
@@ -36,15 +40,18 @@ class ShizukuAppsCheck(
         explanation = "Shizuku gives the apps you allow the rights of adb, or of root when Shizuku runs with " +
             "root. Such an app can install apps and grant them permissions, read the system log, change " +
             "hidden settings, take screenshots and tap the screen for you, without asking again. Allow only " +
-            "apps you trust; one installed from outside an app store is a warning. Sui, the variant for " +
+            "apps you trust; one installed from outside an app store is a warning, and so is any while " +
+            "Shizuku runs as root, since each of them can then do whatever root can. Sui, the variant for " +
             "rooted phones, keeps its own list, which Droynis can't read.",
         remediation = Remediation(
             text = "Open Shizuku, tap Application management (\"Authorized … applications\") and turn off the " +
                 "apps you no longer use or don't fully trust. Settings › Apps › the app › Permissions › Shizuku " +
-                "› Don't allow does the same.",
+                "› Don't allow does the same. On a rooted phone, start Shizuku over wireless debugging " +
+                "instead of with root, so the apps you allow get adb's rights, not root's.",
         ),
         timeout = 15.seconds,
-        failsWhen = "an app other than Droynis may use Shizuku (a warning when it came from outside an app store)",
+        failsWhen = "an app other than Droynis may use Shizuku (a warning when it came from outside an app " +
+            "store, or Shizuku runs as root)",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -62,8 +69,12 @@ class ShizukuAppsCheck(
         // Droynis is left out of the holders; its own Shizuku shell is what the Shizuku tier uses.
         val ownShell = Grant.SHIZUKU in context.capabilities.grants
 
+        val server = shizuku.server()
+        val asRoot = server is Reading.Value && server.value?.asRoot == true
+
         val evidence = buildList {
             add(shizukuApp(installed, inventory))
+            add(server.toEvidence("Shizuku runs as") { it?.runsAs ?: "not running" })
             all.forEach { add(it.evidence("Shizuku access", granted.source, trusted = it in trusted)) }
             if (all.isEmpty()) add(Evidence("Shizuku access", "none", granted.source))
             if (ownShell) add(Evidence("Shizuku access", "Droynis", OWN_SHELL, note = "this app; not counted"))
@@ -76,9 +87,10 @@ class ShizukuAppsCheck(
             return Outcome.pass(if (ownShell) "No app other than Droynis may use Shizuku" else "No app may use Shizuku", evidence)
         }
         return Outcome.fail(
-            "${count(counted.size, "app")} may use Shizuku: ${counted.labels().joinNames()}" + sideloadedSuffix(counted),
+            "${count(counted.size, "app")} may use Shizuku: ${counted.labels().joinNames()}" + sideloadedSuffix(counted) +
+                (if (asRoot) "; Shizuku runs as root, so ${if (counted.size == 1) "it" else "they"} may do what root can" else ""),
             evidence,
-            escalation = sideloadedEscalation(counted),
+            escalation = sideloadedEscalation(counted) ?: Severity.WARNING.takeIf { asRoot },
         )
     }
 

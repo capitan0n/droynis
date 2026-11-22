@@ -262,7 +262,7 @@ class SpecialAccessCheck(
             )
             is AppOpModes.Result.Parsed -> result
         }
-        val checked = Evidence("Apps inspected", "${count(parsed.packages, "app")} with app-op records", source)
+        val checked = Evidence("App-op package entries in this profile", parsed.packages.toString(), source)
         if (parsed.grants.isEmpty()) return Outcome.pass("No app ${access.phrase}", listOf(checked))
 
         // Only now are system apps worth telling apart; without the app list that is impossible.
@@ -286,7 +286,7 @@ class SpecialAccessCheck(
         val own = holders.filter { it.first != null && it.first == context.appPackage }
         val expected = holders.filter { it.first in access.expected }
         val system = holders.filter { (pkg, _) -> pkg != null && byPackage[pkg]?.isSystem == true }
-        // Packages missing from the list (another user's apps, an unknown uid) count as user apps: never hide them.
+        // Keep grants that cannot be matched to this profile's installed-app inventory.
         val (trusted, flagged) = context.splitTrusted(holders - own.toSet() - expected.toSet() - system.toSet()) { it.first }
 
         val evidence = buildList {

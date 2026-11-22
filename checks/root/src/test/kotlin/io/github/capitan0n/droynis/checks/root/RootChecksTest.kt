@@ -35,18 +35,24 @@ class RootChecksTest {
         var manager: Reading<RootManager> = Reading.Value(RootManager.MAGISK, Source("su")),
         var policies: Reading<String> = Reading.Value("", Source("su")),
         var settings: Reading<String> = Reading.Value("", Source("su")),
+        var strings: Reading<String> = Reading.Value("", Source("su")),
         var bootScripts: Reading<String> = Reading.Value("", Source("su")),
         var tempFiles: Reading<String> = Reading.Value("", Source("su")),
         var net: Map<ProcNet, Reading<String>> = ProcNet.entries.associateWith { Reading.Value(HEADER, Source("su")) },
+        var premiumSms: Reading<String?> = Reading.Value(null, Source("su")),
+        var quickShare: Reading<String?> = Reading.Value(null, Source("su")),
     ) : RootShellProbe {
         override fun adbKeys() = keys
         override fun modules() = modules
         override fun manager() = manager
         override fun magiskPolicies() = policies
         override fun magiskSettings() = settings
+        override fun magiskStrings() = strings
         override fun bootScripts() = bootScripts
         override fun tempFiles() = tempFiles
         override fun procNet(table: ProcNet) = net.getValue(table)
+        override fun premiumSmsPolicy() = premiumSms
+        override fun quickShareSettings() = quickShare
     }
 
     private val packages = object : PackageInventory {
@@ -64,7 +70,7 @@ class RootChecksTest {
         ).map { it.spec }
 
         assertEquals(
-            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "NETW-3301"),
+            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "APPS-4303", "NETW-3301", "NETW-3302"),
             specs.map { it.id },
         )
         assertEquals(setOf(Tier.ROOT), specs.map { it.requiredTier }.toSet())
@@ -120,8 +126,32 @@ class RootChecksTest {
 
         assertEquals(Status.FAIL, outcome.status)
         // 10131 is denied, 10133's grant expired in 1970, 10132 is Droynis.
-        assertEquals("2 apps can get root: Termux and adb shell", outcome.summary)
+        // adb's shell is named, but it is no app.
+        assertEquals("adb shell and 1 app can get root: Termux", outcome.summary)
         assertTrue(outcome.evidence.any { it.value == "Droynis" && it.note!!.startsWith("this app") })
+
+        val shellOnly = RootAppsCheck(FakeRoot(policies = v("uid=2000|policy=2|until=0")), packages).run(context)
+        assertEquals("adb shell can get root", shellOnly.summary)
+    }
+
+    @Test
+    fun `a Magisk app hidden under another name is pointed out`() = runTest {
+        assertEquals("org.kde.kdeconnect_tp", MagiskStrings.hiddenManager("key=requester|value=org.kde.kdeconnect_tp\n"))
+        assertNull(MagiskStrings.hiddenManager(""))
+        assertNull(MagiskStrings.hiddenManager("key=other|value=x\nrequester"))
+
+        val table = v("uid=10130|policy=2|until=0")
+        val hidden = RootAppsCheck(FakeRoot(policies = table, strings = v("key=requester|value=org.kde.kdeconnect_tp")), packages).run(context)
+        val row = hidden.evidence.single { it.label == "Magisk app" }
+        assertEquals("KDE Connect (org.kde.kdeconnect_tp)", row.value)
+        assertEquals("org.kde.kdeconnect_tp", row.packageName)
+
+        // Not hidden, a package that isn't installed, or a table that can't be read: nothing is added, nothing breaks.
+        for (strings in listOf(v(""), v("key=requester|value=gone.app"), Reading.Unavailable("no such table", source))) {
+            val outcome = RootAppsCheck(FakeRoot(policies = table, strings = strings), packages).run(context)
+            assertEquals(Status.FAIL, outcome.status)
+            assertTrue(outcome.evidence.none { it.label == "Magisk app" })
+        }
     }
 
     @Test
@@ -260,6 +290,57 @@ class RootChecksTest {
 
         val odd = FakeRoot(net = ProcNet.entries.associateWith { v(HEADER + "garbage line\n") })
         assertEquals(Status.UNKNOWN, ListeningAppsCheck(odd, packages).run(context).status)
+    }
+
+    private fun smsPolicy(vararg apps: Pair<String, Int>) = v(
+        "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<premium-sms-policy>\n" +
+            apps.joinToString("") { (pkg, policy) -> "<package name=\"$pkg\" sms-policy=\"$policy\" />\n" } +
+            "</premium-sms-policy>\n",
+    )
+
+    @Test
+    fun `apps allowed to text premium numbers fail, others and uninstalled ones don't count`() = runTest {
+        val root = FakeRoot(
+            premiumSms = smsPolicy("com.termux" to 3, "org.kde.kdeconnect_tp" to 1, "org.example.gone" to 3, "org.example.denied" to 2),
+        )
+        val outcome = PremiumSmsCheck(root, packages).run(context)
+
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals("1 app may text premium numbers without asking: Termux", outcome.summary)
+        assertEquals("4", outcome.evidence.single { it.label == "Apps with a premium SMS setting" }.value)
+        val allowed = outcome.evidence.filter { it.label == "Always allowed" }
+        assertEquals(listOf("Termux (com.termux)", "org.example.gone"), allowed.map { it.value })
+        assertEquals("not installed; not counted", allowed.last().note)
+
+        val trusted = PremiumSmsCheck(root, packages).run(context.copy(trustedApps = setOf("com.termux")))
+        assertEquals(Status.PASS, trusted.status)
+        assertEquals("Only apps you trust may text premium numbers without asking: Termux", trusted.summary)
+    }
+
+    @Test
+    fun `no file or no app always allowed passes, an odd or unreadable file is unknown`() = runTest {
+        val none = PremiumSmsCheck(FakeRoot(), packages).run(context)
+        assertEquals(Status.PASS, none.status)
+        assertEquals("the file doesn't exist yet", none.evidence.single().note)
+
+        assertEquals(Status.PASS, PremiumSmsCheck(FakeRoot(premiumSms = smsPolicy("com.termux" to 1)), packages).run(context).status)
+        assertEquals(Status.UNKNOWN, PremiumSmsCheck(FakeRoot(premiumSms = v("ABX\u0000binary")), packages).run(context).status)
+        assertEquals(
+            Status.UNKNOWN,
+            PremiumSmsCheck(FakeRoot(premiumSms = Reading.Unavailable("permission denied", source)), packages).run(context).status,
+        )
+    }
+
+    @Test
+    fun `the premium SMS file parser never skips a package it can't read`() {
+        assertEquals(
+            mapOf("a.b" to 3, "c.d" to 2),
+            PremiumSmsPolicies.parse("<premium-sms-policy><package sms-policy=\"3\" name=\"a.b\"/><package name=\"c.d\" sms-policy=\"2\"></package></premium-sms-policy>"),
+        )
+        assertEquals(emptyMap(), PremiumSmsPolicies.parse("<premium-sms-policy />"))
+        assertNull(PremiumSmsPolicies.parse("<premium-sms-policy><package name=\"a.b\" /></premium-sms-policy>"))
+        assertNull(PremiumSmsPolicies.parse("<premium-sms-policy><package name=\"a.b\" sms-policy=\"always\" /></premium-sms-policy>"))
+        assertNull(PremiumSmsPolicies.parse("<package name=\"a.b\" sms-policy=\"3\" />"))
     }
 
     @Test

@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.platform
 
 import android.os.Build
 import io.github.capitan0n.droynis.checks.base.BuildInfo
+import io.github.capitan0n.droynis.checks.base.ChipInfo
 import io.github.capitan0n.droynis.checks.base.DeviceSummary
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
@@ -27,4 +28,14 @@ internal object AndroidBuildInfo : BuildInfo {
         buildType = Build.TYPE.orEmpty(),
         buildTags = Build.TAGS.orEmpty(),
     )
+
+    // Build.SOC_* exist from Android 12; every field reads "unknown" (Build.UNKNOWN) when unset.
+    override fun chip(): ChipInfo = ChipInfo(
+        socManufacturer = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) known(Build.SOC_MANUFACTURER) else null,
+        socModel = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) known(Build.SOC_MODEL) else null,
+        hardware = known(Build.HARDWARE),
+        board = known(Build.BOARD),
+    )
+
+    private fun known(value: String?): String? = value?.trim()?.takeIf { it.isNotEmpty() && it != Build.UNKNOWN }
 }

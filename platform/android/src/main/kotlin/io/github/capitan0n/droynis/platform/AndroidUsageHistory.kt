@@ -8,20 +8,34 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
 import io.github.capitan0n.droynis.checks.base.ScreenUse
+import io.github.capitan0n.droynis.checks.base.UsageDump
 import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Source
+import io.github.capitan0n.droynis.platform.root.RootShell
 import java.time.Instant
 
 /**
- * Android's usage history (`UsageStatsManager`), read in Droynis' own process. It needs usage
- * access: the switch in Settings › Usage access, or the PACKAGE_USAGE_STATS permission from adb.
- * Shizuku and root don't help here, since the call is Droynis' own.
+ * Android's usage history (`UsageStatsManager`). Read in Droynis' own process it needs usage access:
+ * the switch in Settings › Usage access, or the PACKAGE_USAGE_STATS permission from adb. Without
+ * either, a connected privileged shell (Shizuku or root) reads it instead, as the shell user
+ * ([UsageReader]): Droynis' own access is never changed.
  */
-internal class AndroidUsageHistory(private val context: Context) : UsageHistoryProbe {
+internal class AndroidUsageHistory(
+    private val context: Context,
+    private val shells: ShellRouter,
+) : UsageHistoryProbe {
 
     override fun hasAccess(): Reading<Boolean> {
+        val own = ownAccess()
+        if ((own as? Reading.Value)?.value == true) return own
+        val shell = shells.active() ?: return own
+        val grant = if (shell is RootShell) Grant.ROOT else Grant.SHIZUKU
+        return Reading.Value(true, Source("Droynis' privileged shell reads the usage history", grant))
+    }
+
+    private fun ownAccess(): Reading<Boolean> {
         val source = Source("AppOpsManager GET_USAGE_STATS (Droynis)")
         return probe(source) {
             val appOps = context.getSystemService(AppOpsManager::class.java)
@@ -37,7 +51,26 @@ internal class AndroidUsageHistory(private val context: Context) : UsageHistoryP
         }
     }
 
-    override fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> {
+    override fun screensShown(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> =
+        // Without access and without a shell Android answers Droynis with an empty history, as before.
+        if ((ownAccess() as? Reading.Value)?.value == true || shells.active() == null) {
+            ownScreens(packages, since)
+        } else {
+            shellScreens(packages, since)
+        }
+
+    /** Through the privileged shell: every app's count comes back, and only the apps asked about leave this method. */
+    private fun shellScreens(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> =
+        when (val read = shells.usage(since.toEpochMilli())) {
+            is Reading.Value -> when (val parsed = UsageDump.parse(read.value)) {
+                is UsageDump.Result.Parsed -> Reading.Value(parsed.screens.filterKeys { it in packages }, read.source)
+                is UsageDump.Result.Failed -> Reading.Unavailable(parsed.reason, read.source)
+            }
+            is Reading.Unsupported -> read
+            is Reading.Unavailable -> read
+        }
+
+    private fun ownScreens(packages: Set<String>, since: Instant): Reading<Map<String, ScreenUse>> {
         val source = Source("UsageStatsManager.queryEvents(ACTIVITY_RESUMED)")
         return probe(source) {
             val manager = context.getSystemService(UsageStatsManager::class.java)

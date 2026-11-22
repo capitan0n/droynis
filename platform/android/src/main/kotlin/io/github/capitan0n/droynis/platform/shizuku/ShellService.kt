@@ -2,6 +2,7 @@ package io.github.capitan0n.droynis.platform.shizuku
 
 import android.os.ParcelFileDescriptor
 import io.github.capitan0n.droynis.platform.TelephonyReader
+import io.github.capitan0n.droynis.platform.UsageReader
 import java.io.IOException
 import java.io.Reader
 import java.util.concurrent.TimeUnit
@@ -40,6 +41,11 @@ class ShellService : IShellService.Stub() {
     override fun selinuxMode(): String = run(listOf(GETENFORCE)).trim()
 
     override fun telephony(): String = TelephonyReader.read()
+
+    override fun usage(sinceMillis: Long): String {
+        require(sinceMillis >= 0) { "invalid start time" }
+        return UsageReader.read(sinceMillis)
+    }
 
     /** Read straight from the file, no subprocess: it is a few hundred bytes the shell user can read. */
     override fun kernelCmdline(): String = try {
@@ -143,6 +149,8 @@ class ShellService : IShellService.Stub() {
             "trust" to listOf("trust"),
             "wifi" to listOf("wifi"),
             "activity services" to listOf("activity", "services"),
+            "telephony.registry" to listOf("telephony.registry"),
+            "user" to listOf("user"),
         )
 
         const val COMMAND_TIMEOUT_SECONDS = 10L

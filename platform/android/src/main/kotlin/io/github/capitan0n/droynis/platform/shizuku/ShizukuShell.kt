@@ -9,6 +9,8 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.ParcelFileDescriptor
 import android.os.Process
+import io.github.capitan0n.droynis.checks.base.ShizukuServer
+import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.shizuku.PrivilegedShell
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
@@ -51,6 +53,8 @@ data class ShizukuStatus(
     val version: Int? = null,
     /** True when Shizuku runs as root rather than as the adb shell user. */
     val asRoot: Boolean = false,
+    /** The user Shizuku runs as (0 root, 2000 adb's shell), while it runs and says so; null otherwise. */
+    val uid: Int? = null,
     /** Why the shell failed to start last time, if it did. */
     val error: String? = null,
 )
@@ -141,7 +145,9 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
                 isConnected -> ShizukuState.CONNECTED
                 else -> ShizukuState.ALLOWED
             }
-            ShizukuStatus(state, Shizuku.getVersion(), asRoot = Shizuku.getUid() == ROOT_UID, error = lastError)
+            // Shizuku 13 sends its uid when the app connects, so this needs no permission; -1 when it didn't.
+            val uid = Shizuku.getUid().takeIf { it >= 0 }
+            ShizukuStatus(state, Shizuku.getVersion(), asRoot = uid == ROOT_UID, uid = uid, error = lastError)
         } catch (e: RuntimeException) {
             // Shizuku stopped between the ping and these calls.
             ShizukuStatus(ShizukuState.NOT_RUNNING)
@@ -223,6 +229,9 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
     override fun telephony(): Reading<String> =
         call(Source(TELEPHONY_SOURCE, Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.telephony().orEmpty(), source) }
 
+    override fun usage(sinceMillis: Long): Reading<String> =
+        call(Source(USAGE_SOURCE, Grant.SHIZUKU)) { shell, source -> Reading.Value(shell.usage(sinceMillis).orEmpty(), source) }
+
     /** Streamed through a pipe: the output can be larger than one binder call carries. */
     override fun dumpsys(service: String): Reading<String> =
         call(Source("dumpsys $service", Grant.SHIZUKU)) { shell, source ->
@@ -259,7 +268,7 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
         const val MANAGER_PACKAGE = "moe.shizuku.privileged.api"
 
         /** Bump when [ShellService] changes, so Shizuku replaces a shell left from an older Droynis. */
-        private const val SERVICE_VERSION = 5
+        private const val SERVICE_VERSION = 7
 
         private const val REQUEST_CODE = 0x0D50
         private const val CONNECT_TIMEOUT_MILLIS = 10_000L
@@ -268,6 +277,28 @@ class ShizukuShell(context: Context) : PrivilegedShell, ShellAccess {
         /** `UserHandle.PER_USER_RANGE`: uids of each Android user start at a multiple of it. */
         private const val PER_USER_RANGE = 100_000
 
-        const val TELEPHONY_SOURCE = "telephony service: isIccLockEnabled, getAllowedNetworkTypesForReason"
+        /** One read serves the SIM PIN, the 2G and the network security checks: no single getter names it. */
+        const val TELEPHONY_SOURCE = "telephony service, read as the shell user"
+        const val USAGE_SOURCE = "usage stats service: queryEvents(ACTIVITY_RESUMED), read as the shell user"
+    }
+}
+
+/**
+ * Which user the Shizuku service runs as, for APPS-4016: started with root, every app it allows may
+ * do what root can. Read from [ShizukuShell.status], which asks Shizuku itself; Sui answers too.
+ */
+internal class AndroidShizukuServer(private val shizuku: ShizukuShell) : ShizukuServerProbe {
+
+    override fun server(): Reading<ShizukuServer?> {
+        val source = Source("Shizuku.getUid()")
+        return probe(source) {
+            val status = shizuku.status()
+            when (status.state) {
+                ShizukuState.NOT_INSTALLED, ShizukuState.NOT_RUNNING -> Reading.Value(null, source)
+                ShizukuState.OUTDATED -> Reading.Unavailable("Shizuku is older than version 11", source)
+                else -> status.uid?.let { Reading.Value(ShizukuServer(it), source) }
+                    ?: Reading.Unavailable("Shizuku didn't say which user it runs as", source)
+            }
+        }
     }
 }

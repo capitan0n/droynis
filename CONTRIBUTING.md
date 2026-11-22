@@ -64,16 +64,6 @@ explains the layout and why.
    ./gradlew check
    ```
 
-## Update the stalkerware list
-
-SUSP-5007 uses Echap's [Stalkerware Indicators](https://github.com/AssoEchap/stalkerware-indicators)
-(CC BY 4.0), built into the app. To refresh it (needs PyYAML):
-
-```sh
-git clone --depth 1 https://github.com/AssoEchap/stalkerware-indicators /tmp/sw
-python3 scripts/update-stalkerware-indicators.py /tmp/sw
-```
-
 A new permission, from a manifest or a library, must also be added to `ci/release-permissions.txt`
 with a line saying what needs it; CI compares the release APK against that list.
 

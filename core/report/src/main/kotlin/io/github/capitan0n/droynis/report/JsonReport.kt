@@ -4,6 +4,8 @@ import io.github.capitan0n.droynis.core.Finding
 import io.github.capitan0n.droynis.core.ScanContext
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 /**
  * Machine-readable report, meant for diffing scans and for tools such as jq. The layout is
@@ -14,6 +16,12 @@ object JsonReport {
 
     const val SCHEMA = "droynis-report"
     const val SCHEMA_VERSION = 1
+
+    /** Always three fraction digits: ISO_OFFSET_DATE_TIME drops trailing zeros, so the length would vary. */
+    private val STARTED_AT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", Locale.ROOT)
+
+    /** Key next to the verdict names in "verdicts": how many findings the user muted. */
+    const val MUTED = "MUTED"
 
     fun render(
         context: ScanContext,
@@ -26,14 +34,21 @@ object JsonReport {
     ): String {
         val counts = findings.withoutMuted(index.muted).countByVerdict()
         val shown = if (hidePersonal) PersonalDetails.hide(findings) else findings
-        val startedAt = if (hidePersonal) context.startedAt.withZoneSameInstant(ZoneOffset.UTC) else context.startedAt
+        // Whole milliseconds: the clock's precision differs between Android versions, and reports are diffed.
+        val started = context.startedAt.truncatedTo(ChronoUnit.MILLIS)
+        val startedAt = if (hidePersonal) started.withZoneSameInstant(ZoneOffset.UTC) else started
+        // Muted checks are in no verdict's count, so they get their own: the counts add up to the findings.
+        val verdicts = counts.entries.associateTo(linkedMapOf<String, Any?>()) { it.key.name to it.value }
+        verdicts[MUTED] = index.muted.size
         val root = linkedMapOf(
             "schema" to SCHEMA,
             "schemaVersion" to SCHEMA_VERSION,
             "generator" to linkedMapOf("app" to "Droynis", "version" to appVersion),
             "personalDetails" to if (hidePersonal) "hidden" else "included",
+            // What "hidden" covers and what it doesn't, so nobody shares a report believing it says nothing about them.
+            "personalDetailsNote" to if (hidePersonal) "Left out: ${PersonalDetails.DESCRIPTION}. ${PersonalDetails.KEPT}." else null,
             "scan" to linkedMapOf(
-                "startedAt" to startedAt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                "startedAt" to startedAt.format(STARTED_AT),
                 "sdkInt" to context.sdkInt,
                 "tier" to context.capabilities.tier.name,
                 "grants" to context.capabilities.grants.map { it.name }.sorted(),
@@ -52,7 +67,7 @@ object JsonReport {
                 "unsupported" to index.unsupported,
                 "muted" to index.muted,
             ),
-            "verdicts" to counts.entries.associate { it.key.name to it.value },
+            "verdicts" to verdicts,
             "findings" to shown.map { finding ->
                 linkedMapOf(
                     "id" to finding.spec.id,

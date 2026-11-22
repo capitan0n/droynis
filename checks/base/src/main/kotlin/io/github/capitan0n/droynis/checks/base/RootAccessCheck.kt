@@ -4,6 +4,7 @@ import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Check
 import io.github.capitan0n.droynis.core.CheckSpec
 import io.github.capitan0n.droynis.core.Evidence
+import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Outcome
 import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Remediation
@@ -34,7 +35,8 @@ class RootAccessCheck(
             settingsActions = listOf(SettingsActions.APPS),
         ),
         timeout = 15.seconds,
-        failsWhen = "an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found",
+        failsWhen = "an su binary, a root manager (Magisk, KernelSU, APatch…) or Xposed/LSPosed is found, or " +
+            "Droynis itself was given a root shell",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -43,12 +45,17 @@ class RootAccessCheck(
         val apps = packages.installedApps()
         val found = (suFiles as? Reading.Value)?.value.orEmpty()
         val rootApps = rootAppsIn(apps)
+        // A root shell this scan holds is proof, whatever hides the files and the manager's name:
+        // Magisk can rename its app and keep su out of an app's view.
+        val ownShell = context.capabilities.has(Grant.ROOT)
         val evidence = buildList {
+            if (ownShell) add(Evidence("Root access", "granted to Droynis", Source("Droynis' root shell", Grant.ROOT)))
             add(suFiles.toEvidence("su binaries") { if (it.isEmpty()) "none of ${SU_PATHS.size} known paths" else it.joinToString() })
             if (apps !is Reading.Value) add(apps.toEvidence("Installed apps"))
             rootApps.forEach { add(rootAppEvidence(it.packageName, packages, apps.source)) }
         }
-        val signs = found.map { "su at $it" } + rootApps.map { "${packages.label(it.packageName)} installed" }
+        val signs = listOfNotNull("Droynis was given a root shell".takeIf { ownShell }) +
+            found.map { "su at $it" } + rootApps.map { "${packages.label(it.packageName)} installed" }
         return when {
             signs.isNotEmpty() -> Outcome.fail("Signs of root: ${signs.joinNames()}", evidence)
             suFiles is Reading.Value && apps is Reading.Value -> Outcome.pass("No signs of root were found", evidence)
@@ -65,6 +72,11 @@ class RootAccessCheck(
             "/sbin/su",
             "/su/bin/su",
             "/vendor/bin/su",
+            "/vendor/xbin/su",
+            "/system_ext/bin/su",
+            "/product/bin/su",
+            "/odm/bin/su",
+            "/debug_ramdisk/su",
             "/data/local/su",
             "/data/local/bin/su",
             "/data/local/xbin/su",

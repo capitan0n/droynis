@@ -16,6 +16,8 @@ fun rootChecks(probes: RootProbes): List<Check> = listOf(
     // Apps and permissions
     RootAppsCheck(probes.root, probes.packages),
     AdbRootCheck(probes.root),
+    PremiumSmsCheck(probes.root, probes.packages),
     // Network
     ListeningAppsCheck(probes.root, probes.packages),
+    QuickShareCheck(probes.root, probes.packages),
 )

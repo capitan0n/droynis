@@ -17,6 +17,7 @@ fun adbChecks(probes: AdbProbes): List<Check> = (
         HiddenWifiCheck(probes.dumpsys) +
         WepWifiCheck(probes.dumpsys) +
         HotspotCheck(probes.dumpsys) +
+        CallForwardingCheck(probes.dumpsys, probes.cellular) +
         HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages) +
         BackgroundDataUseCheck(probes.dumpsys, probes.packages, probes.defaultApps)
     )

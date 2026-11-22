@@ -27,7 +27,11 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
+import io.github.capitan0n.droynis.checks.base.ScreenCaptureProbe
+import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
+import io.github.capitan0n.droynis.checks.base.StoreKeys
+import io.github.capitan0n.droynis.checks.base.StrongBoxProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
 import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
@@ -43,6 +47,7 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.platform.root.RootShell
+import io.github.capitan0n.droynis.platform.shizuku.AndroidShizukuServer
 import io.github.capitan0n.droynis.platform.shizuku.ShizukuShell
 import java.time.ZonedDateTime
 
@@ -62,7 +67,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val settings: SystemSettings = ShellBackedSettings(AndroidSettings(app.contentResolver), shells)
     override val keyguard: Keyguard = AndroidKeyguard(app)
     override val build: BuildInfo = AndroidBuildInfo
-    private val androidPackages = AndroidPackages(app)
+    private val androidPackages = AndroidPackages(app, signersOf = StoreKeys.PACKAGES)
     override val packages: PackageInventory = androidPackages
     private val devicePolicy = AndroidDevicePolicy(app, packages::label)
     override val policy: DevicePolicy = devicePolicy
@@ -75,6 +80,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val properties: SystemProperties = AndroidSystemProperties
     override val files: FileProbe = AndroidFiles
     override val attestation: AttestationProbe = AndroidAttestation
+    override val strongBox: StrongBoxProbe = AndroidStrongBox(app)
     override val webView: WebViewProbe = AndroidWebView
     private val androidPermissions = AndroidPermissions(app)
     override val permissions: PermissionProbe = androidPermissions
@@ -88,11 +94,13 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val packageDetails: PackageDetailsProbe = AndroidPackageDetails(app)
     private val appFootprints = AndroidAppFootprint(app)
     override val footprints: AppFootprintProbe = appFootprints
-    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app)
+    override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
     override val modules: ModuleProbe = AndroidModules(app)
-    override val profiles: ProfileProbe = AndroidProfiles(app)
+    override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
+    override val screenCapture: ScreenCaptureProbe = AndroidScreenCapture(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
+    override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells
 
     /** Not a check: feeds the permission overview on the Tools screen. */

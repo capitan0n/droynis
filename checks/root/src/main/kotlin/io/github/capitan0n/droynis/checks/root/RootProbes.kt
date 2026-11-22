@@ -39,6 +39,13 @@ interface RootShellProbe {
     fun magiskSettings(): Reading<String>
 
     /**
+     * `magisk --sqlite "SELECT key, value FROM strings"`, one `key=…|value=…` per line; Magisk only.
+     * Its `requester` row holds the package name the Magisk app was hidden under ("Hide the Magisk
+     * app"); there is no such row while the app keeps its own name.
+     */
+    fun magiskStrings(): Reading<String>
+
+    /**
      * The boot scripts root runs under `/data/adb` and the directories that hold them, each as a
      * line `D|F <octal-perms> <owner> <path>` ([BootScripts] reads it). Covers `service.d`,
      * `post-fs-data.d` and each module's `post-fs-data.sh`/`service.sh`.
@@ -53,6 +60,20 @@ interface RootShellProbe {
 
     /** The contents of `/proc/net/<file>`; `Unsupported` when the kernel has no such table. */
     fun procNet(table: ProcNet): Reading<String>
+
+    /**
+     * `/data/misc/sms/premium_sms_policy.xml` as text (binary XML converted with `abx2xml`), in the
+     * format [PremiumSmsPolicies.parse] reads; `Value(null)` when the file doesn't exist.
+     */
+    fun premiumSmsPolicy(): Reading<String?>
+
+    /**
+     * Google Play services' Quick Share settings for this user: each
+     * `/data/user/<user>/com.google.android.gms/shared_prefs/nearbysharing*.xml` as text after a
+     * [QuickSharePrefs.FILE] line, in the format [QuickSharePrefs.parse] reads; `Value(null)` when Play
+     * services has no settings folder.
+     */
+    fun quickShareSettings(): Reading<String?>
 }
 
 /** Everything the root-tier checks read. Implemented by :platform-android. */

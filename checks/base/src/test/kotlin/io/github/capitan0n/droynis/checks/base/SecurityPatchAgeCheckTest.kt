@@ -56,6 +56,6 @@ class SecurityPatchAgeCheckTest {
     fun `evidence shows the raw level and the reference date`() = runTest {
         val outcome = SecurityPatchAgeCheck(FakeBuildInfo(value("2026-09-05"))).run(scanContext())
 
-        assertEquals(listOf("\"2026-09-05\"", "2026-10-01"), outcome.evidence.map { it.value })
+        assertEquals(listOf("2026-09-05", "2026-10-01"), outcome.evidence.map { it.value })
     }
 }
