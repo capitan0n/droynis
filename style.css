@@ -112,7 +112,7 @@ body{background:var(--bg);color:var(--ink)}
 .filter-group + .filter-group { border: 0; padding-top: 0; margin-top: 1.25rem }
 .catalog-controls .filter-group legend { margin-bottom: .55rem }
 .results-header { margin-top: 1.5rem }
-.beta-badge { border: 1px dashed var(--line); border-radius: .4rem; color: var(--accent); padding: .15rem .5rem; font: .8rem LocalMono,monospace }
+.release-badge { border: 1px dashed var(--line); border-radius: .4rem; color: var(--accent); padding: .15rem .5rem; font: .8rem LocalMono,monospace }
 #tier-adb .adb-commands { grid-column: 1 / -1; min-width: 0 }
 .adb-commands .code { margin-top: 0 }
 .code pre, .code pre code { white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; max-width: 100% }

@@ -46,7 +46,7 @@ if(document.getElementById('check-search')){
       (category==='All categories'||c.category===category)&&
       (tier==='All tiers'||c.tier===tier)&&
       (severity === 'All severities' || c.severity === severity) &&
-      [c.id,c.title,c.tier,c.severity,c.failsWhen,c.category].join(' ').toLowerCase().includes(query)
+      [c.id,c.title,c.tier,c.severity,c.failsWhen,c.statusNote || '',c.category].join(' ').toLowerCase().includes(query)
     );
     const visible=expanded?matches:matches.slice(0,PAGE_SIZE);
     grid.replaceChildren();
@@ -57,16 +57,23 @@ if(document.getElementById('check-search')){
       const tierLabel=document.createElement('span');tierLabel.className='tier-badge tier-'+c.tier.toLowerCase();tierLabel.textContent=c.tier;
       const severityLabel=document.createElement('span');severityLabel.className='severity-badge severity-'+c.severity.toLowerCase();severityLabel.textContent=c.severity;
       meta.append(id,tierLabel,severityLabel);
-      if (c.betaAdded) {
+      if (c.addedIn) {
         const badge = document.createElement('span');
-        badge.className = 'beta-badge';
-        badge.textContent = 'Beta';
+        badge.className = 'release-badge';
+        badge.textContent = 'New in ' + c.addedIn;
         meta.append(badge);
       }
       const title=document.createElement('h3');title.textContent=c.title;
       const description=document.createElement('p');
-      const label=document.createElement('span');label.className='failure-label';label.textContent='Flags when ';
-      description.append(label);appendSeverityText(description,c.failsWhen);
+      if (c.statusNote) {
+        description.textContent = c.statusNote;
+      } else {
+        const label = document.createElement('span');
+        label.className = 'failure-label';
+        label.textContent = 'Flags when ';
+        description.append(label);
+        appendSeverityText(description, c.failsWhen);
+      }
       article.append(meta,title,description);grid.append(article);
     }
     if(!matches.length){

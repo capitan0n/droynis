@@ -114,7 +114,7 @@
 | SUSP-5004 | Apps installed by another app | Base | Warning | an app was installed by another app you installed that isn't an app store or an installer tool |
 | SUSP-5005 | Apps with banking-trojan permissions | Base | Warning | an installed app declares an accessibility service and asks for SMS and to draw over other apps (critical when it came from outside an app store or its accessibility service is on) |
 | SUSP-5006 | Apps signed with a debug or test key | Base | Notice | a user app is signed with Android's debug key or a public test key (warning for a test key, or a debug key on an app that isn't debuggable) |
-| SUSP-5007 | Known stalkerware and monitoring apps | Base | Warning | an app you installed has the package name or signing key of an app on Echap's Stalkerware Indicators list (critical for stalkerware, warning for a monitoring app that doesn't hide) |
+| SUSP-5007 | Known stalkerware and monitoring apps (inactive) | Base | Info | never (inactive by design) |
 | SUSP-5008 | Apps using a built-in app's name | Base | Notice | an app from outside an app store shows the same name as an app that came with the phone (a warning when that app is a core one, such as Settings or Google Play services) |
 | SUSP-5009 | Apps posing as an app store | Base | Warning | a user app uses the package name of an app store whose signing keys Droynis knows, but none of them (critical when it has installed other apps) |
 | SUSP-5010 | Screen being recorded or shared | Base | Warning | the screen is being recorded or shared while Droynis scans (Android 15+), or an app you installed shows the screen on a display of its own (critical when that app came from outside an app store) |
@@ -127,11 +127,11 @@
 
 | ID | Check | Tier | Severity | Fails when |
 |---|---|---|---|---|
-| NETW-3001 | Private DNS (Android 9+) | Base | Warning | DNS isn't encrypted and no VPN is active |
+| NETW-3001 | Private DNS (Android 9+) | Base | Warning | Private DNS is inactive and no VPN is active |
 | NETW-3002 | VPN | Base | Info | no VPN is active |
 | NETW-3003 | User CA certificates | Base | Warning | a user-installed CA certificate can intercept TLS |
 | NETW-3004 | Bluetooth | Base | Notice | Bluetooth is on |
-| NETW-3005 | Wi-Fi security (Android 12+) | Base | Warning | the phone is on an open or WEP Wi-Fi network without a VPN |
+| NETW-3005 | Wi-Fi security (Android 12+) | Base | Warning | the phone is on an open or WEP Wi-Fi network |
 | NETW-3006 | NFC | Base | Info | NFC is on |
 | NETW-3007 | HTTP proxy | Base | Warning | web traffic on Wi-Fi, mobile data or another network goes through an HTTP proxy |
 | NETW-3008 | Location | Base | Notice | Location is on |
