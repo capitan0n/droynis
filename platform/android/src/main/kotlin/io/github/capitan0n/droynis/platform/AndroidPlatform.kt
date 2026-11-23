@@ -34,6 +34,7 @@ import io.github.capitan0n.droynis.checks.base.StoreKeys
 import io.github.capitan0n.droynis.checks.base.StrongBoxProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
+import io.github.capitan0n.droynis.checks.base.TetheringProbe
 import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
 import io.github.capitan0n.droynis.checks.base.UptimeProbe
 import io.github.capitan0n.droynis.checks.base.UsbProbe
@@ -100,6 +101,8 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val screenCapture: ScreenCaptureProbe = AndroidScreenCapture(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
+    override fun supportsPasspoint() = app.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_PASSPOINT)
+    override val tethering: TetheringProbe = AndroidTethering(app, routedDumpsys)
     override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells
 

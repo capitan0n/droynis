@@ -72,6 +72,7 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),
     WifiSecurityCheck(probes.network),
+    ActiveTetheringCheck(probes.tethering),
     HttpProxyCheck(probes.network),
     Cellular2gCheck(probes.cellular, probes.settings, probes.properties),
     UserCertificatesCheck(probes.certificates),

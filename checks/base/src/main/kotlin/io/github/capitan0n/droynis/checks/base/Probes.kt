@@ -663,6 +663,7 @@ interface BaseProbes {
     val accessibility: AccessibilityProbe
     val packages: PackageInventory
     val network: NetworkProbe
+    val tethering: TetheringProbe
     val certificates: CertificateStore
     val radios: RadioProbe
     val inputMethods: InputMethodProbe

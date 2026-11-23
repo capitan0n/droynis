@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-108 checks. Each one's full explanation and fix are in the app: tap the check.
+111 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -13,10 +13,10 @@
 |---|---|---|---|---|---|
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
 | [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
-| [Apps and permissions](#apps-and-permissions) | 20 | 7 | 2 | 3 | 32 |
+| [Apps and permissions](#apps-and-permissions) | 20 | 8 | 2 | 3 | 33 |
 | [Suspicious apps](#suspicious-apps) | 10 | 4 | – | – | 14 |
-| [Network and radios](#network-and-radios) | 12 | 6 | 3 | 2 | 23 |
-| **All** | 72 | 18 | 9 | 9 | 108 |
+| [Network and radios](#network-and-radios) | 13 | 7 | 3 | 2 | 25 |
+| **All** | 73 | 20 | 9 | 9 | 111 |
 
 ## Device integrity
 
@@ -98,6 +98,7 @@
 | APPS-4106 | Apps that can change system settings (Android 10+) | ADB | Info | a user app may change system settings (information only) |
 | APPS-4107 | Apps that can manage your media (Android 12+) | ADB | Info | a user app may change or delete media without asking (information only) |
 | APPS-4109 | Apps that keep their permissions while unused (Android 11+) | ADB | Info | a user app is exempt from having its permissions removed while unused (information only) |
+| APPS-4110 | Printing services (Android 9+) | ADB | Info | never (inventory of installed printing services and their switches) |
 | APPS-4201 | Passkey and password providers (Android 14+) | Shizuku | Notice | a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store) |
 | APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | APPS-4301 | Apps with root access | Root | Warning | an app other than Droynis may get root |
@@ -139,12 +140,14 @@
 | NETW-3010 | 2G mobile networks | Base | Notice | a SIM in use may connect to 2G networks |
 | NETW-3011 | Secure NFC (Android 10+) | Base | Notice | NFC is on and works while the phone is locked |
 | NETW-3012 | Added system CA certificates | Base | Warning | a CA certificate was added to the system store, which every app trusts (by a root module or a modified system) |
+| NETW-3013 | Active tethering | Base | Info | the phone is sharing a connection (information only) |
 | NETW-3101 | Wi-Fi MAC randomization (Android 10+) | ADB | Notice | the current Wi-Fi connection or a saved network uses the phone's own MAC address |
 | NETW-3102 | Open Wi-Fi networks that join automatically (Android 12+) | ADB | Notice | a saved open, Enhanced Open or WEP network joins automatically |
 | NETW-3103 | Hotspot security (Android 14+) | ADB | Notice | the hotspot has no password (a warning), or doesn't turn off by itself when no device is connected |
 | NETW-3104 | Hidden Wi-Fi networks (Android 12+) | ADB | Notice | a saved Wi-Fi network is hidden, so the phone calls out its name when it looks for Wi-Fi |
 | NETW-3105 | Saved Wi-Fi networks with broken encryption (Android 12+) | ADB | Notice | a saved Wi-Fi network uses WEP |
 | NETW-3106 | Call forwarding | ADB | Warning | a SIM in use forwards all calls to another number |
+| NETW-3107 | Hotspot 2.0 (Passpoint) | ADB | Info | never (reports the Passpoint switch and readable provider settings) |
 | NETW-3201 | Always-on VPN lockdown | Shizuku | Notice | an always-on VPN lets traffic out while it is down |
 | NETW-3202 | Mobile network encryption (Android 14+) | Shizuku | Notice | the phone accepts mobile connections without encryption (Require encryption is off) |
 | NETW-3203 | Mobile network security alerts (Android 15+) | Shizuku | Notice | the phone doesn't warn about signs of a fake cell tower (Network notifications are off) |

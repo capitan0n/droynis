@@ -232,6 +232,7 @@ class FakeProbes(
     override val accessibility: AccessibilityProbe = FakeAccessibility(),
     override val packages: PackageInventory = FakePackages(),
     override val network: NetworkProbe = FakeNetwork(value(null)),
+    override val tethering: TetheringProbe = TetheringProbe { value(emptySet()) },
     override val certificates: CertificateStore = FakeCertificates(),
     override val radios: RadioProbe = FakeRadios(),
     override val inputMethods: InputMethodProbe = FakeInputMethods(),
