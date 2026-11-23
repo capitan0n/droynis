@@ -72,12 +72,16 @@ class StoreImpostorCheck(private val packages: PackageInventory) : Check {
                 trust = trustOf(counted = isImpostor, trusted = app in trusted),
             )
         }
+        val unverified = stores.filter { it.second == StoreKeys.Verdict.UNVERIFIED || it.second == StoreKeys.Verdict.KEY_UNREAD }
+        if (counted.isEmpty() && unverified.isNotEmpty()) {
+            val verified = stores.count { it.second == StoreKeys.Verdict.KEY_MATCHES }
+            val names = unverified.map { packages.label(it.first.packageName) }.sorted().joinNames()
+            return Outcome.unknown("${count(verified, "store signature")} verified. Unverified: $names", evidence)
+        }
         if (counted.isEmpty() && trusted.isNotEmpty()) {
             return Outcome.pass(onlyTrusted("use an app store's name without its key", trusted.map { packages.label(it.packageName) }), evidence)
         }
         if (counted.isEmpty()) {
-            val unread = stores.filter { it.second == StoreKeys.Verdict.KEY_UNREAD }.map { packages.label(it.first.packageName) }
-            if (unread.isNotEmpty()) return Outcome.unknown("Could not read the signing key of ${unread.joinNames()}", evidence)
             return Outcome.pass(NONE, evidence)
         }
         return Outcome.fail(
@@ -102,6 +106,6 @@ class StoreImpostorCheck(private val packages: PackageInventory) : Check {
     }
 
     internal companion object {
-        const val NONE = "No app uses an app store's name without its signing key"
+        const val NONE = "No app store impersonation detected"
     }
 }

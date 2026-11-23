@@ -64,6 +64,17 @@ class SystemNameAppsCheckTest {
     }
 
     @Test
+    fun `root can identify a renamed manager without hiding its installed name match`() = runTest {
+        val installed = FakePackages(value(system + app("wx.ys")), labels)
+        val packages = object : PackageInventory by installed {
+            override fun installedLabel(packageName: String) = installed.label(packageName)
+            override fun label(packageName: String) = if (packageName == "wx.ys") "Magisk manager (shown as Settings)" else installed.label(packageName)
+        }
+        val result = SystemNameAppsCheck(packages).outcome()
+        assertEquals("Magisk manager (shown as Settings) (wx.ys)", result.evidence.single { it.packageName == "wx.ys" }.value)
+    }
+
+    @Test
     fun `a sideloaded replacement for an ordinary app is a notice`() = runTest {
         val outcome = check(app("org.fossify.gallery", installer = "com.google.android.packageinstaller")).outcome()
         assertEquals(Status.FAIL, outcome.status)

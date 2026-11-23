@@ -13,3 +13,8 @@
 -keep class io.github.capitan0n.droynis.platform.UsageReader {
     public static void main(java.lang.String[]);
 }
+
+# The root shell starts the read-only configuration reader by name.
+-keep class io.github.capitan0n.droynis.platform.root.RootConfigReader {
+    public static void main(java.lang.String[]);
+}

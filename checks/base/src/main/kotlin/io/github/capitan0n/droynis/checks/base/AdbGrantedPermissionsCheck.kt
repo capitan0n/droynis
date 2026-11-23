@@ -134,7 +134,12 @@ class AdbGrantedPermissionsCheck(
             )
         }
         if (counted.isEmpty()) {
-            return Outcome.pass("No app you installed holds a system permission granted over adb", evidence)
+            val summary = if (exempt.isEmpty()) {
+                "No app you installed holds a system permission granted over adb"
+            } else {
+                "No counted apps hold these permissions. Listed separately: ${exempt.map(packages::label).joinNames()}"
+            }
+            return Outcome.pass(summary, evidence)
         }
         val verb = if (counted.size == 1) "holds" else "hold"
         return Outcome.fail(

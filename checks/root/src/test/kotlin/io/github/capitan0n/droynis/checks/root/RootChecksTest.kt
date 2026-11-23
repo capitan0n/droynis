@@ -1,6 +1,7 @@
 package io.github.capitan0n.droynis.checks.root
 
 import io.github.capitan0n.droynis.checks.base.InstalledApp
+import io.github.capitan0n.droynis.checks.base.Keyguard
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.core.Grant
 import io.github.capitan0n.droynis.core.Reading
@@ -35,6 +36,9 @@ class RootChecksTest {
         var manager: Reading<RootManager> = Reading.Value(RootManager.MAGISK, Source("su")),
         var policies: Reading<String> = Reading.Value("", Source("su")),
         var settings: Reading<String> = Reading.Value("", Source("su")),
+        var version: Reading<Int> = Reading.Value(30700, Source("su")),
+        var tapjack: Reading<Boolean> = Reading.Value(true, Source("test")),
+        var lsp: Reading<String> = Reading.Unsupported("not installed", Source("test")),
         var strings: Reading<String> = Reading.Value("", Source("su")),
         var bootScripts: Reading<String> = Reading.Value("", Source("su")),
         var tempFiles: Reading<String> = Reading.Value("", Source("su")),
@@ -45,6 +49,10 @@ class RootChecksTest {
         override fun adbKeys() = keys
         override fun modules() = modules
         override fun manager() = manager
+        override fun magiskVersion() = version
+        override fun zygiskDefault() = Reading.Value(false, Source("test"))
+        override fun tapjackingProtection() = tapjack
+        override fun lsposed() = lsp
         override fun magiskPolicies() = policies
         override fun magiskSettings() = settings
         override fun magiskStrings() = strings
@@ -53,6 +61,11 @@ class RootChecksTest {
         override fun procNet(table: ProcNet) = net.getValue(table)
         override fun premiumSmsPolicy() = premiumSms
         override fun quickShareSettings() = quickShare
+    }
+
+    private fun lock(secure: Boolean = true) = object : Keyguard {
+        override fun isDeviceSecure() = v(secure)
+        override fun passwordComplexity() = error("unused")
     }
 
     private val packages = object : PackageInventory {
@@ -64,13 +77,14 @@ class RootChecksTest {
     fun `every root check needs the root tier`() {
         val specs = rootChecks(
             object : RootProbes {
+                override val keyguard = lock()
                 override val root = FakeRoot()
                 override val packages = this@RootChecksTest.packages
             },
         ).map { it.spec }
 
         assertEquals(
-            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "APPS-4301", "APPS-4302", "APPS-4303", "NETW-3301", "NETW-3302"),
+            listOf("INTG-1301", "INTG-1302", "INTG-1303", "ACCS-2301", "ACCS-2302", "APPS-4301", "APPS-4302", "APPS-4303", "APPS-4304", "NETW-3301", "NETW-3302"),
             specs.map { it.id },
         )
         assertEquals(setOf(Tier.ROOT), specs.map { it.requiredTier }.toSet())
@@ -113,9 +127,82 @@ class RootChecksTest {
 
         val outcome = RootModulesCheck(FakeRoot(modules = v(listing))).run(context)
         assertEquals(Status.FAIL, outcome.status)
-        assertEquals("2 root modules active: Zygisk Next and Going away", outcome.summary)
+        assertEquals("2 root modules enabled: Zygisk Next and Going away", outcome.summary)
         assertEquals(Status.PASS, RootModulesCheck(FakeRoot(modules = v(""))).run(context).status)
         assertEquals(Status.UNKNOWN, RootModulesCheck(FakeRoot(modules = v("name=stray"))).run(context).status)
+    }
+
+    @Test
+    fun `Magisk switches are informational even without an installed module`() = runTest {
+        val root = FakeRoot(settings = v("key=zygisk|value=1\nkey=denylist|value=0"))
+        val check = RootModulesCheck(root)
+        val result = check.run(context)
+        assertEquals(Status.PASS, result.status)
+        assertEquals("on", result.evidence.single { it.label == "Zygisk" }.value)
+        assertEquals("off", result.evidence.single { it.label == "Enforce DenyList" }.value)
+        root.modules = Reading.Unavailable("permission denied", source)
+        val unreadModules = check.run(context)
+        assertEquals(Status.UNKNOWN, unreadModules.status)
+        assertEquals("on", unreadModules.evidence.single { it.label == "Zygisk" }.value)
+        root.settings = v("")
+        assertEquals("Magisk default", check.run(context).evidence.single { it.label == "Zygisk" }.note)
+        root.settings = Reading.Unavailable("refused", source)
+        assertNull(check.run(context).evidence.single { it.label == "Zygisk" }.value)
+        root.manager = v(RootManager.KERNELSU)
+        assertTrue(check.run(context).evidence.none { it.label == "Zygisk" })
+    }
+
+    @Test
+    fun `prompt protections distinguish confirmed off from unreadable`() = runTest {
+        val root = FakeRoot(settings = v("key=su_biometric|value=1"))
+        val check = MagiskPromptCheck(root, lock())
+        assertEquals(Status.PASS, check.run(context).status)
+        root.tapjack = Reading.Unsupported("no switch in this release", source)
+        assertEquals(Status.UNSUPPORTED, check.run(context).status)
+        root.version = v(31100)
+        root.tapjack = v(true)
+        assertEquals(Status.UNSUPPORTED, check.run(context).status)
+        root.version = v(30700)
+        root.tapjack = v(false)
+        assertEquals(Status.FAIL, check.run(context).status)
+        root.tapjack = Reading.Unavailable("unsupported preference", source)
+        assertEquals(Status.UNKNOWN, check.run(context).status)
+        root.settings = v("")
+        assertEquals(Status.FAIL, check.run(context).status)
+        root.settings = v("key=su_biometric|value=1\nunexpected row")
+        assertEquals(Status.UNKNOWN, check.run(context).status)
+        root.settings = v("key=su_biometric|value=1")
+        assertEquals(Status.FAIL, MagiskPromptCheck(root, lock(false)).run(context).status)
+        assertEquals(Status.UNSUPPORTED, check.run(context.copy(appUid = 1010132)).status)
+        root.manager = v(RootManager.APATCH)
+        assertEquals(Status.UNSUPPORTED, check.run(context).status)
+    }
+
+    @Test
+    fun `LSPosed policy and configured scope are independent observations`() = runTest {
+        val root = FakeRoot()
+        val check = LSPosedCheck(root, packages)
+        assertEquals(Status.UNSUPPORTED, check.run(context).status)
+        val rows = "module\torg.example.mod\tsystem\nmodule\torg.example.mod\tcom.termux\nmodule\torg.example.no_scope\t"
+        root.lsp = v("policy=denied\n$rows\nend")
+        val partial = check.run(context)
+        assertEquals(Status.FAIL, partial.status)
+        assertEquals(io.github.capitan0n.droynis.core.Severity.INFO, check.spec.severity)
+        assertTrue(partial.summary.contains("2 enabled LSPosed modules"))
+        assertEquals("Selected: System Framework (system), Termux (com.termux)",
+            partial.evidence.single { it.packageName == "org.example.mod" }.note)
+        assertEquals("no targets selected for this profile", partial.evidence.last().note)
+        root.lsp = v("policy=allowed\n$rows\nend")
+        assertEquals(Status.PASS, check.run(context).status)
+        root.lsp = v("policy=unknown\nend")
+        assertEquals(Status.UNKNOWN, check.run(context).status)
+        root.lsp = v("policy=denied\ninventory=unknown\nend")
+        assertTrue(check.run(context).summary.contains("policy test failed"))
+        for (raw in listOf("policy=allowed\ninventory=unknown\nend", "policy=allowed\n$rows",
+                "policy=allowed\nmodule\tbad/package\tsystem\nend", "unrecognized installation")) {
+            root.lsp = v(raw)
+            assertEquals(Status.UNKNOWN, check.run(context).status)
+        }
     }
 
     @Test
@@ -210,6 +297,10 @@ class RootChecksTest {
         assertEquals("1 program staged in /data/local/tmp: rogue_rndis.sh, 1 of them world-writable", outcome.summary)
         assertTrue(outcome.evidence.single().note!!.contains("world-writable"))
 
+        val groupOnly = TempFilesCheck(FakeRoot(tempFiles = v("F 770 shell 10 1759000000 /data/local/tmp/group.sh"))).run(context)
+        assertNull(groupOnly.evidence.single().note)
+        assertTrue("world-writable" !in groupOnly.summary)
+
         val dataOnly = "F 644 shell 10 1759000000 /data/local/tmp/notes.txt\n"
         assertEquals(Status.PASS, TempFilesCheck(FakeRoot(tempFiles = v(dataOnly))).run(context).status)
         assertEquals(Status.PASS, TempFilesCheck(FakeRoot(tempFiles = v(""))).run(context).status)
@@ -230,6 +321,21 @@ class RootChecksTest {
         val default = adb("key=zygisk|value=1")
         assertEquals(Status.FAIL, default.status)
         assertTrue(default.evidence.single().note!!.contains("default"), default.evidence.single().note)
+    }
+
+    @Test
+    fun `Magisk 31 point 1 reads explicit adb grants and ignores the removed switch`() = runTest {
+        val root = FakeRoot(version = v(31100), settings = v("key=root_access|value=3"))
+        val check = AdbRootCheck(root)
+        assertEquals(Status.PASS, check.run(context).status)
+        root.policies = v("uid=2000|policy=2|until=0")
+        assertEquals(Status.FAIL, check.run(context).status)
+        root.policies = v("uid=2000|policy=2|until=1000\nuid=10130|policy=2|until=0")
+        assertEquals(Status.PASS, check.run(context).status)
+        root.policies = v("uid=2000|policy=5|until=0")
+        assertEquals(Status.UNKNOWN, check.run(context).status)
+        root.version = Reading.Unavailable("missing", source)
+        assertEquals(Status.UNKNOWN, check.run(context).status)
     }
 
     @Test

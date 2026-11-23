@@ -2,6 +2,8 @@ package io.github.capitan0n.droynis.platform.root
 
 import android.content.Context
 import android.os.Process
+import io.github.capitan0n.droynis.checks.root.LSPosedCheck
+import io.github.capitan0n.droynis.checks.root.MagiskStrings
 import io.github.capitan0n.droynis.checks.root.PremiumSmsCheck
 import io.github.capitan0n.droynis.checks.root.ProcNet
 import io.github.capitan0n.droynis.checks.root.QuickShareCheck
@@ -174,6 +176,12 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
         }
     }
 
+    override fun magiskVersion(): Reading<Int> = read("magisk -V", "magisk -V") { exit, output, source ->
+        val version = output.trim().toIntOrNull()
+        if (exit == 0 && version != null && version > 0) Reading.Value(version, source)
+        else Reading.Unavailable("could not identify the Magisk daemon version", source)
+    }
+
     override fun magiskPolicies(): Reading<String> =
         read("magisk --sqlite", MAGISK_POLICIES) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
@@ -184,10 +192,80 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
 
-    override fun magiskStrings(): Reading<String> =
-        read("magisk --sqlite (strings)", MAGISK_STRINGS) { exit, output, source ->
+    /** Read only Magisk's manager identity. Never identify a package by its visible label. */
+    fun hiddenManagerPackage(): String? {
+        if (detected != RootManager.MAGISK) return null
+        return (magiskStrings() as? Reading.Value)?.value?.let(MagiskStrings::hiddenManager)
+    }
+
+    override fun magiskStrings(): Reading<String> {
+        if ((magiskVersion() as? Reading.Value)?.value == 31100) {
+            return Reading.Unsupported("Magisk 31.1 removed manager repackaging", Source("su: magisk -V", Grant.ROOT))
+        }
+        return read("magisk --sqlite (strings)", MAGISK_STRINGS) { exit, output, source ->
             if (exit == 0) Reading.Value(output, source) else failed(exit, output, source)
         }
+    }
+
+    override fun zygiskDefault(): Reading<Boolean> {
+        val command = "magisk -V && getprop ro.product.device && getprop ro.kernel.qemu && getprop ro.boot.qemu"
+        return read("Magisk version and emulator properties", command) { exit, output, source ->
+            val lines = output.lines()
+            val version = lines.firstOrNull()?.toIntOrNull()
+            val value = when {
+                exit != 0 || lines.size != 4 || version == null -> null
+                version in 25200..26400 -> false
+                version in 28100..31100 && lines[1].isNotBlank() ->
+                    lines[1].contains("vsoc") || lines[2] == "1" || lines[3] == "1"
+                else -> null
+            }
+            if (value == null) Reading.Unavailable("unrecognized Magisk default", source) else Reading.Value(value, source)
+        }
+    }
+
+    override fun tapjackingProtection(): Reading<Boolean> {
+        val identity = magiskStrings()
+        val source = Source("su: Magisk manager preferences", Grant.ROOT)
+        if (identity !is Reading.Value) return Reading.Unavailable("manager identity unreadable", source)
+        val pkg = if (identity.value.trim() in setOf("", "key=requester|value=", "key=requester|value=com.topjohnwu.magisk")) "com.topjohnwu.magisk" else
+            MagiskStrings.hiddenManager(identity.value) ?: return Reading.Unavailable("unrecognized manager identity", source)
+        if (pkg.length > 255 || '.' !in pkg || !LSPosedCheck.PACKAGE.matches(pkg)) {
+            return Reading.Unavailable("invalid manager package", source)
+        }
+        @Suppress("DEPRECATION")
+        val version = try {
+            app.packageManager.getPackageInfo(pkg, 0).versionCode
+        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+            return Reading.Unavailable("manager is unavailable in this profile", source)
+        }
+        val user = Process.myUid() / PER_USER_RANGE
+        val result = configReader("Magisk manager preferences", "tapjack $user $pkg $version")
+        return when ((result as? Reading.Value)?.value?.trim()) {
+            "true" -> Reading.Value(true, source)
+            "false" -> Reading.Value(false, source)
+            "no-switch" -> Reading.Unsupported("this Magisk manager has no interactive root prompts", source)
+            else -> Reading.Unavailable("could not verify this manager version or its preferences", source)
+        }
+    }
+
+    override fun lsposed(): Reading<String> {
+        val result = configReader("LSPosed policy and scopes", "lsposed ${Process.myUid() / PER_USER_RANGE}")
+        return if (result is Reading.Value && result.value.trim() == "absent") {
+            Reading.Unsupported("no LSPosed installation found", result.source)
+        } else result
+    }
+
+    private fun configReader(label: String, arguments: String): Reading<String> {
+        val apk = app.applicationInfo.sourceDir.orEmpty()
+        val main = RootConfigReader::class.java.name
+        if (!APK_PATH.matches(apk) || !CLASS_NAME.matches(main)) {
+            return Reading.Unavailable("unexpected app path", Source("su: $label", Grant.ROOT))
+        }
+        val command = "CLASSPATH='$apk' /system/bin/app_process /system/bin $main $arguments"
+        return read(label, command, TELEPHONY_TIMEOUT_MILLIS) { exit, output, source ->
+            if (exit == 0) Reading.Value(output, source) else Reading.Unavailable("root reader failed (exit $exit)", source)
+        }
+    }
 
     override fun bootScripts(): Reading<String> =
         read("stat boot scripts", BOOT_SCRIPTS) { exit, output, source ->
@@ -416,7 +494,7 @@ class RootShell(context: Context) : RootShellProbe, ShellAccess {
             "else echo other; fi"
         const val MAGISK_POLICIES = "magisk --sqlite 'SELECT uid, policy, until FROM policies'"
         const val MAGISK_SETTINGS = "magisk --sqlite 'SELECT key, value FROM settings'"
-        const val MAGISK_STRINGS = "magisk --sqlite 'SELECT key, value FROM strings'"
+        const val MAGISK_STRINGS = "magisk --sqlite \"SELECT key, value FROM strings WHERE key='requester'\""
 
         /**
          * Stats the boot scripts root runs and the folders that hold them, one per line as

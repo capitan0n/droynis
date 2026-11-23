@@ -129,6 +129,9 @@ interface PackageInventory {
 
     /** The app's label, falling back to its package name. */
     fun label(packageName: String): String
+
+    /** The Android label before Droynis identifies a renamed root manager for display. */
+    fun installedLabel(packageName: String): String = label(packageName)
 }
 
 enum class Transport { WIFI, CELLULAR, ETHERNET, VPN, BLUETOOTH, OTHER }

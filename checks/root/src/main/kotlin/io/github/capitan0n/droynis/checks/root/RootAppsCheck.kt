@@ -47,14 +47,14 @@ object MagiskPolicies {
 
 /** Magisk's `strings` table, one `key=…|value=…` per line. */
 object MagiskStrings {
-    private val REQUESTER = Regex("""^key=requester\|value=([A-Za-z0-9_.]+)$""")
+    private val REQUESTER = Regex("""key=requester\|value=([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+)""")
 
     /**
      * The package name the Magisk app was hidden under, or null: the app keeps its own name, or the
      * output is in another shape. It only adds a name to the evidence, so nothing depends on it.
      */
     fun hiddenManager(text: String): String? =
-        text.lines().firstNotNullOfOrNull { REQUESTER.find(it.trim())?.groupValues?.get(1) }
+        REQUESTER.matchEntire(text.trim())?.groupValues?.get(1)?.takeUnless { it == "com.topjohnwu.magisk" }
 }
 
 class RootAppsCheck(
@@ -114,7 +114,7 @@ class RootAppsCheck(
         val (trusted, others) = context.splitTrusted(holders - own.toSet()) { (policy, apps) -> appOf(policy, apps) }
 
         // Hidden, the Magisk app has a random package name and is called "Settings" unless the user
-        // chose otherwise: say which app that is, since every other check lists it by that name.
+        // chose otherwise. Keep that installed label and the real package together in this evidence.
         val strings = root.magiskStrings()
         val hidden = (strings as? Reading.Value)?.value?.let(MagiskStrings::hiddenManager)
             ?.takeIf { pkg -> installed.any { it.packageName == pkg } }
@@ -125,7 +125,7 @@ class RootAppsCheck(
                 add(
                     Evidence(
                         "Magisk app",
-                        "${packages.label(hidden)} ($hidden)",
+                        "${packages.installedLabel(hidden)} ($hidden)",
                         strings.source,
                         note = "the root manager, hidden under another name with \"Hide the Magisk app\"",
                         packageName = hidden,

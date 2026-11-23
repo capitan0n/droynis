@@ -110,6 +110,11 @@ class StoreKeysTest {
         assertEquals("signed with F-Droid's key", pass.evidence.last().note)
         assertEquals(Trust.NOT_COUNTED, pass.evidence.last().trust)
 
+        val aurora = app("com.aurora.store", signers = setOf(otherKey))
+        val mixed = StoreImpostorCheck(FakePackages(value(listOf(genuine, aurora)), mapOf(aurora.packageName to "Aurora Store"))).outcome()
+        assertEquals(Status.UNKNOWN, mixed.status)
+        assertEquals("1 store signature verified. Unverified: Aurora Store", mixed.summary)
+
         val fake = app("com.android.vending", installer = null, signers = setOf(otherKey))
         val labels = mapOf(fake.packageName to "Google Play Store")
         val idle = StoreImpostorCheck(FakePackages(value(listOf(fake)), labels)).outcome()

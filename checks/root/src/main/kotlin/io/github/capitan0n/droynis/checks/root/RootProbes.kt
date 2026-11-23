@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.root
 
+import io.github.capitan0n.droynis.checks.base.Keyguard
 import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.core.Reading
 
@@ -31,6 +32,18 @@ interface RootShellProbe {
     fun modules(): Reading<String>
 
     fun manager(): Reading<RootManager>
+
+    /** Version code from the running Magisk daemon. */
+    fun magiskVersion(): Reading<Int>
+
+    /** Magisk's version-dependent default when its Zygisk switch has no saved value. */
+    fun zygiskDefault(): Reading<Boolean>
+
+    /** Saved overlay-protection switch in the confirmed Magisk manager's preferences. */
+    fun tapjackingProtection(): Reading<Boolean>
+
+    /** LSPosed policy probe and enabled module scopes visible in the scanned profile. */
+    fun lsposed(): Reading<String>
 
     /** `magisk --sqlite "SELECT uid, policy, until FROM policies"`; Magisk only. */
     fun magiskPolicies(): Reading<String>
@@ -78,6 +91,7 @@ interface RootShellProbe {
 
 /** Everything the root-tier checks read. Implemented by :platform-android. */
 interface RootProbes {
+    val keyguard: Keyguard
     val root: RootShellProbe
     val packages: PackageInventory
 }

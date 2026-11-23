@@ -11,6 +11,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
 /** Apps with system permissions granted over adb (APPS-4020). */
@@ -94,6 +95,7 @@ class AdbGrantedPermissionsCheckTest {
         val outcome = AdbGrantedPermissionsCheck(FakePermissions(value(mapOf(ShizukuAppsCheck.MANAGER to setOf(writeSecure)))), packages).outcome()
 
         assertEquals(Status.PASS, outcome.status)
+        assertTrue("Listed separately: Shizuku" in outcome.summary)
         val row = outcome.evidence.single { it.packageName == ShizukuAppsCheck.MANAGER }
         assertEquals(Trust.NOT_COUNTED, row.trust)
         assertEquals("WRITE_SECURE_SETTINGS; Shizuku itself, which has adb's rights anyway (APPS-4016); not counted", row.note)

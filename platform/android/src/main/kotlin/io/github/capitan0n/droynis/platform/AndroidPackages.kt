@@ -35,6 +35,7 @@ internal class AndroidPackages(
     fun clearCache() {
         cache.clear()
         labels.clear()
+        magiskManager = null
     }
 
     private fun readApps(): Reading<List<InstalledApp>> {
@@ -61,8 +62,16 @@ internal class AndroidPackages(
         }
     }
 
-    // computeIfAbsent: checks asking for the same label at once load it once.
-    override fun label(packageName: String): String = labels.computeIfAbsent(packageName, ::loadLabel)
+    /** Package identified by Magisk for this scan. Cleared when the scan ends. */
+    @Volatile
+    var magiskManager: String? = null
+
+    override fun installedLabel(packageName: String): String = labels.computeIfAbsent(packageName, ::loadLabel)
+
+    override fun label(packageName: String): String {
+        val name = installedLabel(packageName)
+        return if (packageName == magiskManager) "Magisk manager (shown as $name)" else name
+    }
 
     private fun loadLabel(packageName: String): String =
         try {

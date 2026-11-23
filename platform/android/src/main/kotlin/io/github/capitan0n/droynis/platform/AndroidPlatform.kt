@@ -125,7 +125,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
      */
     fun newScanContext(): ScanContext {
         shizuku.connect()
-        root.open()
+        androidPackages.magiskManager = if (root.open()) root.hiddenManagerPackage() else null
         return ScanContext(
             startedAt = ZonedDateTime.now(),
             sdkInt = Build.VERSION.SDK_INT,

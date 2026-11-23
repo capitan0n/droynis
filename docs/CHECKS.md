@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-111 checks. Each one's full explanation and fix are in the app: tap the check.
+113 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -12,11 +12,11 @@
 | Category | Base | ADB | Shizuku | Root | All |
 |---|---|---|---|---|---|
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
-| [Access control](#access-control) | 14 | 1 | 2 | 1 | 18 |
-| [Apps and permissions](#apps-and-permissions) | 20 | 8 | 2 | 3 | 33 |
+| [Access control](#access-control) | 14 | 1 | 2 | 2 | 19 |
+| [Apps and permissions](#apps-and-permissions) | 20 | 8 | 2 | 4 | 34 |
 | [Suspicious apps](#suspicious-apps) | 10 | 4 | – | – | 14 |
 | [Network and radios](#network-and-radios) | 13 | 7 | 3 | 2 | 25 |
-| **All** | 73 | 20 | 9 | 9 | 111 |
+| **All** | 73 | 20 | 9 | 11 | 113 |
 
 ## Device integrity
 
@@ -66,6 +66,7 @@
 | ACCS-2201 | SIM card PIN (Android 11+) | Shizuku | Notice | a SIM in use has its PIN turned off |
 | ACCS-2202 | Device controls on the lock screen (Android 13+) | Shizuku | Notice | device controls can be used without unlocking the phone |
 | ACCS-2301 | Computers trusted for USB debugging | Root | Notice | a computer is trusted for USB debugging |
+| ACCS-2302 | Magisk superuser prompt protections | Root | Notice | user authentication or tapjacking protection is confirmed off for Magisk prompts |
 
 ## Apps and permissions
 
@@ -102,8 +103,9 @@
 | APPS-4201 | Passkey and password providers (Android 14+) | Shizuku | Notice | a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store) |
 | APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | APPS-4301 | Apps with root access | Root | Warning | an app other than Droynis may get root |
-| APPS-4302 | Root access over ADB | Root | Warning | Magisk grants root to the ADB shell (Superuser access includes ADB; the default) |
+| APPS-4302 | Root access over ADB | Root | Warning | Magisk allows ADB to request root, or the ADB shell has an unexpired Magisk 31.1 grant |
 | APPS-4303 | Apps allowed to text premium numbers | Root | Warning | an app's Premium SMS access is set to Always allow |
+| APPS-4304 | LSPosed modules and their scope | Root | Info | LSPosed's policy test denies the required rule (information only) |
 
 ## Suspicious apps
 
