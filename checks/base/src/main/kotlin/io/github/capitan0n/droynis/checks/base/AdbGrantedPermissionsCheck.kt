@@ -16,13 +16,10 @@ import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Apps you installed that hold a system permission of the `development` protection level. Android
- * grants those to apps outside the system image only through `pm grant`, so from adb, a Shizuku
- * client or root. The granted flag reads without any privilege; Settings never shows these
- * permissions. Apps that came with the phone hold some of them by privilege and are only counted.
- * The Shizuku app may grant itself WRITE_SECURE_SETTINGS (to start on boot); it already has adb's
- * rights, which APPS-4016 covers, so it is listed but not counted.
- * PACKAGE_USAGE_STATS is development-level too, but APPS-4105 covers it through its app-op.
+ * Apps you installed that hold selected system permissions. Package Manager reports current grants.
+ * Android can grant these permissions through app signing, system privileges or a development grant.
+ * Shizuku's own permission is listed separately because APPS-4016 already covers its shell access.
+ * APPS-4105 covers usage access through its app-op.
  */
 class AdbGrantedPermissionsCheck(
     private val permissions: PermissionProbe,
@@ -43,25 +40,20 @@ class AdbGrantedPermissionsCheck(
     override val spec = CheckSpec(
         id = "APPS-4020",
         category = Category.APPS,
-        title = "Apps with system permissions granted over adb",
+        title = "Apps with system permissions",
         severity = Severity.WARNING,
-        explanation = "Some permissions are meant for the system only: changing secure settings, reading the " +
-            "system log, where every app's messages end up, reading the dumps of system services, and reaching " +
-            "other users of the phone. An app you install gets them only when someone grants them with pm " +
-            "grant, from a computer over adb, through Shizuku or with root, and Settings never shows them. " +
-            "With WRITE_SECURE_SETTINGS an app can turn on an accessibility service, USB debugging or another " +
-            "keyboard without asking you. Automation apps such as Tasker ask for this on purpose; stalkerware " +
-            "is set up the same way. Keep these only for apps you set up yourself and trust.",
+        explanation = "These permissions can let an app change secure settings, read system logs or service " +
+            "diagnostics, or reach other users of the phone. Android can grant them based on app signing, " +
+            "system privileges or a development grant through adb, Shizuku or root. This check reads which " +
+            "permissions each app holds. The package manager does not identify how it received them.",
         remediation = Remediation(
-            text = "Uninstall apps you don't recognize. To take a permission back, connect the phone to a " +
-                "computer with USB debugging on and run the command below with the app's package name and the " +
-                "permission listed for it (for example android.permission.WRITE_SECURE_SETTINGS). Turn USB " +
-                "debugging off again afterwards.",
+            text = "Review the apps and permissions listed below. If you granted a permission with adb, " +
+                "you can revoke that grant using the app's package name and the permission in the command below. " +
+                "Permissions tied to app signing or system privileges may not be revocable this way.",
             command = "adb shell pm revoke <package> <permission>",
         ),
         timeout = 15.seconds,
-        failsWhen = "an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS, " +
-            "which only adb, Shizuku or root can grant",
+        failsWhen = "an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -81,7 +73,7 @@ class AdbGrantedPermissionsCheck(
         val held: Map<String, List<Power>> = granted.value
             .mapValues { (_, perms) -> perms.mapNotNull { wanted[it] }.sorted() }
             .filterValues { it.isNotEmpty() }
-        // Apps that came with the phone hold these by privilege, which is how Android is built.
+        // List the preinstalled permission holders separately.
         val (preinstalled, installed) = held.keys.partition { originOf(it, inventory) == AppOrigin.PREINSTALLED }
         val exempt = installed.filter { it in NOT_COUNTED }
         val all = (installed - exempt.toSet())
@@ -94,7 +86,7 @@ class AdbGrantedPermissionsCheck(
                 val powers = held.getValue(holder.app.packageName)
                 add(
                     Evidence(
-                        "Granted over adb",
+                        PERMISSIONS_HELD,
                         "${holder.app.label} (${holder.app.packageName})",
                         granted.source,
                         note = withTrustNote(
@@ -109,7 +101,7 @@ class AdbGrantedPermissionsCheck(
             exempt.forEach { pkg ->
                 add(
                     Evidence(
-                        "Granted over adb",
+                        PERMISSIONS_HELD,
                         "${packages.label(pkg)} ($pkg)",
                         granted.source,
                         note = held.getValue(pkg).joinToString { it.shortName } + "; " + NOT_COUNTED.getValue(pkg) + "; not counted",
@@ -118,24 +110,24 @@ class AdbGrantedPermissionsCheck(
                     ),
                 )
             }
-            if (all.isEmpty() && exempt.isEmpty()) add(Evidence("Granted over adb", "none", granted.source))
+            if (all.isEmpty() && exempt.isEmpty()) add(Evidence(PERMISSIONS_HELD, "none", granted.source))
             if (preinstalled.isNotEmpty()) {
                 add(Evidence("Apps that came with the phone and hold them", preinstalled.size.toString(), granted.source))
             }
             // Droynis is left out of the holders; the ADB tier is the user granting it DUMP on purpose.
             if (Grant.DUMP in context.capabilities.grants) {
-                add(Evidence("Granted over adb", "Droynis", OWN_GRANTS, note = "DUMP, for the ADB tier; this app; not counted"))
+                add(Evidence(PERMISSIONS_HELD, "Droynis", OWN_GRANTS, note = "DUMP, for the ADB tier; this app; not counted"))
             }
         }
         if (counted.isEmpty() && trusted.isNotEmpty()) {
             return Outcome.pass(
-                onlyTrusted("hold system permissions granted over adb", trusted.labels(), others = "apps that came with the phone"),
+                onlyTrusted("hold these system permissions", trusted.labels(), others = "apps that came with the phone"),
                 evidence,
             )
         }
         if (counted.isEmpty()) {
             val summary = if (exempt.isEmpty()) {
-                "No app you installed holds a system permission granted over adb"
+                "No app you installed holds any of these system permissions"
             } else {
                 "No counted apps hold these permissions. Listed separately: ${exempt.map(packages::label).joinNames()}"
             }
@@ -143,12 +135,13 @@ class AdbGrantedPermissionsCheck(
         }
         val verb = if (counted.size == 1) "holds" else "hold"
         return Outcome.fail(
-            "${count(counted.size, "app")} $verb system permissions granted over adb: ${counted.labels().joinNames()}",
+            "${count(counted.size, "app")} $verb system permissions: ${counted.labels().joinNames()}",
             evidence,
         )
     }
 
     private companion object {
+        const val PERMISSIONS_HELD = "System permissions held"
         val OWN_GRANTS = Source("Droynis' own permissions", Grant.DUMP)
 
         /** Apps whose power these permissions don't add to, with why. */

@@ -94,7 +94,7 @@
 | APPS-4017 | Profiles this scan doesn't cover | Base | Info | another profile shares this user, Droynis doesn't run in the phone's main user, or (ADB tier and up) the phone has another user or profile (information only) |
 | APPS-4018 | Apps that allow unencrypted connections | Base | Info | an app you installed has network access and declares that it may connect without encryption (information only) |
 | APPS-4019 | Apps that can run commands through Termux or Tasker | Base | Notice | another app may run commands in Termux or start Tasker tasks (a warning when it came from outside an app store) |
-| APPS-4020 | Apps with system permissions granted over adb | Base | Warning | an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS, which only adb, Shizuku or root can grant |
+| APPS-4020 | Apps with system permissions | Base | Warning | an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS |
 | APPS-4021 | Active spell checker | Base | Info | never (reports the enabled spell checker) |
 | APPS-4022 | Android backup status | Base | Info | never (reports the Android backup switch) |
 | APPS-4102 | Apps that can draw over other apps (Android 10+) | ADB | Notice | a user app may display over other apps |
