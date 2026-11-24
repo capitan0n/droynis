@@ -1,7 +1,9 @@
 package io.github.capitan0n.droynis.checks.base
 
 import io.github.capitan0n.droynis.checks.base.PlayProtectCheck.Companion.PACKAGE_VERIFIER_ENABLE
+import io.github.capitan0n.droynis.checks.base.PlayProtectCheck.Companion.PACKAGE_VERIFIER_INCLUDE_ADB
 import io.github.capitan0n.droynis.checks.base.PlayProtectCheck.Companion.PACKAGE_VERIFIER_USER_CONSENT
+import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Status
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -10,9 +12,14 @@ import kotlinx.coroutines.test.runTest
 class PlayProtectCheckTest {
 
     private fun check(
-        reading: io.github.capitan0n.droynis.core.Reading<String?>,
-        consent: io.github.capitan0n.droynis.core.Reading<String?> = value(null),
-    ) = PlayProtectCheck(FakeSettings(global = mapOf(PACKAGE_VERIFIER_ENABLE to reading, PACKAGE_VERIFIER_USER_CONSENT to consent)))
+        reading: Reading<String?>,
+        consent: Reading<String?> = value(null),
+        adb: Reading<String?> = value(null),
+    ) = PlayProtectCheck(FakeSettings(global = mapOf(
+        PACKAGE_VERIFIER_ENABLE to reading,
+        PACKAGE_VERIFIER_USER_CONSENT to consent,
+        PACKAGE_VERIFIER_INCLUDE_ADB to adb,
+    )))
 
     @Test
     fun `the verifier on passes, off fails`() = runTest {
@@ -29,7 +36,7 @@ class PlayProtectCheckTest {
         // Most phones never write the master switch: both test phones read it as not set.
         val on = check(value(null), consent = value("1")).run(scanContext())
         assertEquals(Status.PASS, on.status)
-        assertEquals(listOf("(not set)", "1"), on.evidence.map { it.value })
+        assertEquals(listOf("(not set)", "1", "(not set)"), on.evidence.map { it.value })
 
         val off = check(value(null), consent = value("-1")).run(scanContext())
         assertEquals(Status.FAIL, off.status)
@@ -43,6 +50,19 @@ class PlayProtectCheckTest {
         assertEquals(Status.UNKNOWN, check(value(null), consent = value("0")).run(scanContext()).status)
         assertEquals(Status.UNKNOWN, check(value(null), consent = unavailable("access denied")).run(scanContext()).status)
         assertEquals(Status.PASS, check(unavailable("access denied"), consent = value("1")).run(scanContext()).status)
+    }
+
+    @Test
+    fun `ADB verification off is reported separately from general scanning`() = runTest {
+        val off = check(value(null), consent = value("1"), adb = value("0")).outcome()
+        assertEquals(Status.FAIL, off.status)
+        assertEquals("The switch to verify apps installed through ADB is off", off.summary)
+        assertEquals("0", off.evidence.last().value)
+
+        val unreadable = check(value("1"), adb = unavailable("permission denied")).outcome()
+        assertEquals(Status.PASS, unreadable.status)
+        assertEquals(null, unreadable.evidence.last().value)
+        assertEquals(Status.UNKNOWN, check(value(null), adb = value("1")).status())
     }
 
     @Test

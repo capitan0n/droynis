@@ -5,6 +5,7 @@ import io.github.capitan0n.droynis.checks.base.CellularProbe
 import io.github.capitan0n.droynis.checks.base.DefaultAppsProbe
 import io.github.capitan0n.droynis.checks.base.DevicePolicy
 import io.github.capitan0n.droynis.checks.base.PackageInventory
+import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.core.Reading
 
 /**
@@ -23,9 +24,11 @@ interface Dumpsys {
 interface AdbProbes {
     fun supportsPasspoint(): Boolean
     fun hasPrintServices(): Reading<Boolean>
+    fun supportedPrivacySensors(): Reading<Set<PrivacySensor>>
 
     val dumpsys: Dumpsys
     val packages: PackageInventory
+    val permissions: PermissionProbe
 
     /** Advanced Protection changes which saved networks Android 17 joins by itself. */
     val policy: DevicePolicy

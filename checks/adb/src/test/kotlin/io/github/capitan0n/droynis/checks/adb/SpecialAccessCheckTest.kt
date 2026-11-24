@@ -53,7 +53,7 @@ class SpecialAccessCheckTest {
     fun `every access is an adb-tier app check with its own settings screen`() {
         val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "SUSP-5103", specs.values.map { it.id })
+        assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "APPS-4111" + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
         // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
         assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
@@ -111,6 +111,16 @@ class SpecialAccessCheckTest {
 
         assertEquals(Status.PASS, outcome.status)
         assertEquals("No app can record the screen without asking", outcome.summary)
+    }
+
+    @Test
+    fun `mock location names apps with an actual grant`() = runTest {
+        val outcome = check(Access.MOCK_LOCATION, dump(
+            app("u0a130", "org.example.bubbles", "MOCK_LOCATION", "allow"),
+            app("u0a132", "org.example.files", "MOCK_LOCATION", "deny"),
+        )).run(context)
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(listOf("org.example.bubbles"), outcome.evidence.mapNotNull { it.packageName })
     }
 
     @Test

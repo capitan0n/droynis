@@ -1,14 +1,20 @@
 package io.github.capitan0n.droynis.platform
 
 import android.Manifest
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.SensorPrivacyManager
 import android.os.Build
 import android.os.Process
+import android.os.UserManager
+import android.service.textservice.SpellCheckerService
+import android.view.textservice.SpellCheckerSession
 import android.printservice.PrintService
 import io.github.capitan0n.droynis.checks.adb.AdbProbes
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
+import io.github.capitan0n.droynis.checks.adb.PrivacySensor
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
@@ -104,6 +110,43 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override fun supportsPasspoint() = app.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_PASSPOINT)
+    override fun canAddUsers(): Reading<Boolean> {
+        val source = Source("UserManager.supportsMultipleUsers() and DISALLOW_ADD_USER")
+        return probe(source) {
+            val users = app.getSystemService(UserManager::class.java)
+                ?: return@probe Reading.Unavailable("user service unavailable", source)
+            Reading.Value(UserManager.supportsMultipleUsers() && !users.hasUserRestriction(UserManager.DISALLOW_ADD_USER), source)
+        }
+    }
+
+    override fun isSpellCheckerAvailable(component: String): Reading<Boolean> {
+        val source = Source("PackageManager.queryIntentServices() for spell checkers")
+        return probe(source) {
+            val selected = ComponentName.unflattenFromString(component)
+                ?: return@probe Reading.Unavailable("invalid spell checker component", source)
+            val candidates = app.packageManager.queryIntentServices(
+                Intent(SpellCheckerService.SERVICE_INTERFACE).setPackage(selected.packageName),
+                PackageManager.GET_META_DATA,
+            )
+            Reading.Value(candidates.any { result ->
+                val service = result.serviceInfo
+                service != null && service.permission == Manifest.permission.BIND_TEXT_SERVICE &&
+                    service.metaData?.containsKey(SpellCheckerSession.SERVICE_META_DATA) == true &&
+                    ComponentName(service.packageName, service.name) == selected
+            }, source)
+        }
+    }
+
+    override fun supportedPrivacySensors(): Reading<Set<PrivacySensor>> {
+        val source = Source("SensorPrivacyManager.supportsSensorToggle()")
+        if (Build.VERSION.SDK_INT < 31) return Reading.Unsupported("requires Android 12", source)
+        return probe(source) {
+            val privacy = app.getSystemService(SensorPrivacyManager::class.java)
+                ?: return@probe Reading.Unsupported("sensor privacy service absent", source)
+            Reading.Value(PrivacySensor.entries.filterTo(mutableSetOf()) { privacy.supportsSensorToggle(it.id) }, source)
+        }
+    }
+
     override fun hasPrintServices(): Reading<Boolean> {
         val source = Source("PackageManager.queryIntentServices() for print plugins")
         return probe(source) {

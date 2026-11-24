@@ -75,46 +75,17 @@ class PrintingServicesCheck(
 internal object PrintServicesDump {
     private val identifier = Regex("""[A-Za-z_][A-Za-z0-9_.$]*""")
 
-    private class Block(val lines: List<String>, val indent: String) {
-        fun fields(key: String) = lines.filter { it.startsWith(indent + key + "=") }
-
-        fun records(key: String): List<Block>? {
-            val headers = fields(key)
-            if (headers.isEmpty()) return emptyList()
-            val header = headers.singleOrNull() ?: return null
-            val start = lines.indexOf(header)
-            val tail = lines.subList(start + 1, lines.size)
-            val end = tail.indexOfFirst { it.isNotBlank() && !it.startsWith(indent + " ") }
-            if (end < 0) return null
-            val body = tail.subList(0, end)
-            val inner = body.firstOrNull()?.takeWhile { it == ' ' } ?: return null
-            if (header == indent + key + "={" && tail[end] == indent + "}") return listOf(Block(body, inner))
-            if (header != indent + key + "=[" || tail[end] != indent + "]") return null
-            val result = mutableListOf<Block>()
-            var i = 0
-            while (i < body.size) {
-                if (body[i++] != inner + "{") return null
-                val from = i
-                while (i < body.size && body[i].startsWith(inner + " ")) i++
-                if (i == from || i == body.size || body[i++] != inner + "}") return null
-                result += Block(body.subList(from, i - 1), body[from].takeWhile { it == ' ' })
-            }
-            return result
-        }
-
-        fun field(key: String): String? = fields(key).singleOrNull()?.substringAfter('=')
-        fun component(): String? {
-            val pkg = field("package_name")?.takeIf(identifier::matches) ?: return null
-            val cls = field("class_name")?.takeIf(identifier::matches) ?: return null
-            return "$pkg/$cls"
-        }
+    private fun DumpBlock.component(): String? {
+        val pkg = field("package_name")?.takeIf(identifier::matches) ?: return null
+        val cls = field("class_name")?.takeIf(identifier::matches) ?: return null
+        return "$pkg/$cls"
     }
 
     fun parse(text: String, user: Int): Map<String, Boolean>? {
         val lines = dumpLines(text).filter { it.isNotBlank() }
         if (lines.size < 5 || lines[0] != "PRINT MANAGER STATE (dumpsys print)" ||
             lines[1] != "{" || lines.last() != "}") return null
-        val root = Block(lines.subList(2, lines.lastIndex), lines[2].takeWhile { it == ' ' })
+        val root = DumpBlock(lines.subList(2, lines.lastIndex), lines[2].takeWhile { it == ' ' })
         val profile = root.records("user_states")?.singleOrNull { it.field("user_id") == user.toString() } ?: return null
         // AOSP always emits the spooler section after installed/disabled services.
         if (profile.fields("print_spooler_state").singleOrNull()?.endsWith("={") != true) return null

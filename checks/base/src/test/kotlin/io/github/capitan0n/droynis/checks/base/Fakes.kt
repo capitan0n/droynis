@@ -247,7 +247,10 @@ class FakeProbes(
     override val modules: ModuleProbe = FakeModules(),
     override val profiles: ProfileProbe = FakeProfiles(),
     override val shizukuServer: ShizukuServerProbe = FakeShizukuServer(),
-) : BaseProbes
+) : BaseProbes {
+    override fun canAddUsers() = value(false)
+    override fun isSpellCheckerAvailable(component: String) = value(false)
+}
 
 /** By default the phone has no module metadata package, like a ROM without Google's modules. */
 class FakeModules(private val metadata: Reading<ModuleMetadata?> = value(null)) : ModuleProbe {

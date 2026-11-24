@@ -81,7 +81,12 @@ object AppOpModes {
      * allowed by default, such as AUTO_REVOKE_PERMISSIONS_IF_UNUSED, the mode worth finding is
      * `ignore`: the dump prints a mode only where it differs from the default.
      */
-    fun inModes(text: String, ops: Set<String>, modes: Set<String>): Result {
+    fun inModes(text: String, ops: Set<String>, modes: Set<String>): Result = effectiveModes(text, ops, modes)
+
+    /** Explicit modes, including denials. Missing entries can fall back to the manifest permission. */
+    fun allModes(text: String, op: String): Result = effectiveModes(text, setOf(op), modes = null)
+
+    private fun effectiveModes(text: String, ops: Set<String>, modes: Set<String>?): Result {
         val table = when (val read = lastParse.of(text)) {
             is Table.Failed -> return Result.Failed(read.reason)
             is Table.Read -> read
@@ -148,11 +153,11 @@ object AppOpModes {
 
     private fun isUid(line: String) = line.startsAfterIndent("Uid ") && UID.matches(line)
 
-    private fun grantsIn(block: UidBlock, ops: Set<String>, wanted: Set<String>): List<OpGrant> = ops.flatMap { op ->
+    private fun grantsIn(block: UidBlock, ops: Set<String>, wanted: Set<String>?): List<OpGrant> = ops.flatMap { op ->
         val uidMode = block.uidModes[op]
         if (uidMode != null) {
             // A uid mode that differs from the default decides for every package of the uid.
-            if (uidMode !in wanted) return@flatMap emptyList()
+            if (wanted != null && uidMode !in wanted) return@flatMap emptyList()
             val names = block.packages.keys.ifEmpty { setOf(null) }
             names.map { OpGrant(it, block.uid, op, uidMode, uidWide = true) }
         } else {
@@ -165,7 +170,7 @@ object AppOpModes {
                     block.uidModes[switch] != null -> block.uidModes.getValue(switch)
                     else -> record.switchMode ?: record.mode
                 }
-                if (mode in wanted) OpGrant(name, block.uid, op, mode) else null
+                if (wanted == null || mode in wanted) OpGrant(name, block.uid, op, mode) else null
             }
         }
     }

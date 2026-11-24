@@ -625,6 +625,12 @@ data class RemovableVolume(
 
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
+    /** Whether this profile may add users on this device. */
+    fun canAddUsers(): Reading<Boolean>
+
+    /** Whether the selected component is an available system spell-checking service. */
+    fun isSpellCheckerAvailable(component: String): Reading<Boolean>
+
     val settings: SystemSettings
     val keyguard: Keyguard
     val build: BuildInfo

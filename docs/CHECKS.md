@@ -3,7 +3,7 @@
 <!-- Generated from the check definitions by CatalogDocTest. Don't edit by hand: after
      changing a check, run UPDATE_CHECKS_DOC=1 ./gradlew :checks-adb:test -->
 
-113 checks. Each one's full explanation and fix are in the app: tap the check.
+121 checks. Each one's full explanation and fix are in the app: tap the check.
 
 - A check passes only on a value it read; otherwise it is Unknown or N/A, never Passed.
 - A failure weighs by severity (critical 10, warning 5, notice 2, info 0); any critical failure caps the score at 40.
@@ -12,11 +12,11 @@
 | Category | Base | ADB | Shizuku | Root | All |
 |---|---|---|---|---|---|
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
-| [Access control](#access-control) | 14 | 1 | 2 | 2 | 19 |
-| [Apps and permissions](#apps-and-permissions) | 20 | 8 | 2 | 4 | 34 |
+| [Access control](#access-control) | 17 | 1 | 2 | 2 | 22 |
+| [Apps and permissions](#apps-and-permissions) | 22 | 11 | 2 | 4 | 39 |
 | [Suspicious apps](#suspicious-apps) | 9 | 5 | – | – | 14 |
 | [Network and radios](#network-and-radios) | 13 | 7 | 3 | 2 | 25 |
-| **All** | 72 | 21 | 9 | 11 | 113 |
+| **All** | 77 | 24 | 9 | 11 | 121 |
 
 ## Device integrity
 
@@ -61,7 +61,10 @@
 | ACCS-2011 | USB debugging | Base | Warning | adb over USB is on |
 | ACCS-2012 | Wireless debugging (Android 11+) | Base | Warning | adb over Wi-Fi is on |
 | ACCS-2013 | USB debugging authorization timeout (Android 11+) | Base | Notice | computers allowed for USB debugging keep their access for more than 7 days without connecting, or for good |
+| ACCS-2014 | Unlock required after app pinning | Base | Notice | app pinning is on and unpinning does not require unlocking |
+| ACCS-2015 | Add users from the lock screen | Base | Notice | the lock-screen switch for adding users is on and the profile can add users |
 | ACCS-2020 | Remote lock and erase | Base | Notice | no app or known service can lock and erase the phone remotely |
+| ACCS-2021 | Google theft protection (Android 10+) | Base | Info | never (manual review of Google theft protection) |
 | ACCS-2101 | Smart Lock and Extend Unlock | ADB | Notice | a trust agent such as Smart Lock can keep the phone unlocked |
 | ACCS-2201 | SIM card PIN (Android 11+) | Shizuku | Notice | a SIM in use has its PIN turned off |
 | ACCS-2202 | Device controls on the lock screen (Android 13+) | Shizuku | Notice | device controls can be used without unlocking the phone |
@@ -86,12 +89,14 @@
 | APPS-4012 | Apps with location all the time (Android 10+) | Base | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
 | APPS-4013 | Apps that skip battery optimization | Base | Info | an app you installed may skip battery optimization (information only) |
 | APPS-4014 | Google Play services | Base | Info | Google Play services is built into the system, with privileged access (information only) |
-| APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier is turned off, or Play Protect's "Scan apps" switch is |
+| APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier, Play Protect scanning, or the separate ADB verification switch is off |
 | APPS-4016 | Apps with Shizuku access | Base | Notice | an app other than Droynis may use Shizuku (a warning when it came from outside an app store, or Shizuku runs as root) |
 | APPS-4017 | Profiles this scan doesn't cover | Base | Info | another profile shares this user, Droynis doesn't run in the phone's main user, or (ADB tier and up) the phone has another user or profile (information only) |
 | APPS-4018 | Apps that allow unencrypted connections | Base | Info | an app you installed has network access and declares that it may connect without encryption (information only) |
 | APPS-4019 | Apps that can run commands through Termux or Tasker | Base | Notice | another app may run commands in Termux or start Tasker tasks (a warning when it came from outside an app store) |
 | APPS-4020 | Apps with system permissions granted over adb | Base | Warning | an app you installed holds WRITE_SECURE_SETTINGS, READ_LOGS, DUMP or INTERACT_ACROSS_USERS, which only adb, Shizuku or root can grant |
+| APPS-4021 | Active spell checker | Base | Info | never (reports the enabled spell checker) |
+| APPS-4022 | Android backup status | Base | Info | never (reports the Android backup switch) |
 | APPS-4102 | Apps that can draw over other apps (Android 10+) | ADB | Notice | a user app may display over other apps |
 | APPS-4103 | Apps with access to all files (Android 11+) | ADB | Notice | a user app has all files access |
 | APPS-4104 | Apps that can install other apps (Android 10+) | ADB | Notice | a user app other than a known app store may install apps |
@@ -100,6 +105,9 @@
 | APPS-4107 | Apps that can manage your media (Android 12+) | ADB | Info | a user app may change or delete media without asking (information only) |
 | APPS-4109 | Apps that keep their permissions while unused (Android 11+) | ADB | Info | a user app is exempt from having its permissions removed while unused (information only) |
 | APPS-4110 | Printing services (Android 9+) | ADB | Info | never (inventory of installed printing services and their switches) |
+| APPS-4111 | Apps allowed to fake location (Android 10+) | ADB | Notice | a user app has mock location access |
+| APPS-4112 | Apps allowed to show full-screen alerts (Android 14+) | ADB | Info | never (reports apps with full-screen alert access) |
+| APPS-4113 | Camera and microphone privacy switches (Android 12+) | ADB | Info | never (reports the camera and microphone privacy switches) |
 | APPS-4201 | Passkey and password providers (Android 14+) | Shizuku | Notice | a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store) |
 | APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | APPS-4301 | Apps with root access | Root | Warning | an app other than Droynis may get root |

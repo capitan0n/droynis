@@ -202,6 +202,22 @@ class SpecialAccessCheck(
             modes = setOf("ignore"),
             systemLabel = "System apps exempt",
         ),
+        MOCK_LOCATION(
+            id = "APPS-4111",
+            op = "MOCK_LOCATION",
+            label = "Mock location access",
+            title = "Apps allowed to fake location",
+            phrase = "can supply mock locations",
+            explanation = "Android can let a testing or navigation app supply simulated locations. " +
+                "This check shows apps with that permission.",
+            remediation = Remediation(
+                text = "In Developer options, open Select mock location app and clear an app you no longer use.",
+                settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            ),
+            minSdk = 29,
+            failsWhen = "a user app has mock location access",
+            modes = setOf("allow"),
+        ),
         SCREEN_CAPTURE(
             // APPS-4108 until it moved to Suspicious apps.
             id = "SUSP-5103",

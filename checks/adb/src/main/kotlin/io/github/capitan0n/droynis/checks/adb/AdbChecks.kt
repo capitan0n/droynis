@@ -19,6 +19,8 @@ fun adbChecks(probes: AdbProbes): List<Check> = (
         HotspotCheck(probes.dumpsys) +
         PasspointCheck(probes.dumpsys, probes::supportsPasspoint) +
         PrintingServicesCheck(probes.dumpsys, probes.packages, probes::hasPrintServices) +
+        FullScreenAlertsCheck(probes.dumpsys, probes.packages, probes.permissions) +
+        SensorPrivacyCheck(probes.dumpsys, probes::supportedPrivacySensors) +
         CallForwardingCheck(probes.dumpsys, probes.cellular) +
         HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages) +
         BackgroundDataUseCheck(probes.dumpsys, probes.packages, probes.defaultApps) +
