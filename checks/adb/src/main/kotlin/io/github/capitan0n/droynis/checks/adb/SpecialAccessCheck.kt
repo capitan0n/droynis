@@ -302,6 +302,10 @@ class SpecialAccessCheck(
             own.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "Droynis itself; not counted", trust = notCounted(pkg))) }
             if (system.isNotEmpty()) add(Evidence(access.systemLabel, system.size.toString(), source))
         }
+        if (flagged.isEmpty() && expected.isNotEmpty()) {
+            val allowed = (expected + trusted).mapNotNull { (pkg, _) -> pkg?.let(packages::label) }.distinct()
+            return Outcome.pass("Allowed to install apps: ${allowed.joinNames()}. No unexpected user apps found.", evidence)
+        }
         if (flagged.isEmpty() && trusted.isNotEmpty()) {
             return Outcome.pass(onlyTrusted(access.phrase, trusted.mapNotNull { it.first?.let(packages::label) }), evidence)
         }

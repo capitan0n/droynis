@@ -60,7 +60,8 @@ class WebViewCheck(private val webView: WebViewProbe) : Check {
                     ?: Outcome.unknown("WebView reports a placeholder update date (${info.lastUpdated})", evidence)
                 age < 0 -> Outcome.unknown("WebView's update date is ahead of the device clock", evidence)
                 age <= MAX_AGE_DAYS && stale != null -> Outcome.fail(
-                    "WebView ${info.versionName} $updated ${days(age)} ago, but its version is at least ${days(stale.days)} old",
+                    "Old WebView version ${info.versionName} (at least ${days(stale.days)} old) " +
+                        if (info.fromSystemImage) "came with a recent system update" else "was installed recently",
                     evidence + stale.evidence,
                 )
                 age <= MAX_AGE_DAYS -> Outcome.pass("WebView ${info.versionName} $updated ${days(age)} ago", evidence)

@@ -18,6 +18,7 @@ class ModelTest {
     fun `a moved check's old id leads to its new one`() {
         assertEquals("SUSP-5102", CheckSpec.currentId("APPS-4101"))
         assertEquals("SUSP-5103", CheckSpec.currentId("APPS-4108"))
+        assertEquals("SUSP-5105", CheckSpec.currentId("SUSP-5010"))
         assertEquals("APPS-4102", CheckSpec.currentId("APPS-4102"))
     }
 

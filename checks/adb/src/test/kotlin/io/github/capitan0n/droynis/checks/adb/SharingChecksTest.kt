@@ -30,7 +30,7 @@ class SharingChecksTest {
             override fun installedApps(): Reading<List<InstalledApp>> = error("unused")
             override fun label(packageName: String) = packageName
         }
-        assertEquals(Status.UNKNOWN, PrintingServicesCheck(unavailable, packages).run(context).status)
+        assertEquals(Status.UNKNOWN, PrintingServicesCheck(unavailable, packages) { error("unexpected query") }.run(context).status)
         assertEquals(Status.UNKNOWN, PasspointCheck(unavailable) { true }.run(context).status)
         assertEquals(Status.UNSUPPORTED, PasspointCheck(unavailable) { false }.run(context).status)
         val settings = dump(Reading.Value("WifiScoringState true\nWifiPasspointState false", source))
@@ -101,6 +101,23 @@ class SharingChecksTest {
         assertNull(PasspointDump.providers(lines.dropLast(1), 10))
         assertEquals(emptyList(), PasspointDump.providers(listOf("WifiStateUser 0",
             "PasspointManager - Providers Begin ---", "PasspointManager - Providers End ---"), 0))
+    }
+
+    @Test
+    fun `printing can confirm an empty inventory without initialized profile data`() = runTest {
+        val uninitialized = dump(Reading.Value("PRINT MANAGER STATE (dumpsys print)\n{\n}", source))
+        val packages = object : PackageInventory {
+            override fun installedApps(): Reading<List<InstalledApp>> = error("unused")
+            override fun label(packageName: String) = packageName
+        }
+        suspend fun outcome(installed: Reading<Boolean>) =
+            PrintingServicesCheck(uninitialized, packages) { installed }.run(context)
+
+        val noPlugins = outcome(Reading.Value(false, source))
+        assertEquals(Status.PASS, noPlugins.status)
+        assertEquals("No printing services installed in this profile", noPlugins.summary)
+        assertEquals(Status.UNKNOWN, outcome(Reading.Value(true, source)).status)
+        assertEquals(Status.UNKNOWN, outcome(Reading.Unavailable("permission denied", source)).status)
     }
 
     @Test

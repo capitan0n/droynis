@@ -623,40 +623,6 @@ data class RemovableVolume(
     }
 }
 
-/** Whether the screen Droynis is shown on is in a recording or screen share, as Android tells the app itself. */
-enum class ScreenRecording { RECORDED, NOT_RECORDED }
-
-/** A display other than the phone's own screen, as `DisplayManager` shows it to Droynis. */
-data class ExtraDisplay(
-    val displayId: Int,
-    /** The name its creator gave it, such as "ScreenRecorder"; can be empty. */
-    val name: String,
-    /**
-     * The app that created it, for a virtual display; null for a physical screen (HDMI, USB-C) or
-     * when Android doesn't say.
-     */
-    val ownerPackage: String?,
-    /** `Display.FLAG_PRESENTATION`: meant for an app's own content, such as slides, rather than a copy of the screen. */
-    val presentation: Boolean = false,
-)
-
-interface ScreenCaptureProbe {
-    /**
-     * `WindowManager.addScreenRecordingCallback` (Android 15+): whether Droynis' own screen is in a
-     * recording or screen share right now, whoever records it. Unsupported below Android 15.
-     * Unavailable while Droynis isn't on screen, such as in a scheduled scan: Android answers only
-     * for the app's own windows.
-     */
-    fun recording(): Reading<ScreenRecording>
-
-    /**
-     * `DisplayManager.getDisplays()` without the built-in screen: external screens and the virtual
-     * displays other apps made public, for casting or remote control. A private virtual display, the
-     * default for screen recorders, is visible only to the app that made it and isn't listed.
-     */
-    fun extraDisplays(): Reading<List<ExtraDisplay>>
-}
-
 /** Everything the base-tier checks read. Implemented by :platform-android. */
 interface BaseProbes {
     val settings: SystemSettings
@@ -690,5 +656,4 @@ interface BaseProbes {
     val modules: ModuleProbe
     val profiles: ProfileProbe
     val shizukuServer: ShizukuServerProbe
-    val screenCapture: ScreenCaptureProbe
 }

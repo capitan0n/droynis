@@ -1,8 +1,12 @@
 package io.github.capitan0n.droynis.platform
 
+import android.Manifest
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Process
+import android.printservice.PrintService
 import io.github.capitan0n.droynis.checks.adb.AdbProbes
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
@@ -27,7 +31,6 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
-import io.github.capitan0n.droynis.checks.base.ScreenCaptureProbe
 import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.StoreKeys
@@ -98,10 +101,21 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
     override val modules: ModuleProbe = AndroidModules(app)
     override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
-    override val screenCapture: ScreenCaptureProbe = AndroidScreenCapture(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
     override fun supportsPasspoint() = app.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_PASSPOINT)
+    override fun hasPrintServices(): Reading<Boolean> {
+        val source = Source("PackageManager.queryIntentServices() for print plugins")
+        return probe(source) {
+            // QUERY_ALL_PACKAGES lets this see print plugins across the scanned profile.
+            val services = app.packageManager.queryIntentServices(
+                Intent(PrintService.SERVICE_INTERFACE),
+                PackageManager.MATCH_DIRECT_BOOT_AWARE or PackageManager.MATCH_DIRECT_BOOT_UNAWARE,
+            )
+            Reading.Value(services.any { it.serviceInfo?.permission == Manifest.permission.BIND_PRINT_SERVICE }, source)
+        }
+    }
+
     override val tethering: TetheringProbe = AndroidTethering(app, routedDumpsys)
     override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells

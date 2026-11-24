@@ -22,6 +22,7 @@ interface Dumpsys {
 /** Everything the ADB-tier checks read. Implemented by :platform-android. */
 interface AdbProbes {
     fun supportsPasspoint(): Boolean
+    fun hasPrintServices(): Reading<Boolean>
 
     val dumpsys: Dumpsys
     val packages: PackageInventory

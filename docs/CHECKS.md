@@ -14,9 +14,9 @@
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
 | [Access control](#access-control) | 14 | 1 | 2 | 2 | 19 |
 | [Apps and permissions](#apps-and-permissions) | 20 | 8 | 2 | 4 | 34 |
-| [Suspicious apps](#suspicious-apps) | 10 | 4 | – | – | 14 |
+| [Suspicious apps](#suspicious-apps) | 9 | 5 | – | – | 14 |
 | [Network and radios](#network-and-radios) | 13 | 7 | 3 | 2 | 25 |
-| **All** | 73 | 20 | 9 | 11 | 113 |
+| **All** | 72 | 21 | 9 | 11 | 113 |
 
 ## Device integrity
 
@@ -120,11 +120,11 @@
 | SUSP-5007 | Known stalkerware and monitoring apps (inactive) | Base | Info | never (inactive by design) |
 | SUSP-5008 | Apps using a built-in app's name | Base | Notice | an app from outside an app store shows the same name as an app that came with the phone (a warning when that app is a core one, such as Settings or Google Play services) |
 | SUSP-5009 | Apps posing as an app store | Base | Warning | a user app uses the package name of an app store whose signing keys Droynis knows, but none of them (critical when it has installed other apps) |
-| SUSP-5010 | Screen being recorded or shared | Base | Warning | the screen is being recorded or shared while Droynis scans (Android 15+), or an app you installed shows the screen on a display of its own (critical when that app came from outside an app store) |
 | SUSP-5101 | Hidden apps running in the background (Android 10+) | ADB | Warning | an app that hides from the app drawer, or one without an icon from outside an app store, runs a service it started, or started a foreground service or drew over other apps in the last 7 days (critical when it hides and came from outside an app store) |
 | SUSP-5102 | Background camera, microphone and location use (Android 10+) | ADB | Notice | a user app used the camera, microphone or location from the background in the last 7 days (warning for camera or microphone) |
 | SUSP-5103 | Apps that can record the screen without asking (Android 10+) | ADB | Warning | a user app may record or cast the screen without asking |
 | SUSP-5104 | Background SMS, call log and contacts use (Android 10+) | ADB | Notice | a user app read SMS, the call log or contacts, or received SMS, from the background in the last 7 days (warning when it came from outside an app store) |
+| SUSP-5105 | Active screen capture | ADB | Warning | Android's MediaProjection service reports an active screen capture or mirroring session |
 
 ## Network and radios
 

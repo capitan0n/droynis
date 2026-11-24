@@ -225,7 +225,7 @@ class DeviceStateChecksTest {
         val old = check("148.0.7778.178").outcome()
         assertEquals(Status.FAIL, old.status)
         assertEquals(
-            "WebView 148.0.7778.178 came with a system update 14 days ago, but its version is at least 149 days old",
+            "Old WebView version 148.0.7778.178 (at least 149 days old) came with a recent system update",
             old.summary,
         )
         assertEquals("2026-05-05 or earlier", old.evidence.single { it.label == "Chromium 148 released" }.value)
@@ -236,6 +236,7 @@ class DeviceStateChecksTest {
         // Updated from a store recently but still old: the engine is what counts.
         val store = WebViewCheck(FakeWebView(value(WebViewInfo("com.google.android.webview", "148.0.7778.178", LocalDate.of(2026, 9, 20)))))
         assertEquals(Status.FAIL, store.status())
+        assertEquals("Old WebView version 148.0.7778.178 (at least 149 days old) was installed recently", store.outcome().summary)
     }
 
     @Test

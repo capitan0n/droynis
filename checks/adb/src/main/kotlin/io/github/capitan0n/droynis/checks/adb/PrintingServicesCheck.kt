@@ -12,12 +12,17 @@ import io.github.capitan0n.droynis.core.Reading
 import io.github.capitan0n.droynis.core.Remediation
 import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
+import io.github.capitan0n.droynis.core.Source
 import io.github.capitan0n.droynis.core.Trust
 import io.github.capitan0n.droynis.core.evaluate
 import io.github.capitan0n.droynis.core.toEvidence
 import kotlin.time.Duration.Companion.seconds
 
-class PrintingServicesCheck(private val dumpsys: Dumpsys, private val packages: PackageInventory) : Check {
+class PrintingServicesCheck(
+    private val dumpsys: Dumpsys,
+    private val packages: PackageInventory,
+    private val hasPrintServices: () -> Reading<Boolean>,
+) : Check {
     override val spec = CheckSpec(
         id = "APPS-4110",
         category = Category.APPS,
@@ -38,14 +43,28 @@ class PrintingServicesCheck(private val dumpsys: Dumpsys, private val packages: 
         val dump = dumpsys.dump("print")
         return dump.evaluate("Printing services", if (dump is Reading.Value) emptyList() else listOf(dump.toEvidence("Print manager"))) {
             val services = PrintServicesDump.parse(it, user)
-                ?: return@evaluate Outcome.unknown("No complete print service inventory for this profile",
-                    listOf(Evidence("Print manager", null, dump.source, note = "missing or unrecognized profile data")))
+                ?: return@evaluate withoutPrintInventory(dump.source)
             val evidence = services.toSortedMap().map { (component, enabled) ->
                 val pkg = component.substringBefore('/')
                 Evidence(packages.label(pkg), component, dump.source, note = if (enabled) "enabled" else "disabled",
                     packageName = pkg, trust = Trust.NOT_COUNTED)
             }
             Outcome.pass("${count(services.size, "printing service")} installed, ${services.values.count { enabled -> enabled }} enabled", evidence)
+        }
+    }
+
+    private fun withoutPrintInventory(source: Source): Outcome {
+        // The print manager only dumps profiles whose state it has initialized. The package
+        // manager can confirm an empty inventory, but only the print manager reports the switches.
+        val candidates = hasPrintServices()
+        val evidence = listOf(
+            Evidence("Print manager", null, source, note = "missing or unrecognized profile data"),
+            candidates.toEvidence("Installed print plugins") { if (it) "present" else "none" },
+        )
+        return if (candidates is Reading.Value && !candidates.value) {
+            Outcome.pass("No printing services installed in this profile", evidence)
+        } else {
+            Outcome.unknown("No complete print service inventory for this profile", evidence)
         }
     }
 }

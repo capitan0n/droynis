@@ -149,6 +149,7 @@ class ShellService : IShellService.Stub() {
             "trust" to listOf("trust"),
             "wifi" to listOf("wifi"),
             "print" to listOf("print"),
+            "media_projection" to listOf("media_projection"),
             "tethering" to listOf("tethering"),
             "connectivity tethering" to listOf("connectivity", "tethering"),
             "activity services" to listOf("activity", "services"),

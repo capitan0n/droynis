@@ -175,7 +175,7 @@ class SpecialAccessCheckTest {
         ).run(context)
 
         assertEquals(Status.PASS, outcome.status)
-        assertEquals("No user app can install other apps", outcome.summary)
+        assertEquals("Allowed to install apps: F-Droid. No unexpected user apps found.", outcome.summary)
         assertEquals("an app store; not counted", outcome.evidence.single { it.value!!.contains("fdroid") }.note)
     }
 

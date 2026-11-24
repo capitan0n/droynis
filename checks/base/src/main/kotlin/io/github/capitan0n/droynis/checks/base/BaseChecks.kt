@@ -67,7 +67,6 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     StalkerwareCheck,
     SystemNameAppsCheck(probes.packages),
     StoreImpostorCheck(probes.packages),
-    ScreenCaptureCheck(probes.screenCapture, probes.packages),
     // Network
     PrivateDnsCheck(probes.network),
     VpnCheck(probes.network),
