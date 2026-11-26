@@ -30,7 +30,7 @@ class ClipboardAlertsCheck(private val settings: SystemSettings) : Check {
 
     override val spec = CheckSpec(
         id = "APPS-4202",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Clipboard access alerts",
         severity = Severity.NOTICE,
         explanation = "What you copy often holds passwords, one-time codes, addresses or crypto wallet " +

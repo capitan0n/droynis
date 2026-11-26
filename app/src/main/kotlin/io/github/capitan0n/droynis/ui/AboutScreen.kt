@@ -71,6 +71,10 @@ fun AboutScreen(appVersion: String, onOpenLink: (String) -> Unit, onFeedback: ()
                 )
                 Spacer(Modifier.height(6.dp))
                 Pill(stringResource(R.string.app_tagline))
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { onOpenLink(AppInfo.WEBSITE) }) {
+                    Text(stringResource(R.string.about_website))
+                }
             }
         }
 
@@ -78,7 +82,7 @@ fun AboutScreen(appVersion: String, onOpenLink: (String) -> Unit, onFeedback: ()
             Text(stringResource(R.string.about_body), style = MaterialTheme.typography.bodyLarge)
             Spacer(Modifier.height(10.dp))
             Text(
-                stringResource(R.string.about_independent),
+                stringResource(R.string.about_antivirus_limit),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

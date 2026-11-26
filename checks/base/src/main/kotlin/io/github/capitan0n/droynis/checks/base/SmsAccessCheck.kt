@@ -22,7 +22,7 @@ class SmsAccessCheck(
 
     override val spec = CheckSpec(
         id = "APPS-4008",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Apps that can read your SMS or call log",
         severity = Severity.NOTICE,
         explanation = "One-time login codes arrive by SMS, so an app that reads SMS can take over accounts " +

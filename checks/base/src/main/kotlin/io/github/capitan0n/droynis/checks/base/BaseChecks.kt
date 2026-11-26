@@ -39,13 +39,10 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     UsbDebuggingCheck(probes.settings, probes.usb),
     WirelessDebuggingCheck(probes.settings),
     AdbAuthorizationTimeoutCheck(probes.settings),
-    // Apps and permissions
+    // App security
     AccessibilityServicesCheck(probes.accessibility, probes.packages),
     DeviceAdminsCheck(probes.policy, probes.packages),
-    NotificationAccessCheck(probes.settings, probes.packages),
-    SmsAccessCheck(probes.permissions, probes.defaultApps, probes.packages),
     SmsSendingCheck(probes.permissions, probes.defaultApps, probes.packages),
-    BackgroundLocationCheck(probes.permissions, probes.packages),
     BatteryOptimizationCheck(probes.battery, probes.packages),
     KeyboardAppsCheck(probes.inputMethods),
     SpellCheckerCheck(probes.settings, probes.packages, probes::isSpellCheckerAvailable),
@@ -62,6 +59,10 @@ fun baseChecks(probes: BaseProbes): List<Check> = listOf(
     OtherProfilesCheck(probes.profiles),
     CleartextAppsCheck(probes.packages, probes.permissions),
     BackupStatusCheck(probes.settings),
+    // Privacy
+    NotificationAccessCheck(probes.settings, probes.packages),
+    SmsAccessCheck(probes.permissions, probes.defaultApps, probes.packages),
+    BackgroundLocationCheck(probes.permissions, probes.packages),
     // Suspicious apps
     HiddenAppsCheck(probes.footprints, probes.packages, probes.accessibility, probes.policy, probes.settings),
     HiddenAutostartCheck(probes.footprints, probes.packages, probes.battery),

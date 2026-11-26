@@ -52,8 +52,8 @@ class SpecialAccessCheck(
         /** INFO for switches worth knowing about that can't hurt much: listed, but not in the score. */
         val severity: Severity = Severity.NOTICE,
         /**
-         * Apps and permissions for switches the user sets in Settings; Suspicious apps for access
-         * that only adb can give, which on a user app is a sign of stalkerware.
+         * Privacy for access to files and media; Suspicious apps for screen capture access that
+         * only adb can give. Other special app permissions are in App security.
          */
         val category: Category = Category.APPS,
         /**
@@ -98,6 +98,7 @@ class SpecialAccessCheck(
             ),
             minSdk = 30,
             failsWhen = "a user app has all files access",
+            category = Category.PRIVACY,
         ),
         INSTALL_APPS(
             id = "APPS-4104",
@@ -174,6 +175,7 @@ class SpecialAccessCheck(
             minSdk = 31,
             failsWhen = "a user app may change or delete media without asking (information only)",
             severity = Severity.INFO,
+            category = Category.PRIVACY,
         ),
         UNUSED_APPS(
             // APPS-4108 was screen capture and is retired, so this is 4109.

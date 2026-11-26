@@ -7,8 +7,8 @@ screen that fixes it. It never changes anything itself.
 
 [Visit the Droynis website](https://capitan0n.github.io/droynis/)
 
-- **100+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
-  apps, network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
+- **100+ checks** in six areas: device integrity, access control, app security, privacy, suspicious
+  apps, and network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
 - **Private:** no `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the
   phone unless you share a report.
 - **Honest:** a check passes only on a value it actually read. When Android won't say, the result

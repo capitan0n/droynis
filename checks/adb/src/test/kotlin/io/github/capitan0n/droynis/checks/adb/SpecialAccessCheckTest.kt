@@ -55,9 +55,12 @@ class SpecialAccessCheckTest {
 
         assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "APPS-4111" + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
-        // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
-        assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
-        assertTrue(specs.filterKeys { it != Access.SCREEN_CAPTURE }.values.all { it.category == Category.APPS })
+        assertEquals(
+            setOf(Access.ALL_FILES, Access.MANAGE_MEDIA),
+            specs.filterValues { it.category == Category.PRIVACY }.keys,
+        )
+        assertEquals(setOf(Access.SCREEN_CAPTURE), specs.filterValues { it.category == Category.SUSPICIOUS_APPS }.keys)
+        assertEquals(Access.entries.size - 3, specs.count { it.value.category == Category.APPS })
         // Each Settings switch has its own screen; screen capture has no switch, only an adb command.
         val switches = specs.filterKeys { it != Access.SCREEN_CAPTURE }.values
         assertEquals(switches.size, switches.map { it.remediation.settingsActions.single() }.toSet().size)

@@ -70,7 +70,8 @@ data class CheckSpec(
 enum class Category(val label: String) {
     DEVICE_INTEGRITY("Device integrity"),
     ACCESS_CONTROL("Access control"),
-    APPS("Apps and permissions"),
+    APPS("App security"),
+    PRIVACY("Privacy"),
 
     /**
      * Signs that an installed app is adware, stalkerware or other malware: it hides from the app

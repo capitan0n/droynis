@@ -14,7 +14,7 @@ fun rootChecks(probes: RootProbes): List<Check> = listOf(
     // Access control
     TrustedComputersCheck(probes.root),
     MagiskPromptCheck(probes.root, probes.keyguard),
-    // Apps and permissions
+    // App security
     RootAppsCheck(probes.root, probes.packages),
     AdbRootCheck(probes.root),
     PremiumSmsCheck(probes.root, probes.packages),

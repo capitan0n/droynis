@@ -25,7 +25,7 @@ class BackgroundLocationCheck(
 
     override val spec = CheckSpec(
         id = "APPS-4012",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Apps with location all the time",
         severity = Severity.NOTICE,
         explanation = "An app allowed location \"All the time\" can see where you are while you aren't " +

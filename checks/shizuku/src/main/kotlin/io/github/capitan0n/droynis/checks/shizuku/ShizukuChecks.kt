@@ -13,8 +13,9 @@ fun shizukuChecks(probes: ShizukuProbes): List<Check> = listOf(
     // Access control
     SimPinCheck(probes.cellular),
     LockScreenControlsCheck(probes.settings),
-    // Apps and permissions
+    // App security
     CredentialProvidersCheck(probes.settings, probes.packages),
+    // Privacy
     ClipboardAlertsCheck(probes.settings),
     // Network
     AlwaysOnVpnCheck(probes.settings, probes.packages),

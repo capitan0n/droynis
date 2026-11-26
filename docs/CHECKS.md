@@ -13,7 +13,8 @@
 |---|---|---|---|---|---|
 | [Device integrity](#device-integrity) | 16 | – | 2 | 3 | 21 |
 | [Access control](#access-control) | 17 | 1 | 2 | 2 | 22 |
-| [Apps and permissions](#apps-and-permissions) | 22 | 11 | 2 | 4 | 39 |
+| [App security](#app-security) | 19 | 8 | 1 | 4 | 32 |
+| [Privacy](#privacy) | 3 | 3 | 1 | – | 7 |
 | [Suspicious apps](#suspicious-apps) | 9 | 5 | – | – | 14 |
 | [Network and radios](#network-and-radios) | 13 | 7 | 3 | 2 | 25 |
 | **All** | 77 | 24 | 9 | 11 | 121 |
@@ -71,7 +72,7 @@
 | ACCS-2301 | Computers trusted for USB debugging | Root | Notice | a computer is trusted for USB debugging |
 | ACCS-2302 | Magisk superuser prompt protections | Root | Notice | user authentication or tapjacking protection is confirmed off for Magisk prompts |
 
-## Apps and permissions
+## App security
 
 | ID | Check | Tier | Severity | Fails when |
 |---|---|---|---|---|
@@ -79,14 +80,11 @@
 | APPS-4002 | Device admin apps | Base | Notice | a device admin you installed, or a device or profile owner, is active (a warning when it came from outside an app store) |
 | APPS-4003 | Debuggable apps | Base | Warning | an installed app is debuggable |
 | APPS-4004 | Apps from unknown sources | Base | Notice | an app came from outside a known app store |
-| APPS-4005 | Notification access | Base | Notice | an app you installed can read all notifications (a warning when it came from outside an app store) |
 | APPS-4006 | Keyboard apps | Base | Notice | a third-party keyboard is enabled |
 | APPS-4007 | Apps built for old Android | Base | Notice | a user app targets Android 8.1 (API 27) or older |
-| APPS-4008 | Apps that can read your SMS or call log | Base | Notice | an app other than your SMS and phone apps, or one of those installed from outside an app store, can read SMS or the call log (a warning when it came from outside an app store) |
 | APPS-4009 | Apps that can send SMS | Base | Notice | an app other than your SMS app can send SMS (a warning when it came from outside an app store) |
 | APPS-4010 | Autofill service (Android 9+) | Base | Notice | an autofill service from an app you installed is selected (a warning when it came from outside an app store) |
 | APPS-4011 | Digital assistant app | Base | Notice | the digital assistant is an app you installed (a warning when it came from outside an app store) |
-| APPS-4012 | Apps with location all the time (Android 10+) | Base | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
 | APPS-4013 | Apps that skip battery optimization | Base | Info | an app you installed may skip battery optimization (information only) |
 | APPS-4014 | Google Play services | Base | Info | Google Play services is built into the system, with privileged access (information only) |
 | APPS-4015 | App scanning (Play Protect) | Base | Warning | the install-time app verifier, Play Protect scanning, or the separate ADB verification switch is off |
@@ -98,22 +96,30 @@
 | APPS-4021 | Active spell checker | Base | Info | never (reports the enabled spell checker) |
 | APPS-4022 | Android backup status | Base | Info | never (reports the Android backup switch) |
 | APPS-4102 | Apps that can draw over other apps (Android 10+) | ADB | Notice | a user app may display over other apps |
-| APPS-4103 | Apps with access to all files (Android 11+) | ADB | Notice | a user app has all files access |
 | APPS-4104 | Apps that can install other apps (Android 10+) | ADB | Notice | a user app other than a known app store may install apps |
 | APPS-4105 | Apps with usage access (Android 10+) | ADB | Notice | a user app has usage access |
 | APPS-4106 | Apps that can change system settings (Android 10+) | ADB | Info | a user app may change system settings (information only) |
-| APPS-4107 | Apps that can manage your media (Android 12+) | ADB | Info | a user app may change or delete media without asking (information only) |
 | APPS-4109 | Apps that keep their permissions while unused (Android 11+) | ADB | Info | a user app is exempt from having its permissions removed while unused (information only) |
 | APPS-4110 | Printing services (Android 9+) | ADB | Info | never (inventory of installed printing services and their switches) |
 | APPS-4111 | Apps allowed to fake location (Android 10+) | ADB | Notice | a user app has mock location access |
 | APPS-4112 | Apps allowed to show full-screen alerts (Android 14+) | ADB | Info | never (reports apps with full-screen alert access) |
-| APPS-4113 | Camera and microphone privacy switches (Android 12+) | ADB | Info | never (reports the camera and microphone privacy switches) |
 | APPS-4201 | Passkey and password providers (Android 14+) | Shizuku | Notice | a passkey or password provider from an app you installed is turned on (a warning when it came from outside an app store) |
-| APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 | APPS-4301 | Apps with root access | Root | Warning | an app other than Droynis may get root |
 | APPS-4302 | Root access over ADB | Root | Warning | Magisk allows ADB to request root, or the ADB shell has an unexpired Magisk 31.1 grant |
 | APPS-4303 | Apps allowed to text premium numbers | Root | Warning | an app's Premium SMS access is set to Always allow |
 | APPS-4304 | LSPosed modules and their scope | Root | Info | LSPosed's policy test denies the required rule (information only) |
+
+## Privacy
+
+| ID | Check | Tier | Severity | Fails when |
+|---|---|---|---|---|
+| APPS-4005 | Notification access | Base | Notice | an app you installed can read all notifications (a warning when it came from outside an app store) |
+| APPS-4008 | Apps that can read your SMS or call log | Base | Notice | an app other than your SMS and phone apps, or one of those installed from outside an app store, can read SMS or the call log (a warning when it came from outside an app store) |
+| APPS-4012 | Apps with location all the time (Android 10+) | Base | Notice | an app you installed may use location all the time (a warning when it came from outside an app store) |
+| APPS-4103 | Apps with access to all files (Android 11+) | ADB | Notice | a user app has all files access |
+| APPS-4107 | Apps that can manage your media (Android 12+) | ADB | Info | a user app may change or delete media without asking (information only) |
+| APPS-4113 | Camera and microphone privacy switches (Android 12+) | ADB | Info | never (reports the camera and microphone privacy switches) |
+| APPS-4202 | Clipboard access alerts (Android 12+) | Shizuku | Notice | "Show clipboard access" is off, so apps read the clipboard silently |
 
 ## Suspicious apps
 

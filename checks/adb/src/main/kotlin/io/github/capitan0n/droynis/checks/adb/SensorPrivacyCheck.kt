@@ -24,7 +24,7 @@ class SensorPrivacyCheck(
 ) : Check {
     override val spec = CheckSpec(
         id = "APPS-4113",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Camera and microphone privacy switches",
         severity = Severity.INFO,
         minSdk = 31,
