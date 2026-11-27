@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -141,6 +142,7 @@ class DroynisAppTest {
         compose.onNodeWithText(sms).assertExists()
         compose.onNodeWithText(patch).assertDoesNotExist()
 
+        compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToIndex(0)
         compose.onNodeWithContentDescription(text(R.string.clear_search)).performClick()
         compose.onNodeWithTag(CHECKS_LIST_TAG).performScrollToNode(hasText(patch))
     }
