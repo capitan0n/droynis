@@ -63,7 +63,7 @@ class CellularEncryptionCheck(private val cellular: CellularProbe) : Check {
             allowed.on == false -> Outcome.pass("The phone refuses mobile connections without encryption", evidence)
             allowed.on == true ->
                 Outcome.fail("The phone accepts mobile connections without encryption: Require encryption is off", evidence)
-            allowed.unsupported -> Outcome.unsupported("This phone's modem can't refuse unencrypted connections", evidence)
+            allowed.unsupported -> Outcome.unsupported("Android’s telephony service reports this encryption control as unsupported", evidence)
             else -> Outcome.unknown("Whether the phone requires encryption could not be read", evidence)
         }
     }
@@ -111,7 +111,7 @@ class CellularAlertsCheck(private val cellular: CellularProbe) : Check {
         )
         val evidence = alerts.map { it.switch.evidence(it.label, it.getter, grant) }
         val supported = alerts.filterNot { it.switch.unsupported }
-        if (supported.isEmpty()) return Outcome.unsupported("This phone's modem can't warn about fake cell towers", evidence)
+        if (supported.isEmpty()) return Outcome.unsupported("Android’s telephony service reports these network alerts as unsupported", evidence)
 
         val off = supported.filter { it.switch.on == false }
         return when {
@@ -134,7 +134,10 @@ private inline fun securityOrOutcome(cellular: CellularProbe, exit: (Outcome) ->
     if (sims is Reading.Unsupported) exit(Outcome.unsupported("This device has no mobile network", listOf(sims.toEvidence("Mobile network"))))
     return when (val read = cellular.security()) {
         is Reading.Value -> read
-        is Reading.Unsupported -> exit(Outcome.unsupported("This device has no mobile network security switches", listOf(read.toEvidence(LABEL))))
+        is Reading.Unsupported -> exit(
+            Outcome.unsupported("The mobile network security switches are unavailable through Android’s telephony service",
+                listOf(read.toEvidence(LABEL))),
+        )
         is Reading.Unavailable -> exit(
             Outcome.unknown("The mobile network security switches could not be read (${read.reason})", listOf(read.toEvidence(LABEL))),
         )
@@ -149,7 +152,8 @@ private fun PrivilegedSwitch.evidence(label: String, getter: String, grant: Gran
     on?.let { if (it != inverted) "on" else "off" },
     Source("ITelephony.$getter()", grant),
     note = when {
-        unsupported -> "not supported by this phone's modem ($error)"
+        error == "NoSuchMethodException" -> "telephony API unavailable ($error)"
+        unsupported -> "reported as unsupported by Android’s telephony service ($error)"
         on == null -> "not readable${error?.let { ": $it" }.orEmpty()}"
         else -> null
     },

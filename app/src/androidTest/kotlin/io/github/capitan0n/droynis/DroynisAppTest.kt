@@ -24,6 +24,7 @@ import io.github.capitan0n.droynis.platform.AndroidPlatform
 import io.github.capitan0n.droynis.ui.CHECKS_LIST_TAG
 import io.github.capitan0n.droynis.ui.CHECKS_SEARCH_TAG
 import io.github.capitan0n.droynis.ui.DEVICE_LIST_TAG
+import io.github.capitan0n.droynis.ui.HELP_LIST_TAG
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -89,6 +90,7 @@ class DroynisAppTest {
         compose.onNodeWithText(text(R.string.tools_schedule)).assertExists()
 
         compose.onNodeWithText(text(R.string.tab_help)).performClick()
+        compose.onNodeWithTag(HELP_LIST_TAG).performScrollToNode(hasText(text(R.string.help_legend)))
         compose.onNodeWithText(text(R.string.help_legend)).assertExists()
     }
 
@@ -101,7 +103,7 @@ class DroynisAppTest {
         // The handle is also in the GitHub link and the e-mail address: match the author line itself.
         compose.onNodeWithText("${AppInfo.AUTHOR} – ${AppInfo.HANDLE}").assertExists()
         compose.onNodeWithText(AppInfo.FEEDBACK_EMAIL).assertExists()
-        compose.onNodeWithText("not affiliated", substring = true).assertExists()
+        compose.onNodeWithText(text(R.string.about_antivirus_limit)).assertExists()
 
         // The Help tab links to the same page.
         compose.onNodeWithContentDescription(text(R.string.navigate_back)).performClick()

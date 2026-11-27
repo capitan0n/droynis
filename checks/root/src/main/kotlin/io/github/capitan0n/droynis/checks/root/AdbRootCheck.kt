@@ -12,12 +12,7 @@ import io.github.capitan0n.droynis.core.ScanContext
 import io.github.capitan0n.droynis.core.Severity
 import io.github.capitan0n.droynis.core.evaluate
 
-/**
- * Whether Magisk grants root to the ADB shell, not just to apps. Magisk's Superuser access setting
- * defaults to "Apps and ADB", so out of the box any computer trusted for USB debugging gets a root
- * shell with `adb shell su`. Only Magisk stores this in a form Droynis can read; KernelSU and APatch
- * keep it elsewhere.
- */
+/** Magisk's ADB request switch on older releases and the saved shell grant on 31.1. */
 class AdbRootCheck(private val shell: RootShellProbe) : Check {
 
     override val spec = CheckSpec(
@@ -25,16 +20,15 @@ class AdbRootCheck(private val shell: RootShellProbe) : Check {
         category = Category.APPS,
         title = "Root access over ADB",
         severity = Severity.WARNING,
-        explanation = "Magisk can hand root to apps, to the ADB shell, to both or to neither. The default is " +
-            "both, so any computer you have trusted for USB debugging can run `adb shell su` and get a full root " +
-            "shell, and so can malware on that computer. Limiting root to apps keeps adb, and anything reaching " +
-            "the phone over it, out of root.",
+        explanation = "A computer trusted for USB debugging can send commands as Android's shell user. " +
+            "Older Magisk versions have a switch that lets the shell request root. Magisk 31.1 uses a saved " +
+            "superuser grant for the shell instead.",
         remediation = Remediation(
-            text = "In the Magisk app, open Settings › Superuser access and set it to \"Apps only\". Keep USB " +
-                "debugging off when you don't need it, and review the computers trusted for it (ACCS-2301).",
+            text = "In Magisk 31.1, review Shell in the Superuser tab. On earlier releases, choose Apps only " +
+                "under Settings › Superuser access. Review your trusted computers in ACCS-2301.",
         ),
         requires = setOf(Grant.ROOT),
-        failsWhen = "Magisk grants root to the ADB shell (Superuser access includes ADB; the default)",
+        failsWhen = "Magisk allows ADB to request root, or the ADB shell has an unexpired Magisk 31.1 grant",
     )
 
     override suspend fun run(context: ScanContext): Outcome {
@@ -45,6 +39,21 @@ class AdbRootCheck(private val shell: RootShellProbe) : Check {
                 listOf(manager.toEvidenceManager()),
             )
         }
+        val version = shell.magiskVersion()
+        if (version !is Reading.Value || version.value > 31100) return Outcome.unknown("Could not identify Magisk's ADB access model")
+        if (version.value == 31100) {
+            val table = shell.magiskPolicies()
+            val policies = (table as? Reading.Value)?.let { MagiskPolicies.parse(it.value) }
+                ?: return Outcome.unknown("Could not read the ADB shell's Magisk grant")
+            val shellGrant = policies.singleOrNull { it.uid == 2000 }
+            if (policies.count { it.uid == 2000 } > 1 || (shellGrant != null && shellGrant.policy !in 0..3)) {
+                return Outcome.unknown("Unrecognized ADB shell grant")
+            }
+            val allowed = shellGrant?.grantsRoot(context.startedAt.toEpochSecond()) == true
+            val evidence = listOf(Evidence("ADB shell (UID 2000)", if (allowed) "root granted" else "no current grant", table.source))
+            return if (allowed) Outcome.fail("The ADB shell has a saved Magisk root grant", evidence)
+                else Outcome.pass("The ADB shell has no current Magisk root grant", evidence)
+        }
         val reading = shell.magiskSettings()
         return reading.evaluate("Magisk's Superuser access", listOf(reading.toEvidenceRaw())) { raw ->
             val map = MagiskSettings.parse(raw)
@@ -54,6 +63,10 @@ class AdbRootCheck(private val shell: RootShellProbe) : Check {
                 )
             val fromDefault = ROOT_ACCESS !in map
             val rootAccess = map[ROOT_ACCESS] ?: DEFAULT_ROOT_ACCESS
+            if (rootAccess !in DISABLED..APPS_AND_ADB) {
+                return@evaluate Outcome.unknown("Unrecognized Magisk Superuser access setting",
+                    listOf(Evidence("Superuser access", rootAccess.toString(), reading.source)))
+            }
             val description = describe(rootAccess)
             val evidence = listOf(
                 Evidence(
@@ -64,9 +77,9 @@ class AdbRootCheck(private val shell: RootShellProbe) : Check {
                 ),
             )
             if (rootAccess == ADB_ONLY || rootAccess == APPS_AND_ADB) {
-                Outcome.fail("A computer with adb can get root: Magisk's Superuser access is \"$description\"", evidence)
+                Outcome.fail("The ADB shell can request root: Magisk's Superuser access is \"$description\"", evidence)
             } else {
-                Outcome.pass("The ADB shell can't get root: Magisk's Superuser access is \"$description\"", evidence)
+                Outcome.pass("Magisk blocks root requests from the ADB shell: Superuser access is \"$description\"", evidence)
             }
         }
     }
@@ -107,8 +120,12 @@ object MagiskSettings {
     fun parse(text: String): Map<String, Int>? {
         val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() }
         if (lines.isEmpty()) return emptyMap()
-        val rows = lines.mapNotNull { ROW.find(it) }
-        if (rows.isEmpty()) return null
-        return rows.associate { it.groupValues[1] to it.groupValues[2].toInt() }
+        val settings = mutableMapOf<String, Int>()
+        for (line in lines) {
+            val match = ROW.matchEntire(line) ?: return null
+            val (key, raw) = match.destructured
+            if (settings.put(key, raw.toIntOrNull() ?: return null) != null) return null
+        }
+        return settings
     }
 }

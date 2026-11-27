@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.VerifiedUser
@@ -95,6 +96,7 @@ val Category.labelRes: Int
         Category.DEVICE_INTEGRITY -> R.string.category_integrity
         Category.ACCESS_CONTROL -> R.string.category_access
         Category.APPS -> R.string.category_apps
+        Category.PRIVACY -> R.string.category_privacy
         Category.SUSPICIOUS_APPS -> R.string.category_suspicious
         Category.NETWORK -> R.string.category_network
     }
@@ -103,7 +105,7 @@ val Category.shortLabelRes: Int
     get() = when (this) {
         Category.DEVICE_INTEGRITY -> R.string.category_short_integrity
         Category.ACCESS_CONTROL -> R.string.category_short_access
-        Category.APPS -> R.string.category_short_apps
+        Category.APPS, Category.PRIVACY -> labelRes
         Category.SUSPICIOUS_APPS -> R.string.category_short_suspicious
         Category.NETWORK -> R.string.category_short_network
     }
@@ -113,6 +115,7 @@ val Category.icon: ImageVector
         Category.DEVICE_INTEGRITY -> Icons.Rounded.VerifiedUser
         Category.ACCESS_CONTROL -> Icons.Rounded.Lock
         Category.APPS -> Icons.Rounded.Apps
+        Category.PRIVACY -> Icons.Rounded.PrivacyTip
         Category.SUSPICIOUS_APPS -> Icons.Rounded.VisibilityOff
         Category.NETWORK -> Icons.Rounded.Wifi
     }
@@ -125,6 +128,7 @@ val Category.accent: Color
             Category.DEVICE_INTEGRITY -> if (dark) Color(0xFF3987E5) else Color(0xFF2A78D6)
             Category.ACCESS_CONTROL -> if (dark) Color(0xFF9085E9) else Color(0xFF4A3AA7)
             Category.APPS -> Color(0xFFD55181)
+            Category.PRIVACY -> if (dark) Color(0xFF55C5D4) else Color(0xFF047988)
             // Purple, between the violet and the magenta: away from every status color and the teal brand.
             Category.SUSPICIOUS_APPS -> if (dark) Color(0xFFB57ADB) else Color(0xFF8E3FB8)
             Category.NETWORK -> Color(0xFF199E70)

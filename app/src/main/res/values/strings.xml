@@ -46,7 +46,8 @@
     <string name="about_title">About Droynis</string>
     <string name="about_version">Version %1$s</string>
     <string name="about_body">A security and privacy audit for Android. It reads your settings and explains them, and never changes anything by itself.</string>
-    <string name="about_independent">Droynis is an independent project. It is not affiliated with, endorsed by or connected to Lynis or CISOfy; Lynis was only the inspiration for a readable audit with a hardening score.</string>
+    <string name="about_antivirus_limit">Droynis is not an antivirus. It does not scan apps for malicious code or remove malware.</string>
+    <string name="about_website">Droynis website</string>
     <string name="about_license">Free and open-source software under the GNU GPL v3.0 or later.</string>
     <string name="about_what">What Droynis does</string>
     <string name="help_about_link">Version %1$s · author, source code and feedback</string>
@@ -84,12 +85,12 @@
     <!-- Categories -->
     <string name="category_integrity">Device integrity</string>
     <string name="category_access">Access control</string>
-    <string name="category_apps">Apps and permissions</string>
+    <string name="category_apps">App security</string>
+    <string name="category_privacy">Privacy</string>
     <string name="category_suspicious">Suspicious apps</string>
     <string name="category_network">Network and radios</string>
     <string name="category_short_integrity">Integrity</string>
     <string name="category_short_access">Access</string>
-    <string name="category_short_apps">Apps</string>
     <string name="category_short_suspicious">Suspicious</string>
     <string name="category_short_network">Network</string>
 
@@ -340,6 +341,7 @@
     </plurals>
 
     <!-- Help -->
+    <string name="help_muted_checks">Muted checks</string>
     <string name="help_legend">Reading the results</string>
     <string name="help_score">How the score works</string>
     <string name="help_score_body">Every check that passed or failed counts, weighted by its severity. The score is the share of that weight you passed. Unknown and N/A results do not count either way, and neither do checks you muted.</string>
@@ -442,27 +444,6 @@
     <string name="help_privacy_2">No trackers, ads, analytics or Google Play Services.</string>
     <string name="help_privacy_3">Read-only: Droynis opens Settings for you but never changes anything itself.</string>
     <string name="help_privacy_4">Reports leave out hardware identifiers, phone numbers and account names.</string>
-    <string name="help_faq">Questions and answers</string>
-    <string name="faq_q1">Does a score of 100 mean my phone is safe?</string>
-    <string name="faq_a1">No. Droynis checks the settings that public Android APIs can see, and signs that an installed app hides from you, such as a blank name or a turned-off icon. It does not scan apps for malicious code, and cannot find spyware hidden in system apps or tampered firmware. A high score means the basics are in place.</string>
-    <string name="faq_q2">Why are some checks Unknown?</string>
-    <string name="faq_a2">Android hides some settings from apps, and some vendors change or remove them. Droynis then says it does not know instead of guessing. Android 17, for example, can report USB debugging and developer options as off to every app.</string>
-    <string name="faq_q3">Why does Droynis need to see all installed apps?</string>
-    <string name="faq_a3">Since Android 11 apps see only a few other apps by default. Without the “query all packages” permission the app checks would miss most apps and pass falsely.</string>
-    <string name="faq_q4">Can Droynis fix problems for me?</string>
-    <string name="faq_a4">No, on purpose. It explains what to change and opens the right Settings screen, so you stay in control of every change.</string>
-    <string name="faq_q5">What is a privilege tier?</string>
-    <string name="faq_a5">Each check states the access it needs. Base checks work on any phone with no setup. ADB checks need two read-only permissions that you grant once from a computer (⋮ › Check catalog › ADB); until then they show as N/A and do not change the score. Shizuku runs the ADB checks without those grants and adds a few of its own, through a shell that runs only fixed read-only commands. On a rooted phone you can turn on the root tier, which covers all of them and adds checks only root can do. Droynis reads only what its checks need, keeps nothing, and has no internet access to send it anywhere.</string>
-    <string name="faq_q6">Does Droynis run in the background?</string>
-    <string name="faq_a6">No. It scans only while it is open: no background services, notifications or wakelocks.</string>
-    <string name="faq_q8">Can I leave out a check I can\'t fix?</string>
-    <string name="faq_a8">Yes. Open the check and turn on “Mute this check”, or use the switch in the check catalog. A muted check still runs and shows its result, but the score, the counts and the issue lists leave it out, and reports list it as muted. Security patch age is the typical case: only the manufacturer can ship a newer patch. To undo them all at once, pick the Muted filter in the Checks tab and tap Unmute all.</string>
-    <string name="faq_q10">An app I use needs a lot of access. Can I stop it from counting?</string>
-    <string name="faq_a10">Yes. Watch, automation and password apps often need notification access, SMS or location all the time. Open a check that lists the app and tap Trust under it: the app stays listed everywhere, but no longer counts in any check, and the score follows. Trust only apps you know: a trusted app that later gets more access, such as an accessibility service, is listed but not counted either. ⋮ › Trusted apps lists every app you trust, and reports name them too.</string>
-    <string name="faq_q9">What does “Hide personal details” leave out of reports?</string>
-    <string name="faq_a9">It is on by default and applies to saved, shared and copied reports. It replaces every IP address, the DNS and proxy servers, the Private DNS host (a NextDNS-style host carries your personal ID), the computers trusted for USB debugging and the names of saved Wi-Fi networks with [hidden]. App names, the phone model and the Android version stay: the findings are about them, and they don\'t single out your phone. Droynis itself never sends a report anywhere.</string>
-    <string name="faq_q7">Is Droynis part of Lynis?</string>
-    <string name="faq_a7">No. Droynis is an independent project and is not affiliated with, endorsed by or connected to Lynis or CISOfy. Lynis, an audit tool for Linux and Unix, only inspired the idea of a readable audit with a hardening score. Droynis shares no code with it.</string>
 
     <!-- Accessibility -->
     <string name="cd_expand">Expand</string>

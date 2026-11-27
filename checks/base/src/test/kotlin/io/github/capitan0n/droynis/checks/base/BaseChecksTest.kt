@@ -1,5 +1,6 @@
 package io.github.capitan0n.droynis.checks.base
 
+import io.github.capitan0n.droynis.core.Category
 import io.github.capitan0n.droynis.core.Tier
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -36,16 +37,17 @@ class BaseChecksTest {
     }
 
     @Test
-    fun `id prefixes match their category`() {
+    fun `original id prefixes survive regrouping`() {
         val prefixes = mapOf(
-            "INTG" to "DEVICE_INTEGRITY",
-            "ACCS" to "ACCESS_CONTROL",
-            "APPS" to "APPS",
-            "SUSP" to "SUSPICIOUS_APPS",
-            "NETW" to "NETWORK",
+            Category.DEVICE_INTEGRITY to "INTG",
+            Category.ACCESS_CONTROL to "ACCS",
+            Category.APPS to "APPS",
+            Category.PRIVACY to "APPS",
+            Category.SUSPICIOUS_APPS to "SUSP",
+            Category.NETWORK to "NETW",
         )
         for (spec in specs) {
-            assertEquals(prefixes[spec.id.take(4)], spec.category.name, spec.id)
+            assertEquals(prefixes.getValue(spec.category), spec.id.substringBefore('-'), spec.id)
         }
     }
 }

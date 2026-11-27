@@ -52,8 +52,8 @@ class SpecialAccessCheck(
         /** INFO for switches worth knowing about that can't hurt much: listed, but not in the score. */
         val severity: Severity = Severity.NOTICE,
         /**
-         * Apps and permissions for switches the user sets in Settings; Suspicious apps for access
-         * that only adb can give, which on a user app is a sign of stalkerware.
+         * Privacy for access to files and media; Suspicious apps for screen capture access that
+         * only adb can give. Other special app permissions are in App security.
          */
         val category: Category = Category.APPS,
         /**
@@ -98,6 +98,7 @@ class SpecialAccessCheck(
             ),
             minSdk = 30,
             failsWhen = "a user app has all files access",
+            category = Category.PRIVACY,
         ),
         INSTALL_APPS(
             id = "APPS-4104",
@@ -174,6 +175,7 @@ class SpecialAccessCheck(
             minSdk = 31,
             failsWhen = "a user app may change or delete media without asking (information only)",
             severity = Severity.INFO,
+            category = Category.PRIVACY,
         ),
         UNUSED_APPS(
             // APPS-4108 was screen capture and is retired, so this is 4109.
@@ -201,6 +203,22 @@ class SpecialAccessCheck(
             severity = Severity.INFO,
             modes = setOf("ignore"),
             systemLabel = "System apps exempt",
+        ),
+        MOCK_LOCATION(
+            id = "APPS-4111",
+            op = "MOCK_LOCATION",
+            label = "Mock location access",
+            title = "Apps allowed to fake location",
+            phrase = "can supply mock locations",
+            explanation = "Android can let a testing or navigation app supply simulated locations. " +
+                "This check shows apps with that permission.",
+            remediation = Remediation(
+                text = "In Developer options, open Select mock location app and clear an app you no longer use.",
+                settingsActions = listOf(SettingsActions.DEVELOPER_OPTIONS),
+            ),
+            minSdk = 29,
+            failsWhen = "a user app has mock location access",
+            modes = setOf("allow"),
         ),
         SCREEN_CAPTURE(
             // APPS-4108 until it moved to Suspicious apps.
@@ -301,6 +319,10 @@ class SpecialAccessCheck(
             expected.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "an app store; not counted", trust = notCounted(pkg))) }
             own.forEach { (pkg, grant) -> add(holderEvidence(pkg, grant, source, note = "Droynis itself; not counted", trust = notCounted(pkg))) }
             if (system.isNotEmpty()) add(Evidence(access.systemLabel, system.size.toString(), source))
+        }
+        if (flagged.isEmpty() && expected.isNotEmpty()) {
+            val allowed = (expected + trusted).mapNotNull { (pkg, _) -> pkg?.let(packages::label) }.distinct()
+            return Outcome.pass("Allowed to install apps: ${allowed.joinNames()}. No unexpected user apps found.", evidence)
         }
         if (flagged.isEmpty() && trusted.isNotEmpty()) {
             return Outcome.pass(onlyTrusted(access.phrase, trusted.mapNotNull { it.first?.let(packages::label) }), evidence)

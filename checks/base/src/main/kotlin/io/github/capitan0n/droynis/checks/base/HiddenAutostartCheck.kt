@@ -84,7 +84,7 @@ class HiddenAutostartCheck(
         BOOT("starts when the phone starts"),
         FOREGROUND("can run foreground services"),
         OVERLAY("asks to draw over other apps"),
-        FULL_SCREEN("can show full-screen pop-ups"),
+        FULL_SCREEN("requests full-screen pop-ups"),
         BATTERY("asks to skip battery limits"),
     }
 

@@ -256,7 +256,11 @@ class ShizukuChecksTest {
 
     @Test
     fun `a modem without the encryption switch is not applicable, an unread one unknown`() = runTest {
-        assertEquals(Status.UNSUPPORTED, CellularEncryptionCheck(security(nullCipherAllowed = unsupported)).run(context).status)
+        val result = CellularEncryptionCheck(security(nullCipherAllowed = unsupported)).run(context)
+        assertEquals(Status.UNSUPPORTED, result.status)
+        assertEquals("Android’s telephony service reports this encryption control as unsupported", result.summary)
+        assertEquals("reported as unsupported by Android’s telephony service (UnsupportedOperationException)",
+            result.evidence.single().note)
         assertEquals(
             Status.UNKNOWN,
             CellularEncryptionCheck(security(nullCipherAllowed = PrivilegedSwitch(null, "SecurityException"))).run(context).status,
@@ -278,10 +282,10 @@ class ShizukuChecksTest {
         // A modem with only one of the two alerts is judged on that one.
         val partial = CellularAlertsCheck(security(nullCipherAlerts = unsupported, identifierAlerts = PrivilegedSwitch(true))).run(context)
         assertEquals(Status.PASS, partial.status)
-        assertEquals(
-            Status.UNSUPPORTED,
-            CellularAlertsCheck(security(nullCipherAlerts = unsupported, identifierAlerts = unsupported)).run(context).status,
-        )
+        val unavailable = CellularAlertsCheck(security(nullCipherAlerts = unsupported, identifierAlerts = unsupported))
+            .run(context)
+        assertEquals(Status.UNSUPPORTED, unavailable.status)
+        assertEquals("Android’s telephony service reports these network alerts as unsupported", unavailable.summary)
         assertEquals(
             Status.UNKNOWN,
             CellularAlertsCheck(security(nullCipherAlerts = PrivilegedSwitch(true), identifierAlerts = PrivilegedSwitch(null, "SecurityException")))

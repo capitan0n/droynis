@@ -18,7 +18,7 @@ class NotificationAccessCheck(
 
     override val spec = CheckSpec(
         id = "APPS-4005",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Notification access",
         severity = Severity.NOTICE,
         explanation = "An app with notification access reads every notification as it arrives, including " +

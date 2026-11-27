@@ -10,6 +10,7 @@ object AppInfo {
 
     /** The source code, for the Source code row. */
     const val REPOSITORY = "https://github.com/capitan0n/droynis"
+    const val WEBSITE = "https://capitan0n.github.io/droynis/"
     const val FEEDBACK_EMAIL = "capitan0n@protonmail.com"
 
     /** Shizuku's releases, for "Get Shizuku" when it is not installed. */

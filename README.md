@@ -7,8 +7,8 @@ screen that fixes it. It never changes anything itself.
 
 [Visit the Droynis website](https://capitan0n.github.io/droynis/)
 
-- **100+ checks** in five areas: device integrity, access control, apps and permissions, suspicious
-  apps, network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
+- **100+ checks** in six areas: device integrity, access control, app security, privacy, suspicious
+  apps, and network and radios. Full list: [docs/CHECKS.md](docs/CHECKS.md).
 - **Private:** no `INTERNET` permission, no Google Play Services, no analytics. Nothing leaves the
   phone unless you share a report.
 - **Honest:** a check passes only on a value it actually read. When Android won't say, the result
@@ -112,7 +112,6 @@ variables, and builds an unsigned APK without them, as F-Droid expects.
 - [docs/CHECKS.md](docs/CHECKS.md): every check and when it fails
 - [docs/DESIGN.md](docs/DESIGN.md): how it works, and what Android allows
 - [CONTRIBUTING.md](CONTRIBUTING.md): report a wrong result, translate, add a check
-- [docs/RELEASING.md](docs/RELEASING.md): how a release is built, signed and checked
 - [SECURITY.md](SECURITY.md): report a vulnerability privately
 
 ## Credits and license

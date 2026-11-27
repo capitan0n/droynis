@@ -44,7 +44,6 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Save
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -237,6 +236,7 @@ const val CHECKS_LIST_TAG = "checks_list"
 const val CATALOG_LIST_TAG = "catalog_list"
 const val CHECKS_SEARCH_TAG = "checks_search"
 const val DEVICE_LIST_TAG = "device_list"
+const val HELP_LIST_TAG = "help_list"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -280,7 +280,7 @@ fun DroynisApp(
     val openSpec = catalog.firstOrNull { it.id == openCheckId }
     val issueCount = state.result?.findings?.withoutMuted(state.muted)?.issues()?.size ?: 0
     val showChecks = { newFilter: CheckFilter, newCategory: Category? ->
-        // A search left from before would hide some of what the dashboard points to.
+        // Clear existing search and tier filters when opening a group of checks.
         query = ""
         filter = newFilter
         category = newCategory
@@ -335,7 +335,6 @@ fun DroynisApp(
                     hidePersonal = state.hidePersonal,
                     actions = actions,
                     onHelp = { tab = Tab.HELP },
-                    showAboutButton = tab == Tab.HELP,
                     onTheme = { showTheme = true },
                     onAppIcon = { showAppIcon = true },
                     onAbout = { showAbout = true },
@@ -461,6 +460,10 @@ fun DroynisApp(
                                 appVersion = appVersion,
                                 onAbout = { showAbout = true },
                                 onCatalog = { showCatalog = true },
+                                onMutedChecks = { showChecks(CheckFilter.MUTED, null) },
+                                onTrustedApps = { showTrusted = true },
+                                onAppIcon = { showAppIcon = true },
+                                onTheme = { showTheme = true },
                             )
                         }
                     }
@@ -497,7 +500,6 @@ private fun MainTopBar(
     hidePersonal: Boolean,
     actions: AppActions,
     onHelp: () -> Unit,
-    showAboutButton: Boolean,
     onTheme: () -> Unit,
     onAppIcon: () -> Unit,
     onAbout: () -> Unit,
@@ -522,9 +524,6 @@ private fun MainTopBar(
             }
         },
         actions = {
-            if (showAboutButton) {
-                IconButton(onClick = onAbout) { Icon(Icons.Rounded.Info, stringResource(R.string.menu_about)) }
-            }
             IconButton(onClick = actions::scan, enabled = !scanning) {
                 Icon(Icons.Rounded.Refresh, stringResource(R.string.menu_scan_again))
             }
@@ -541,11 +540,7 @@ private fun MainTopBar(
                         menuOpen = false
                         actions.saveReport(ReportFormat.JSON)
                     }
-                    MenuItem(R.string.menu_share_report, Icons.Rounded.Share, enabled = reportReady) {
-                        menuOpen = false
-                        actions.shareReport()
-                    }
-                    // Applies to all three exports above; stays open so the tick can be seen to change.
+                    // Keep the menu open so the updated checkbox is visible.
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.menu_hide_personal)) },
                         onClick = { actions.setHidePersonal(!hidePersonal) },

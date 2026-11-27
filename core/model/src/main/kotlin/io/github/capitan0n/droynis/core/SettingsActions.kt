@@ -29,6 +29,9 @@ object SettingsActions {
     /** `Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS` */
     const val DEVELOPER_OPTIONS = "android.settings.APPLICATION_DEVELOPMENT_SETTINGS"
 
+    const val USER_SETTINGS = "android.settings.USER_SETTINGS"
+    const val FULL_SCREEN_ALERTS = "android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT"
+
     /** `Settings.ACTION_WIRELESS_SETTINGS`: Network & internet, where Private DNS lives. */
     const val NETWORK = "android.settings.WIRELESS_SETTINGS"
 

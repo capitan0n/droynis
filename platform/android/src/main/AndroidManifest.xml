@@ -18,12 +18,6 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
 
-    <!--
-        Android 15+: ask whether Droynis' own screen is being recorded or shared, for SUSP-5010.
-        Android answers only about Droynis' windows, and only while they are on screen.
-    -->
-    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
-
     <!-- Read whether Android 16 Advanced Protection is on, for INTG-1030. -->
     <uses-permission android:name="android.permission.QUERY_ADVANCED_PROTECTION_MODE" />
 

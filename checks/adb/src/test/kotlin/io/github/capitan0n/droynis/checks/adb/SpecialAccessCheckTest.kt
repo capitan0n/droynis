@@ -53,11 +53,14 @@ class SpecialAccessCheckTest {
     fun `every access is an adb-tier app check with its own settings screen`() {
         val specs = Access.entries.associateWith { check(it, dump()).spec }
 
-        assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "SUSP-5103", specs.values.map { it.id })
+        assertEquals((4102..4107).map { "APPS-$it" } + "APPS-4109" + "APPS-4111" + "SUSP-5103", specs.values.map { it.id })
         assertTrue(specs.values.all { it.requiredTier == Tier.ADB })
-        // Settings switches are app permissions; access only adb can give is a sign of stalkerware.
-        assertEquals(Category.SUSPICIOUS_APPS, specs.getValue(Access.SCREEN_CAPTURE).category)
-        assertTrue(specs.filterKeys { it != Access.SCREEN_CAPTURE }.values.all { it.category == Category.APPS })
+        assertEquals(
+            setOf(Access.ALL_FILES, Access.MANAGE_MEDIA),
+            specs.filterValues { it.category == Category.PRIVACY }.keys,
+        )
+        assertEquals(setOf(Access.SCREEN_CAPTURE), specs.filterValues { it.category == Category.SUSPICIOUS_APPS }.keys)
+        assertEquals(Access.entries.size - 3, specs.count { it.value.category == Category.APPS })
         // Each Settings switch has its own screen; screen capture has no switch, only an adb command.
         val switches = specs.filterKeys { it != Access.SCREEN_CAPTURE }.values
         assertEquals(switches.size, switches.map { it.remediation.settingsActions.single() }.toSet().size)
@@ -111,6 +114,16 @@ class SpecialAccessCheckTest {
 
         assertEquals(Status.PASS, outcome.status)
         assertEquals("No app can record the screen without asking", outcome.summary)
+    }
+
+    @Test
+    fun `mock location names apps with an actual grant`() = runTest {
+        val outcome = check(Access.MOCK_LOCATION, dump(
+            app("u0a130", "org.example.bubbles", "MOCK_LOCATION", "allow"),
+            app("u0a132", "org.example.files", "MOCK_LOCATION", "deny"),
+        )).run(context)
+        assertEquals(Status.FAIL, outcome.status)
+        assertEquals(listOf("org.example.bubbles"), outcome.evidence.mapNotNull { it.packageName })
     }
 
     @Test
@@ -175,7 +188,7 @@ class SpecialAccessCheckTest {
         ).run(context)
 
         assertEquals(Status.PASS, outcome.status)
-        assertEquals("No user app can install other apps", outcome.summary)
+        assertEquals("Allowed to install apps: F-Droid. No unexpected user apps found.", outcome.summary)
         assertEquals("an app store; not counted", outcome.evidence.single { it.value!!.contains("fdroid") }.note)
     }
 

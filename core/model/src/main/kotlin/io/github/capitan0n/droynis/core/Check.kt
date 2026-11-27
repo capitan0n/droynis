@@ -52,13 +52,14 @@ data class CheckSpec(
         private val ID_PATTERN = Regex("[A-Z]{4}-\\d{4}")
 
         /**
-         * Checks that moved to another category and got a new id there, old id to new. Ids stored on
+         * Checks that moved to another tier or category and got a new id, old id to new. Ids stored on
          * the phone (muted checks) are read through [currentId], so a mute survives the move. An old
          * id is never given to another check.
          */
         val RENAMED: Map<String, String> = mapOf(
             "APPS-4101" to "SUSP-5102",
             "APPS-4108" to "SUSP-5103",
+            "SUSP-5010" to "SUSP-5105",
         )
 
         /** [id], or the id its check has now when it moved. */
@@ -69,7 +70,8 @@ data class CheckSpec(
 enum class Category(val label: String) {
     DEVICE_INTEGRITY("Device integrity"),
     ACCESS_CONTROL("Access control"),
-    APPS("Apps and permissions"),
+    APPS("App security"),
+    PRIVACY("Privacy"),
 
     /**
      * Signs that an installed app is adware, stalkerware or other malware: it hides from the app

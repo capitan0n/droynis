@@ -11,9 +11,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
 
-/** Apps with system permissions granted over adb (APPS-4020). */
+/** Apps with system permissions (APPS-4020). */
 class AdbGrantedPermissionsCheckTest {
 
     private val writeSecure = "android.permission.WRITE_SECURE_SETTINGS"
@@ -51,7 +52,7 @@ class AdbGrantedPermissionsCheckTest {
         val outcome = check(value(mapOf(settingsProvider to setOf(writeSecure, dump)))).outcome()
 
         assertEquals(Status.PASS, outcome.status)
-        assertEquals("No app you installed holds a system permission granted over adb", outcome.summary)
+        assertEquals("No app you installed holds any of these system permissions", outcome.summary)
         assertEquals("1", outcome.evidence.single { it.label == "Apps that came with the phone and hold them" }.value)
         assertFalse(outcome.evidence.any { it.packageName == settingsProvider })
     }
@@ -66,7 +67,7 @@ class AdbGrantedPermissionsCheckTest {
         val outcome = check(value(holders)).outcome()
 
         assertEquals(Status.FAIL, outcome.status)
-        assertEquals("2 apps hold system permissions granted over adb: Logcat Reader and Tasker", outcome.summary)
+        assertEquals("2 apps hold system permissions: Logcat Reader and Tasker", outcome.summary)
         assertNull(outcome.escalation)
         val tasks = outcome.evidence.single { it.packageName == tasker }
         assertEquals("WRITE_SECURE_SETTINGS: change secure settings; from an app store", tasks.note)
@@ -83,7 +84,7 @@ class AdbGrantedPermissionsCheckTest {
         val outcome = check(value(mapOf(tasker to setOf(writeSecure)))).run(context)
 
         assertEquals(Status.PASS, outcome.status)
-        assertEquals("Only apps that came with the phone and apps you trust hold system permissions granted over adb: Tasker", outcome.summary)
+        assertEquals("Only apps that came with the phone and apps you trust hold these system permissions: Tasker", outcome.summary)
         assertEquals(Trust.TRUSTED, outcome.evidence.single { it.packageName == tasker }.trust)
         assertEquals("DUMP, for the ADB tier; this app; not counted", outcome.evidence.single { it.value == "Droynis" }.note)
     }
@@ -94,6 +95,7 @@ class AdbGrantedPermissionsCheckTest {
         val outcome = AdbGrantedPermissionsCheck(FakePermissions(value(mapOf(ShizukuAppsCheck.MANAGER to setOf(writeSecure)))), packages).outcome()
 
         assertEquals(Status.PASS, outcome.status)
+        assertTrue("Listed separately: Shizuku" in outcome.summary)
         val row = outcome.evidence.single { it.packageName == ShizukuAppsCheck.MANAGER }
         assertEquals(Trust.NOT_COUNTED, row.trust)
         assertEquals("WRITE_SECURE_SETTINGS; Shizuku itself, which has adb's rights anyway (APPS-4016); not counted", row.note)

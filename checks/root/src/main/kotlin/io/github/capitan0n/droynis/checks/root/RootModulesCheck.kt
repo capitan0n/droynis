@@ -93,7 +93,8 @@ class RootModulesCheck(private val root: RootShellProbe) : Check {
         severity = Severity.INFO,
         explanation = "Magisk, KernelSU and APatch modules change the system at every boot, with full " +
             "root rights and before any app or security setting can stop them. Each one is code you " +
-            "trust completely. This check lists them for your review and doesn't count in the score.",
+            "trust completely. The details also show Magisk's Zygisk and Enforce DenyList switches when available. " +
+            "This check is informational.",
         remediation = Remediation(
             text = "Open your root manager's Modules screen and remove modules you no longer use or " +
                 "don't fully trust. Install modules only from their authors' own pages.",
@@ -104,23 +105,49 @@ class RootModulesCheck(private val root: RootShellProbe) : Check {
         failsWhen = "an enabled root module is installed (information only)",
     )
 
+    private fun magiskSwitches(): List<Evidence> {
+        val manager = root.manager() as? Reading.Value ?: return emptyList()
+        if (manager.value != RootManager.MAGISK) return emptyList()
+        val settings = root.magiskSettings()
+        val values = (settings as? Reading.Value)?.let { MagiskSettings.parse(it.value) }
+        return listOf("Zygisk" to "zygisk", "Enforce DenyList" to "denylist").map { (label, key) ->
+            if (key == "zygisk" && values != null && key !in values) {
+                val default = root.zygiskDefault()
+                val row = default.toEvidence(label) { if (it) "on" else "off" }
+                return@map if (default is Reading.Value) row.copy(note = "Magisk default") else row
+            }
+            val defaultOff = key == "denylist" && values != null && key !in values
+            val state = when {
+                defaultOff || values?.get(key) == 0 -> "off"
+                values?.get(key) == 1 -> "on"
+                else -> null
+            }
+            Evidence(label, state, settings.source, note = when {
+                defaultOff -> "Magisk default"
+                state == null -> "no explicit readable switch"
+                else -> "saved Magisk switch"
+            })
+        }
+    }
+
     override suspend fun run(context: ScanContext): Outcome {
         val listing = root.modules()
+        val switches = magiskSwitches()
         val text = when (listing) {
             is Reading.Value -> listing.value
             is Reading.Unsupported -> return Outcome.unsupported(
                 "Root modules are not available here (${listing.reason})",
-                listOf(listing.toEvidence("Modules")),
+                listOf(listing.toEvidence("Modules")) + switches,
             )
             is Reading.Unavailable -> return Outcome.unknown(
                 "The module list could not be read (${listing.reason})",
-                listOf(listing.toEvidence("Modules")),
+                listOf(listing.toEvidence("Modules")) + switches,
             )
         }
         val modules = when (val parsed = RootModules.parse(text)) {
             is RootModules.Result.Failed -> return Outcome.unknown(
                 "The module list is in a format Droynis doesn't recognize (${parsed.reason})",
-                listOf(Evidence("Modules", null, listing.source, note = parsed.reason)),
+                listOf(Evidence("Modules", null, listing.source, note = parsed.reason)) + switches,
             )
             is RootModules.Result.Parsed -> parsed.modules
         }
@@ -136,12 +163,12 @@ class RootModulesCheck(private val root: RootShellProbe) : Check {
                         "removed at the next reboot".takeIf { module.removing },
                     ).joinToString(", ").ifEmpty { null },
                 )
-            }
+            } + switches
         val active = modules.filter { it.enabled }
         if (active.isEmpty()) {
             val summary = if (modules.isEmpty()) "No root modules are installed" else "Every root module is disabled"
             return Outcome.pass(summary, evidence)
         }
-        return Outcome.fail("${count(active.size, "root module")} active: ${active.map { it.name }.joinNames()}", evidence)
+        return Outcome.fail("${count(active.size, "root module")} enabled: ${active.map { it.name }.joinNames()}", evidence)
     }
 }

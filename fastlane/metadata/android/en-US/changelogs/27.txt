@@ -1,0 +1,1 @@
+Droynis now has 121 checks, including new coverage for tethering, Hotspot 2.0, printing services, mock location, Magisk, and LSPosed. The app adds a Privacy category and simplifies Help. Active screen capture detection now requires the ADB tier. JSON reports can now include the PRIVACY category.

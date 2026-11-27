@@ -56,7 +56,7 @@ class TempFilesCheck(private val shell: RootShellProbe) : Check {
                     "Staged program",
                     "${entry.path} (${entry.perms} ${entry.owner}, ${entry.date()})",
                     reading.source,
-                    note = if (entry.worldWritable) "world-writable: anyone on the phone can replace it" else null,
+                    note = if (entry.worldWritable) "world-writable by Unix permissions. Directory access and SELinux also apply" else null,
                 )
             }
             if (runnable.isEmpty()) {
@@ -83,7 +83,7 @@ data class TempEntry(
 ) {
     val name: String get() = path.substringAfterLast('/')
 
-    val worldWritable: Boolean get() = groupOrOtherWrite(perms)
+    val worldWritable: Boolean get() = perms.last().digitToInt(8) and 2 != 0
 
     /** A non-directory that is executable, or named like a shell script. */
     val runnable: Boolean get() = !isDir && (anyExecBit(perms) || name.endsWith(".sh"))

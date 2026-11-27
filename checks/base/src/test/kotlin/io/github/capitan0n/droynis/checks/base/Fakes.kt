@@ -167,15 +167,6 @@ class FakeShizukuServer(private val server: Reading<ShizukuServer?> = value(null
     override fun server() = server
 }
 
-/** By default Android 15+ says the screen isn't recorded, and there is no other display. */
-class FakeScreenCapture(
-    private val recording: Reading<ScreenRecording> = value(ScreenRecording.NOT_RECORDED),
-    private val displays: Reading<List<ExtraDisplay>> = value(emptyList()),
-) : ScreenCaptureProbe {
-    override fun recording() = recording
-    override fun extraDisplays() = displays
-}
-
 class FakeInputMethods(private val keyboards: Reading<List<Keyboard>> = value(emptyList())) : InputMethodProbe {
     override fun enabledKeyboards() = keyboards
 }
@@ -232,6 +223,7 @@ class FakeProbes(
     override val accessibility: AccessibilityProbe = FakeAccessibility(),
     override val packages: PackageInventory = FakePackages(),
     override val network: NetworkProbe = FakeNetwork(value(null)),
+    override val tethering: TetheringProbe = TetheringProbe { value(emptySet()) },
     override val certificates: CertificateStore = FakeCertificates(),
     override val radios: RadioProbe = FakeRadios(),
     override val inputMethods: InputMethodProbe = FakeInputMethods(),
@@ -255,8 +247,10 @@ class FakeProbes(
     override val modules: ModuleProbe = FakeModules(),
     override val profiles: ProfileProbe = FakeProfiles(),
     override val shizukuServer: ShizukuServerProbe = FakeShizukuServer(),
-    override val screenCapture: ScreenCaptureProbe = FakeScreenCapture(),
-) : BaseProbes
+) : BaseProbes {
+    override fun canAddUsers() = value(false)
+    override fun isSpellCheckerAvailable(component: String) = value(false)
+}
 
 /** By default the phone has no module metadata package, like a ROM without Google's modules. */
 class FakeModules(private val metadata: Reading<ModuleMetadata?> = value(null)) : ModuleProbe {

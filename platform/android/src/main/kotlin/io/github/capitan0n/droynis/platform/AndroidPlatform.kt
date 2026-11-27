@@ -1,10 +1,20 @@
 package io.github.capitan0n.droynis.platform
 
+import android.Manifest
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.hardware.SensorPrivacyManager
 import android.os.Build
 import android.os.Process
+import android.os.UserManager
+import android.service.textservice.SpellCheckerService
+import android.view.textservice.SpellCheckerSession
+import android.printservice.PrintService
 import io.github.capitan0n.droynis.checks.adb.AdbProbes
 import io.github.capitan0n.droynis.checks.adb.Dumpsys
+import io.github.capitan0n.droynis.checks.adb.PrivacySensor
 import io.github.capitan0n.droynis.checks.base.AccessibilityProbe
 import io.github.capitan0n.droynis.checks.base.AppFootprintProbe
 import io.github.capitan0n.droynis.checks.base.AttestationProbe
@@ -27,13 +37,13 @@ import io.github.capitan0n.droynis.checks.base.PackageInventory
 import io.github.capitan0n.droynis.checks.base.PermissionProbe
 import io.github.capitan0n.droynis.checks.base.ProfileProbe
 import io.github.capitan0n.droynis.checks.base.RadioProbe
-import io.github.capitan0n.droynis.checks.base.ScreenCaptureProbe
 import io.github.capitan0n.droynis.checks.base.ShizukuServerProbe
 import io.github.capitan0n.droynis.checks.base.StorageProbe
 import io.github.capitan0n.droynis.checks.base.StoreKeys
 import io.github.capitan0n.droynis.checks.base.StrongBoxProbe
 import io.github.capitan0n.droynis.checks.base.SystemProperties
 import io.github.capitan0n.droynis.checks.base.SystemSettings
+import io.github.capitan0n.droynis.checks.base.TetheringProbe
 import io.github.capitan0n.droynis.checks.base.UsageHistoryProbe
 import io.github.capitan0n.droynis.checks.base.UptimeProbe
 import io.github.capitan0n.droynis.checks.base.UsbProbe
@@ -97,9 +107,59 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
     override val usageHistory: UsageHistoryProbe = AndroidUsageHistory(app, shells)
     override val modules: ModuleProbe = AndroidModules(app)
     override val shizukuServer: ShizukuServerProbe = AndroidShizukuServer(shizuku)
-    override val screenCapture: ScreenCaptureProbe = AndroidScreenCapture(app)
     private val routedDumpsys = RoutedDumpsys(grants, shells)
     override val dumpsys: Dumpsys = routedDumpsys
+    override fun supportsPasspoint() = app.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WIFI_PASSPOINT)
+    override fun canAddUsers(): Reading<Boolean> {
+        val source = Source("UserManager.supportsMultipleUsers() and DISALLOW_ADD_USER")
+        return probe(source) {
+            val users = app.getSystemService(UserManager::class.java)
+                ?: return@probe Reading.Unavailable("user service unavailable", source)
+            Reading.Value(UserManager.supportsMultipleUsers() && !users.hasUserRestriction(UserManager.DISALLOW_ADD_USER), source)
+        }
+    }
+
+    override fun isSpellCheckerAvailable(component: String): Reading<Boolean> {
+        val source = Source("PackageManager.queryIntentServices() for spell checkers")
+        return probe(source) {
+            val selected = ComponentName.unflattenFromString(component)
+                ?: return@probe Reading.Unavailable("invalid spell checker component", source)
+            val candidates = app.packageManager.queryIntentServices(
+                Intent(SpellCheckerService.SERVICE_INTERFACE).setPackage(selected.packageName),
+                PackageManager.GET_META_DATA,
+            )
+            Reading.Value(candidates.any { result ->
+                val service = result.serviceInfo
+                service != null && service.permission == Manifest.permission.BIND_TEXT_SERVICE &&
+                    service.metaData?.containsKey(SpellCheckerSession.SERVICE_META_DATA) == true &&
+                    ComponentName(service.packageName, service.name) == selected
+            }, source)
+        }
+    }
+
+    override fun supportedPrivacySensors(): Reading<Set<PrivacySensor>> {
+        val source = Source("SensorPrivacyManager.supportsSensorToggle()")
+        if (Build.VERSION.SDK_INT < 31) return Reading.Unsupported("requires Android 12", source)
+        return probe(source) {
+            val privacy = app.getSystemService(SensorPrivacyManager::class.java)
+                ?: return@probe Reading.Unsupported("sensor privacy service absent", source)
+            Reading.Value(PrivacySensor.entries.filterTo(mutableSetOf()) { privacy.supportsSensorToggle(it.id) }, source)
+        }
+    }
+
+    override fun hasPrintServices(): Reading<Boolean> {
+        val source = Source("PackageManager.queryIntentServices() for print plugins")
+        return probe(source) {
+            // QUERY_ALL_PACKAGES lets this see print plugins across the scanned profile.
+            val services = app.packageManager.queryIntentServices(
+                Intent(PrintService.SERVICE_INTERFACE),
+                PackageManager.MATCH_DIRECT_BOOT_AWARE or PackageManager.MATCH_DIRECT_BOOT_UNAWARE,
+            )
+            Reading.Value(services.any { it.serviceInfo?.permission == Manifest.permission.BIND_PRINT_SERVICE }, source)
+        }
+    }
+
+    override val tethering: TetheringProbe = AndroidTethering(app, routedDumpsys)
     override val profiles: ProfileProbe = AndroidProfiles(app, routedDumpsys)
     override val shell: PrivilegedShell = shells
 
@@ -122,7 +182,7 @@ class AndroidPlatform(context: Context) : BaseProbes, AdbProbes, ShizukuProbes, 
      */
     fun newScanContext(): ScanContext {
         shizuku.connect()
-        root.open()
+        androidPackages.magiskManager = if (root.open()) root.hiddenManagerPackage() else null
         return ScanContext(
             startedAt = ZonedDateTime.now(),
             sdkInt = Build.VERSION.SDK_INT,

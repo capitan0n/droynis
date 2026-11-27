@@ -17,9 +17,14 @@ fun adbChecks(probes: AdbProbes): List<Check> = (
         HiddenWifiCheck(probes.dumpsys) +
         WepWifiCheck(probes.dumpsys) +
         HotspotCheck(probes.dumpsys) +
+        PasspointCheck(probes.dumpsys, probes::supportsPasspoint) +
+        PrintingServicesCheck(probes.dumpsys, probes.packages, probes::hasPrintServices) +
+        FullScreenAlertsCheck(probes.dumpsys, probes.packages, probes.permissions) +
+        SensorPrivacyCheck(probes.dumpsys, probes::supportedPrivacySensors) +
         CallForwardingCheck(probes.dumpsys, probes.cellular) +
         HiddenBackgroundCheck(probes.dumpsys, probes.footprints, probes.packages) +
-        BackgroundDataUseCheck(probes.dumpsys, probes.packages, probes.defaultApps)
+        BackgroundDataUseCheck(probes.dumpsys, probes.packages, probes.defaultApps) +
+        ScreenCaptureCheck(probes.dumpsys, probes.packages)
     )
     // Grouped by category like the other registries (a stable sort keeps the order within each);
     // screen capture is one of the special access switches but belongs to Suspicious apps.

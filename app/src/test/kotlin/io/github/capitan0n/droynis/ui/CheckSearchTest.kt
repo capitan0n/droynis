@@ -17,7 +17,7 @@ class CheckSearchTest {
 
     private val sms = CheckSpec(
         id = "APPS-4008",
-        category = Category.APPS,
+        category = Category.PRIVACY,
         title = "Apps that can read your SMS or call log",
         severity = Severity.NOTICE,
         explanation = "One-time login codes arrive by SMS.",
@@ -51,6 +51,7 @@ class CheckSearchTest {
     fun `ids, categories and hyphenated words are found`() {
         assertTrue(matches("4008", sms))
         assertTrue(matches("apps-4008", sms))
+        assertTrue(matches("privacy", sms))
         assertTrue(matches("access control", lock))
         assertTrue(matches("wifi", lock))
         assertTrue(matches("wi-fi", lock))

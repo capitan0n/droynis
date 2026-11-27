@@ -46,7 +46,8 @@
     <string name="about_title">關於 Droynis</string>
     <string name="about_version">版本 %1$s</string>
     <string name="about_body">專為 Android 設計的安全性與隱私權稽核工具。它能讀取並解釋您的設定，且絕不會自行變更任何設定。</string>
-    <string name="about_independent">Droynis 是一個獨立專案，與 Lynis 或 CISOfy 無任何關聯、未獲其認可亦無附屬關係；Lynis 僅作為具備強化評分且易於閱讀之稽核概念的靈感來源。</string>
+    <string name="about_antivirus_limit">Droynis 並非防毒軟體。它不會掃描應用程式中的惡意程式碼，也不會移除惡意軟體。</string>
+    <string name="about_website">Droynis 網站</string>
     <string name="about_license">採用 GNU GPL v3.0 或後續版本授權的自由暨開源軟體。</string>
     <string name="about_what">Droynis 的功能</string>
     <string name="help_about_link">版本 %1$s · 開發者、原始碼與意見反應</string>
@@ -84,12 +85,12 @@
     <!-- Categories -->
     <string name="category_integrity">裝置完整性</string>
     <string name="category_access">存取控制</string>
-    <string name="category_apps">應用程式與權限</string>
+    <string name="category_apps">應用程式安全性</string>
+    <string name="category_privacy">隱私權</string>
     <string name="category_suspicious">可疑應用程式</string>
     <string name="category_network">網路與無線通訊</string>
     <string name="category_short_integrity">完整性</string>
     <string name="category_short_access">存取</string>
-    <string name="category_short_apps">應用程式</string>
     <string name="category_short_suspicious">可疑</string>
     <string name="category_short_network">網路</string>
 
@@ -336,6 +337,7 @@
     </plurals>
 
     <!-- Help -->
+    <string name="help_muted_checks">略過計分的檢查</string>
     <string name="help_legend">判讀檢查結果</string>
     <string name="help_score">評分計算機制</string>
     <string name="help_score_body">所有「已通過」或「未通過」的檢查項目均會計入評分，並依嚴重程度賦予加權權重。評分為您通過項目權重佔所有計分項目總權重的百分比。「未知」與「不適用」之結果均不計入，您設定略過計分的項目亦同。</string>
@@ -438,27 +440,6 @@
     <string name="help_privacy_2">不含任何追蹤器、廣告、分析工具或 Google Play 服務。</string>
     <string name="help_privacy_3">唯讀設計：Droynis 會為您開啟對應的「設定」頁面，但絕不自行修改任何系統設定。</string>
     <string name="help_privacy_4">檢測報告預設排除硬體識別碼、電話號碼與帳戶名稱。</string>
-    <string name="help_faq">常見問題與解答</string>
-    <string name="faq_q1">獲得 100 分是否代表我的手機絕對安全？</string>
-    <string name="faq_a1">不是。Droynis 僅檢查公開 Android API 所能讀取的系統設定，以及已安裝應用程式對使用者隱匿自身特徵的跡象（例如空白名稱或停用圖示）。它並不會掃描應用程式的惡意程式碼，也無法發現隱藏於系統應用程式或經過篡改之韌體中的間諜軟體。高分僅代表手機的基本安全防護措施皆已就緒。</string>
-    <string name="faq_q2">為什麼有些檢查項目會顯示為「未知」？</string>
-    <string name="faq_a2">Android 會對一般應用程式隱藏部分系統設定，且某些硬體廠商也會修改或移除特定項目。Droynis 秉持誠實原則直接標記為不知道，絕不隨意猜測。例如在 Android 17 上，系統可能會對所有第三方應用程式將「USB 偵錯」與「開發人員選項」統一回報為關閉。</string>
-    <string name="faq_q3">為什麼 Droynis 需要檢視所有已安裝的應用程式？</string>
-    <string name="faq_a3">自 Android 11 起，應用程式在預設情況下僅能看見極少數其他應用程式。若不宣告「查詢所有套件 (QUERY_ALL_PACKAGES)」權限，應用程式相關檢查項目將遺漏大多數應用程式，進而產生不實的合格通過判定。</string>
-    <string name="faq_q4">Droynis 可以自動幫我修復安全問題嗎？</string>
-    <string name="faq_a4">刻意不提供自動修復功能。Droynis 會為您清楚說明應調整哪些項目並協助開啟正確的「設定」頁面，讓您對手機的每一項變更保有絕對的主控權。</string>
-    <string name="faq_q5">什麼是權限階層？</string>
-    <string name="faq_a5">各項檢查均會註明其所需的存取權限。「基礎」檢查適用於任何手機且無須額外設定。「ADB」檢查需要您透過電腦進行一次性授權授予兩項唯讀權限（⋮ › 檢查項目目錄 › ADB）；在此之前它們會顯示為「不適用」且不計入評分。Shizuku 則能免除前述指令授權，直接執行 ADB 階層檢查並額外增加數項專屬檢查，其底層 shell 僅執行預先定義的唯讀指令。在已 Root 的手機上，您可以開啟 Root 階層，該階層涵蓋前面所有項目並額外提供僅 Root 方能執行的檢查。Droynis 僅讀取檢查所需的最小限度資料，不保存任何內容，更無任何網路存取權能將其向外傳送。</string>
-    <string name="faq_q6">Droynis 會在背景持續執行嗎？</string>
-    <string name="faq_a6">不會。它僅在您開啟應用程式時執行掃描：完全不具備背景服務、通知推播或常駐喚醒鎖 (Wakelock)。</string>
-    <string name="faq_q8">我可以排除自己無法修正的檢查項目嗎？</string>
-    <string name="faq_a8">可以。開啟該檢查項目並啟用「略過此檢查計分」，或直接在檢查項目目錄中使用開關設定。略過計分的項目仍會正常執行並呈現結果，但評分計算、項目計數與問題清單將排除該項，報告中亦會載明其為已略過狀態。安全性修補程式期限是最典型的例子：因為只有原廠才能推送更新。若要一次全部恢復計分，只需在「檢查項目」分頁中選擇「已略過計分」篩選條件，隨後輕觸「全部恢復計分」即可。</string>
-    <string name="faq_q10">我使用的應用程式確實需要大量權限，可以不將它計為缺失嗎？</string>
-    <string name="faq_a10">可以。手錶隨行軟體、自動化工具與密碼管理程式通常隨時都需要通知存取權、簡訊或常駐位置資訊。請開啟列有該應用程式的檢查項目，輕觸其下方的「信任」按鈕：該應用程式仍會完整列出，但在任何檢查中都不再計為缺失，安全性評分亦會即時更新。請務必僅信任您完全瞭解的應用程式：受信任的應用程式日後若取得更多敏感權限（例如無障礙服務），同樣會被列出但不計入缺失。⋮ ›「信任的應用程式」可隨時檢視您信任的所有應用程式，匯出的報告中亦會具名列出。</string>
-    <string name="faq_q9">「隱藏個人資訊」功能會在報告中排除哪些資料？</string>
-    <string name="faq_a9">此功能預設為開啟，適用於儲存、分享與複製的各類報告。它會將所有 IP 位址、DNS 與代理伺服器、私人 DNS 主機名稱（NextDNS 風格之主機名稱可能含有個人設定檔 ID）、獲信任能進行 USB 偵錯的電腦以及已儲存的 Wi-Fi 網路名稱替換為 [hidden]。應用程式名稱、手機型號與 Android 版本則會予以保留：因為檢查結果正是針對它們進行評估，且這些資訊不會直接暴露特定個人身分。Droynis 本身絕不會主動向外傳送任何報告。</string>
-    <string name="faq_q7">Droynis 是 Lynis 的一部分嗎？</string>
-    <string name="faq_a7">不是。Droynis 是完全獨立的專案，與 Lynis 或 CISOfy 無任何關聯、未獲其認可亦無附屬關係。Lynis 作為 Linux 與 Unix 系統上的稽核工具，僅啟發了我們打造一款兼具易讀說明與系統強化評分之稽核工具的想法。Droynis 與其沒有共用任何程式碼。</string>
 
     <!-- Accessibility -->
     <string name="cd_expand">展開</string>

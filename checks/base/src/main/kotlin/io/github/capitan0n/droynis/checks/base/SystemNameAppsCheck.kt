@@ -65,10 +65,10 @@ class SystemNameAppsCheck(private val packages: PackageInventory) : Check {
             if (label != app.packageName) builtIn.getOrPut(normalize(label)) { mutableListOf() } += app.packageName
         }
         val found = user.mapNotNull { app ->
-            val label = packages.label(app.packageName)
-            if (label == app.packageName) return@mapNotNull null
-            val twins = builtIn[normalize(label)] ?: return@mapNotNull null
-            Found(Holder(AppRef(app.packageName, label), originOf(app.packageName, inventory)), twins.sorted())
+            val installedLabel = packages.installedLabel(app.packageName)
+            if (installedLabel == app.packageName) return@mapNotNull null
+            val twins = builtIn[normalize(installedLabel)] ?: return@mapNotNull null
+            Found(Holder(AppRef(app.packageName, packages.label(app.packageName)), originOf(app.packageName, inventory)), twins.sorted())
         }.sortedWith(compareByDescending<Found> { it.core }.thenBy { it.holder.app.label.lowercase(Locale.ROOT) })
         if (found.isEmpty()) return Outcome.pass(NONE, listOf(inspected))
 
